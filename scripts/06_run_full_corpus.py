@@ -38,8 +38,21 @@ For each person identified:
 1. Deconstruct the name into praenomen, nomen, and cognomen using the rules below.
 2. Identify gender ('male', 'female', or 'unknown') and social/professional status markers.
 3. Expand standard abbreviations (e.g., 'L.' to 'Lucius', 'M.' to 'Marcus', 'f.' to 'filius').
-4. Set fragmentary=true if the raw name is visibly incomplete (e.g., 'Aemilius Sa', 'Car Publilius', 'Gen ius').
+4. Set fragmentary=true if the name overlaps a lacuna or is otherwise visibly incomplete (see CONVENTIONS).
 5. Return a JSON object containing a 'results' list, where each item matches an ID to its extracted persons list.
+
+INSCRIPTION CONVENTIONS — these texts contain raw epigraphic markers, parse them carefully:
+- '[abc]' = letters abc are damaged but restored by editors. Treat as present.
+  Example: '[Mar]cus' → praenomen=Marcus, fragmentary=false (it's a restored reading).
+- '[3]' or '[6]' or '[---]' = a lacuna of approximately N missing characters. The name there is INCOMPLETE.
+  Example: 'M[3]C[3] Saraca' → praenomen=null (damaged), cognomen=Saraca, fragmentary=true.
+- '<a=b>' = letter 'b' was inscribed in place of intended 'a'. Use the intended letter.
+- '/' = line break in the original. Ignore for parsing — names can cross line breaks.
+- '(...)' = editorial abbreviation expansion. Use the expansion.
+- '?' = uncertain reading.
+
+If a name overlaps a '[N]' lacuna, has unrestored fragments (single dangling letters like 'M' or 'Sa'),
+or is otherwise visibly damaged, set fragmentary=true. Restored bracket readings like '[Mar]cus' are fine.
 
 PRAENOMEN RULES — critical:
 - Only these 18 names are valid praenomina: {', '.join(sorted(PRAENOMINA))}
@@ -112,7 +125,10 @@ def load_records():
     for r in data:
         if r.get('province') != PROVINCE:
             continue
-        text = str(r.get('clean_text_interpretive_word') or r.get('inscription') or '').strip()
+        # Use raw 'inscription' field (with [3] lacuna markers) — feeding the model
+        # the editor's interpretive fill-in causes hallucination of names from gaps.
+        # The lacuna markers also let the model correctly flag fragmentary names.
+        text = str(r.get('inscription') or r.get('clean_text_interpretive_word') or '').strip()
         if not text or text == '?':
             continue
         if damage_ratio(text) > DAMAGE_THRESHOLD:
@@ -161,7 +177,7 @@ def main():
             batch_input = [{'id': r['id'], 'text': r['text']} for r in batch]
 
             try:
-                time.sleep(1)
+                #time.sleep(1)
                 response = client.models.generate_content(
                     model='gemini-2.5-flash',
                     contents=f"Please process this batch of inscriptions: {json.dumps(batch_input, ensure_ascii=False)}",

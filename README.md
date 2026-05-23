@@ -43,7 +43,32 @@ Several non-obvious choices in `scripts/05_evaluate_ner.py`:
 - **Praenomen expansion**: LIRE stores praenomens in abbreviated form (`Q.`, `T.`); the model expands them (`Quintus`, `Titus`). A lookup table maps abbreviations before signature comparison.
 - **Word-overlap matching** (≥75% threshold with 6-char prefix): replaces simple substring matching to handle (a) predictions with extra cognomina and (b) Latin case ending variants (`Uttedius` vs `Uttedio`).
 - **Imperial filtering**: Two-stage filter removes emperors and their family from the discoveries list — (1) `status` field keywords (`emperor`, `divus`, `caesar`, `augustus`, `imperator`); (2) inscription-level formula detection (`Imperatori Caesari...`, `Imperator Caesar...`).
-- **Damage pre-filtering** (in `04c`): Inscriptions where >30% of characters are inside lacunae brackets are skipped before sending to the API, reducing cost on records unlikely to yield clean extractions.
+- **Damage pre-filtering** (in `06_run_full_corpus.py`): Inscriptions where >30% of characters are inside lacunae brackets (`[...]`) are skipped before sending to the API, reducing cost on records unlikely to yield clean extractions.
+
+## Input Format: Raw `inscription` vs Interpretive Cleaned Text
+
+The pipeline feeds the model EDCS's raw `inscription` field — the editor's transcription containing
+lacuna markers (`[3]` = 3 missing chars), restored readings (`[Mar]cus`), and other epigraphic
+conventions — rather than `clean_text_interpretive_word` (the interpretive fill-in with brackets
+stripped).
+
+This was non-obvious at first but matters a lot. A 30-record A/B test on bracketed eval records
+(see `scripts/test_inscription_vs_clean.py`) showed:
+
+| Metric | `clean_text` input | Raw `inscription` input | Delta |
+|--------|---|---|---|
+| Precision | 0.711 | **0.844** | +13.3 |
+| Recall | 0.726 | **0.800** | +7.4 |
+| F1 | 0.719 | **0.822** | +10.3 |
+| Fragmentary flagged | 4 | 68 | 17× |
+
+**Why:** with the interpretive text the model cannot see where the original was damaged, so
+(a) it hallucinates names from the editor's filled-in gaps, inflating false positives, and
+(b) it almost never sets `fragmentary=true`, since the lacunae are invisible. Feeding the
+raw `inscription` text lets the model preserve uncertainty and treat damaged names as
+fragmentary rather than confident attestations.
+
+The prompt explains the bracket conventions to the model so it can parse them correctly.
 
 ## Future Directions
 
