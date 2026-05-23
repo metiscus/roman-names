@@ -1,0 +1,124 @@
+# Roman + African + personification deity tokens.
+# Used by name_filters.is_deity() to detect "person" extractions that are
+# actually dedicatees of votive/dedicatory inscriptions. Matched as exact
+# lowercase tokens against name fields (after bracket/digit cleanup).
+#
+# Includes inflected forms (dative, genitive) since deities most often
+# appear in those cases in dedications. Comments are ignored.
+
+# Olympian / Capitoline core (Roman)
+iuppiter
+iupiter
+jupiter
+iovi
+iovis
+iuno
+juno
+iunoni
+minerva
+minervae
+mars
+marti
+martis
+venus
+veneri
+veneris
+apollo
+apollini
+diana
+dianae
+vulcanus
+volcanus
+vulcano
+mercurius
+mercurio
+neptunus
+neptuno
+vesta
+vestae
+ceres
+cereri
+bacchus
+bacchi
+liber
+libero
+pluto
+plutoni
+saturnus
+saturno
+sol
+soli
+luna
+lunae
+hercules
+herculi
+aesculapius
+aesculapio
+
+# African and syncretic (Saturnus = Baal-Hammon in Africa, Caelestis = Tanit)
+caelestis
+caelesti
+hammon
+ammon
+tanit
+baal
+tellus
+telluri
+frugifer
+genius
+genio
+numen
+numini
+
+# Personifications worshipped as goddesses
+salus
+saluti
+salutaris
+concordia
+concordiae
+corcondia
+corcondiae
+fortuna
+fortunae
+spes
+spei
+pietas
+pietati
+virtus
+virtuti
+victoria
+victoriae
+felicitas
+felicitati
+iustitia
+justitiae
+pax
+paci
+pacis
+roma
+romae
+libertas
+libertati
+fides
+fidei
+honos
+honori
+abundantia
+providentia
+aequitas
+clementia
+disciplina
+
+# Collective deities
+lares
+laribus
+penates
+penatibus
+manes
+manibus
+dii
+diis
+
+# Imperial cult — "Augusta" alone (no surrounding name) is the deified empress
+augusta
+augustae

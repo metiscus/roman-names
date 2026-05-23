@@ -1,0 +1,33 @@
+# African (and a few non-African) town/place names that the model is known
+# to misextract as personal names. Conservative initial seed; extend as
+# additional FPs are flagged in triage.
+#
+# is_place() fires only when cognomen alone matches one of these and there
+# is no praenomen or nomen — protects against false-flagging persons whose
+# name happens to share a token with a town.
+#
+# Lowercase, one per line. Comments OK.
+
+# Towns confirmed misextracted in Africa Proconsularis triage (2026-05)
+apisa
+emerita
+
+# Other plausible-confusable Africa Proconsularis towns
+# (left commented until we see actual FPs — broad lists invite mis-flagging
+# legitimate persons whose name token overlaps a place token)
+# thugga
+# lepcis
+# sabratha
+# hadrumetum
+# hippo
+# cirta
+# theveste
+# lambaesis
+# capsa
+# sufes
+# sufetula
+# madauros
+# gigthis
+# calama
+# mactaris
+# carthago

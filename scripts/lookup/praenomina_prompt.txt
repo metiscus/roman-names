@@ -1,0 +1,26 @@
+# Praenomina list for the NER prompt (used by 06_run_full_corpus.py).
+# Tighter than praenomina_canonical.txt — only the 18 standard male forms.
+# These get listed in the SYSTEM_PROMPT so the model is told what counts
+# as a valid praenomen during extraction. Feminine forms are tolerated by
+# the post-process whitelist but not advertised to the model up-front,
+# because feminine praenomina are rare enough that promoting them in the
+# prompt would invite over-extraction.
+Aulus
+Appius
+Gaius
+Caius
+Gnaeus
+Decimus
+Kaeso
+Lucius
+Marcus
+Manius
+Mamercus
+Numerius
+Publius
+Quintus
+Sextus
+Servius
+Spurius
+Titus
+Tiberius
