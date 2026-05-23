@@ -15,16 +15,49 @@ DAMAGE_THRESHOLD = 0.30
 BATCH_SIZE = 10
 OUTPUT_PATH = 'data/output/africa_proconsularis_ner_full.jsonl'
 
-SYSTEM_PROMPT = """You are an expert Latin epigrapher specializing in the Roman inscriptions of Africa Proconsularis.
+PRAENOMINA = {
+    'Aulus', 'Appius', 'Gaius', 'Caius', 'Gnaeus', 'Decimus', 'Kaeso',
+    'Lucius', 'Marcus', 'Manius', 'Mamercus', 'Numerius', 'Publius',
+    'Quintus', 'Sextus', 'Servius', 'Spurius', 'Titus', 'Tiberius',
+}
+
+TRIBUS = {
+    'Aemilia', 'Aniensis', 'Arnensis', 'Camilia', 'Claudia', 'Clustumina',
+    'Collina', 'Cornelia', 'Esquilina', 'Fabia', 'Falerna', 'Galeria',
+    'Horatia', 'Lemonia', 'Maecia', 'Menenia', 'Oufentina', 'Palatina',
+    'Papiria', 'Pollia', 'Pomptina', 'Publilia', 'Pupinia', 'Quirina',
+    'Romilia', 'Sabatina', 'Scaptia', 'Sergia', 'Stellatina', 'Suburana',
+    'Teretina', 'Tromentina', 'Velina', 'Voltinia', 'Voturia',
+}
+
+SYSTEM_PROMPT = f"""You are an expert Latin epigrapher specializing in the Roman inscriptions of Africa Proconsularis.
 You will be provided with a list of inscriptions, each with a unique ID.
 Your task is to perform Named Entity Recognition (NER) on each inscription and extract personal names.
 
 For each person identified:
-1. Deconstruct the name into praenomen, nomen, and cognomen.
+1. Deconstruct the name into praenomen, nomen, and cognomen using the rules below.
 2. Identify gender ('male', 'female', or 'unknown') and social/professional status markers.
-3. Handle Abbreviations: Expand standard abbreviations (e.g., 'L.' to 'Lucius', 'M.' to 'Marcus', 'f.' to 'filius').
-4. Return a JSON object containing a 'results' list, where each item matches an ID to its extracted persons list."""
+3. Expand standard abbreviations (e.g., 'L.' to 'Lucius', 'M.' to 'Marcus', 'f.' to 'filius').
+4. Set fragmentary=true if the raw name is visibly incomplete (e.g., 'Aemilius Sa', 'Car Publilius', 'Gen ius').
+5. Return a JSON object containing a 'results' list, where each item matches an ID to its extracted persons list.
 
+PRAENOMEN RULES — critical:
+- Only these 18 names are valid praenomina: {', '.join(sorted(PRAENOMINA))}
+- Any name not in this list is NEVER a praenomen, even if it appears first.
+- Iulius, Flavius, Aurelius, Valerius, etc. are NOMINA, not praenomina.
+- If only one name is present with no praenomen, classify it as cognomen (not nomen).
+
+TRIBUS (voting tribe) — must not be confused with nomen:
+- The following words are Roman voting tribes, not family names. If present, record in status field as 'tribus: X', do not put in nomen:
+- {', '.join(sorted(TRIBUS))}
+- Example: 'C. Iulius Quirina Maximus' → praenomen=Gaius, nomen=Iulius, cognomen=Maximus, status='tribus: Quirina'
+
+NAME FIELD RULES:
+- praenomen, nomen, cognomen fields must contain ONLY name text — never gender values, never status words.
+- If a name element is uncertain or missing, use null — do not fill with gender or status values."""
+
+
+GENDER_VALUES = {'male', 'female', 'unknown', 'homo', 'vir', 'mulier'}
 
 class Person(BaseModel):
     praenomen: Optional[str] = Field(None)
@@ -33,6 +66,14 @@ class Person(BaseModel):
     gender: Optional[str] = Field(None)
     status: Optional[str] = Field(None)
     raw_name: str
+    fragmentary: bool = Field(False)
+
+    def model_post_init(self, __context):
+        # Guard against gender values leaking into name fields
+        for field in ('praenomen', 'nomen', 'cognomen'):
+            val = getattr(self, field)
+            if val and val.lower().strip() in GENDER_VALUES:
+                object.__setattr__(self, field, None)
 
 class InscriptionResult(BaseModel):
     id: str
