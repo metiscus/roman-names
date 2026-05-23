@@ -56,6 +56,40 @@ def get_system_prompt(province):
     {"praenomen": null, "nomen": "Aemilia", "cognomen": "Victoria Fipiorina", "gender": "female", "status": null, "raw_name": "Aemilia Victoria Fipiorina"}
   ]}]
 }"""
+    elif province.lower() in ('dalmatia', 'pannonia superior', 'pannonia inferior',
+                              'noricum', 'dacia'):
+        extra_examples = """
+**Input:** "Bato Platoris f(ilius) eq(ues) alae / Claudiae novae / vix(it) an(nos) XXXV / Epicadus f(ilius) p(osuit)"
+**Output:**
+{
+  "results": [{"id": "D1", "persons": [
+    {"praenomen": null, "nomen": null, "cognomen": "Bato", "gender": "male", "status": "eques alae Claudiae novae", "raw_name": "Bato Platoris f."},
+    {"praenomen": null, "nomen": null, "cognomen": "Plator", "gender": "male", "status": "pater", "raw_name": "Platoris"},
+    {"praenomen": null, "nomen": null, "cognomen": "Epicadus", "gender": "male", "status": "filius", "raw_name": "Epicadus f."}
+  ]}]
+}
+
+**Input:** "D(is) M(anibus) / T(ito) Aurelio / Dasantis f(ilio) Batoni / vet(erano) leg(ionis) XI C(laudiae) / vixit an(nos) LV"
+**Output:**
+{
+  "results": [{"id": "D2", "persons": [
+    {"praenomen": "Titus", "nomen": "Aurelius", "cognomen": "Bato", "gender": "male", "status": "veteranus legionis XI Claudiae", "raw_name": "T. Aurelio Dasantis f. Batoni"}
+  ]}]
+}
+
+**Input:** "Silvano / sacrum / vicus / [3]p[3]posu/it"
+**Output:**
+{
+  "results": [{"id": "D3", "persons": []}]
+}
+
+**Input:** "D(is) M(anibus) / Val(erio) Valenti / domo Salona / vixit an(nos) XX"
+**Output:**
+{
+  "results": [{"id": "D4", "persons": [
+    {"praenomen": null, "nomen": "Valerius", "cognomen": "Valens", "gender": "male", "status": "domo Salona", "raw_name": "Val. Valenti"}
+  ]}]
+}"""
     else:
         extra_examples = ""
 
