@@ -150,6 +150,55 @@ The headline F1 drops from 0.82 to 0.76 on switching to raw-inscription input. C
 - The qualitative tradeoff from the pre-run A/B test stands: with raw input the model correctly flags fragmentary names instead of fabricating restorations. The full-corpus run rate of `fragmentary: true` is 28.4% (up from 12% under clean-text), which is the desired behavior.
 - 0.76 adjusted F1 with 0.85 recall is still strong for unsupervised NER on noisy epigraphic text. Headline framing for outreach: "0.85 recall and 0.68 precision on inscriptions that survive a 30%-lacuna damage filter; 186 candidate name attestations on the 299-record eval set that don't match LIRE ground truth and warrant manual review."
 
+### Discoveries-list triage and non-person FP filters
+
+Manual review of the top 10 "discoveries" (against SIRAR, PIR, PLRE, secondary scholarship) found that most were not discoveries at all:
+- `Augusta Salutaris` (EDCS-06000308) is a deity on a dedicatory inscription — the actual person C. Vibius Marsus, proconsul, was correctly extracted and matched LIRE GT, but the deity got bucketed alongside as a "discovery."
+- Three `P./L. Septimius Geta` entries — emperor's brother (Caracalla's), not in our imperial filter.
+- `Pio Felici` / `Pius` — bare imperial epithets.
+- `Tiberius Caesar Augustus` — actual emperor, somehow not caught.
+- `[[C(aio) Fulvio Pla[ut]iano]]` — Severan praetorian prefect, damnatio memoriae brackets are a strong imperial signal.
+
+**Boncarth Muthumbalis** (EDCS-06000296) was a *real* hit: extracted correctly with `IIIIvir macelli` status from a bilingual Latin-Punic Liber Pater dedication at Lepcis Magna; cited in Brill scholarship for the practice of municipal magistrates funding dedications `ex multis`. He is not in LIRE's structured `people` field.
+
+This sharpens the framing: the dataset's value is **machine-readable attestations of individuals already documented in scholarship but absent from any open structured prosopographical dataset**. Not "discoveries" in the strong sense — but the bridge between EDCS's raw text, LIRE's hand-curated 433 records, and the scholarly literature.
+
+**New module: `scripts/name_filters.py`**
+- `DEITY_NAMES` — Roman/African/personification deity tokens (Iuppiter, Saturnus, Caelestis, Salus, Concordia, Augusta-when-alone, etc.).
+- `EMPEROR_SIGNATURES` — known emperor/imperial-family name tuples (Septimius+Geta, Aurelius+Antoninus, Fulvius+Plautianus...).
+- `IMPERIAL_EPITHETS` — bare epithets when no nomen/praenomen accompanies (Pius, Felix, Invictus, Augustus, etc.).
+- `[[...]]` damnatio memoriae brackets → imperial.
+- `classify_non_person_fp(person)` returns `'deity' | 'imperial' | 'epithet' | None`.
+
+Wired into both `05b_eval_from_corpus.py` (bucket FPs out of discoveries) and `06_export_to_dataset.py` (add `is_deity` / `is_imperial` / `is_bare_epithet` boolean columns to the deliverable). After filters:
+
+| Metric | Before filters | After filters |
+|---|---|---|
+| Precision (adj) | 0.68 | **0.71** |
+| F1 (adj) | 0.76 | **0.77** |
+| FP — Imperial | 37 | 44 (+7 Severan family, Tiberius, Plautianus) |
+| FP — Deity / personification | — | 6 |
+| FP — Bare imperial epithet | — | 5 |
+| Candidate Discoveries | 186 | 168 |
+
+Export deliverable now flags 856 `is_deity`, 1,358 `is_imperial`, 330 `is_bare_epithet`, 10,262 `fragmentary` (out of 34,788 — note these overlap). Downstream consumers can filter as needed.
+
+### Framing for outreach (revised)
+
+Earlier draft framing leaned on "discoveries." That's not honest — Boncarth Muthumbalis is real but already known; the deity FPs were never persons. The defensible framing:
+
+> **Structured, machine-readable attestation index for Africa Proconsularis Roman inscriptions.** Bridges raw EDCS text with LIRE's hand-curated `people` layer (currently 433/33k records). Validated against LIRE ground truth: F1 0.77, recall 0.85 (adjusted, excl. damage-filtered). Useful for: aggregate analyses, cross-reference between EDCS records and published prosopographical scholarship, and a starting point for future expert curation.
+
+LIRE remains the authority; this is a parallel resource that depends on it for validation. No suggestion of patching or merging into LIRE — that would be presumptuous toward a hand-curated academic project. Courtesy email to Heřmánková as ground-truth user, methodological feedback request only.
+
+### Next direction (user-set priority)
+
+1. **Triage** the 168 candidate discoveries (manual spot-check, EDCS context + scholarly cross-reference) to produce a real precision-of-discoveries number. Cheapest, biggest credibility unlock.
+2. **Dedup pass** — cluster on nomen+cognomen + findspot proximity + overlapping date, careful around 212 CE Constitutio Antoniniana. Turns N attestations into ~N' distinct individuals. Essential for prosopographical use.
+3. **Webapp** — Leaflet + GeoJSON + GitHub Pages per `followup/webapp_plan.md`. Outreach surface.
+
+Britannia and Zenodo upload follow after these.
+
 ---
 
 ## Next Province: Britannia
