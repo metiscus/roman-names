@@ -29,6 +29,13 @@ Example: 'C. Iulius Quirina Maximus' → praenomen=Gaius, nomen=Iulius, cognomen
 - Never put gender values ('male', 'female') or status words into name fields.
 - If a name element is missing or uncertain, use null.
 
+### NAME COHERENCE — multiple cognomina / agnomen:
+- When consecutive Latin name elements appear with NO separator between them, they belong to the SAME person.
+- Separators that split persons: 'et', 'cum', filiation ('filius', 'filia', 'uxor', 'mater', 'pater'),
+  verbs ('posuit', 'fecit', 'vixit', 'dedit', 'pia', 'pius'), or a clear punctuation/line break.
+- If extra name elements follow without a separator, treat them as extended cognomen / agnomen
+  belonging to the same person — do NOT split them into multiple persons.
+
 ### JSON Schema:
 {
   "persons": [
@@ -73,6 +80,14 @@ Example: 'C. Iulius Quirina Maximus' → praenomen=Gaius, nomen=Iulius, cognomen
     {"praenomen": null, "nomen": null, "cognomen": "Boncarth", "gender": "male", "status": "IIII vir macelli", "raw_name": "Boncarth", "fragmentary": false},
     {"praenomen": null, "nomen": null, "cognomen": "Muthumbal", "gender": "male", "status": null, "raw_name": "Muthumbalis", "fragmentary": false},
     {"praenomen": null, "nomen": null, "cognomen": "Sydbyus", "gender": "male", "status": null, "raw_name": "Sydby", "fragmentary": false}
+  ]
+}
+
+**Input:** "Dis Manibus sacrum Aemilia Victoria Fipiorina pia vixit annos XXXV"
+**Output:**
+{
+  "persons": [
+    {"praenomen": null, "nomen": "Aemilia", "cognomen": "Victoria Fipiorina", "gender": "female", "status": null, "raw_name": "Aemilia Victoria Fipiorina", "fragmentary": false}
   ]
 }
 
