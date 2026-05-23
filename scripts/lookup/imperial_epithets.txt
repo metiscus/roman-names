@@ -1,0 +1,23 @@
+# Bare imperial epithets — when these appear as a person's cognomen with no
+# nomen/praenomen accompanying, they're not a person but a stranded epithet
+# fragment from an imperial dedication (e.g., "[Imp. Caes. ... ] Pio Felici").
+#
+# Used by name_filters.is_bare_epithet(). Includes dative forms common in
+# dedications. Matched as lowercase tokens after bracket/digit cleanup.
+pius
+felix
+invictus
+maximus
+aeternus
+perpetuus
+augustus
+augusta
+caesar
+imperator
+dominus
+noster
+
+# Dative forms (dedicatory)
+pio
+felici
+invicto

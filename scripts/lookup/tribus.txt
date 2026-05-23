@@ -1,0 +1,40 @@
+# Roman voting tribes (tribus). 35 in total.
+# Used by 06_run_full_corpus.py to instruct the model not to confuse a
+# tribus name (e.g. "Quirina", "Arnensis") with a person's nomen.
+# If a tribus name appears as a name field after the rule fires, our
+# downstream filters should treat it as `status: tribus: X`.
+Aemilia
+Aniensis
+Arnensis
+Camilia
+Claudia
+Clustumina
+Collina
+Cornelia
+Esquilina
+Fabia
+Falerna
+Galeria
+Horatia
+Lemonia
+Maecia
+Menenia
+Oufentina
+Palatina
+Papiria
+Pollia
+Pomptina
+Publilia
+Pupinia
+Quirina
+Romilia
+Sabatina
+Scaptia
+Sergia
+Stellatina
+Suburana
+Teretina
+Tromentina
+Velina
+Voltinia
+Voturia

@@ -71,6 +71,7 @@ def main():
     tp = 0
     fp_imperial = 0
     fp_deity = 0
+    fp_place = 0
     fp_epithet = 0
     fp_other = 0
     fn = 0
@@ -132,6 +133,8 @@ def main():
                     fp_imperial += 1
                 elif non_person == 'deity':
                     fp_deity += 1
+                elif non_person == 'place':
+                    fp_place += 1
                 elif non_person == 'epithet':
                     fp_epithet += 1
                 else:
@@ -143,7 +146,7 @@ def main():
                         "status": p_raw.get('status'),
                     })
 
-    total_fp = fp_imperial + fp_deity + fp_epithet + fp_other
+    total_fp = fp_imperial + fp_deity + fp_place + fp_epithet + fp_other
     # Recall(raw) treats all unanswered GT (damaged + damage-filtered + real miss) as misses.
     # Recall(adjusted) only counts real misses — the honest model-quality measure.
     precision_raw = tp / (tp + total_fp) if (tp + total_fp) > 0 else 0
@@ -165,6 +168,7 @@ def main():
     print(f"False Negatives (real misses):       {fn}")
     print(f"FP — Imperial:                       {fp_imperial}")
     print(f"FP — Deity / personification:        {fp_deity}")
+    print(f"FP — Place name:                     {fp_place}")
     print(f"FP — Bare imperial epithet:          {fp_epithet}")
     print(f"Candidate Discoveries (real FPs):    {fp_other}")
     print("-" * 60)

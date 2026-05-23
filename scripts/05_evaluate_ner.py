@@ -11,7 +11,8 @@ PRAENOMEN_EXPANSIONS = {
 }
 
 IMPERIAL_KEYWORDS = {'emperor', 'divus', 'caesar', 'augustus', 'augusta', 'imperator'}
-IMPERIAL_FORMULAE = ('imperatori', 'imperator ', 'imp. caes', 'imp caes', 'domino nostro', 'divo ', 'divae ')
+IMPERIAL_FORMULAE = ('imperatori', 'imperator ', 'imp. caes', 'imp caes',
+                     'domino nostro', 'divo ', 'divae ', 'divi ')
 
 def normalize(text):
     if not text:

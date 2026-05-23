@@ -1,0 +1,71 @@
+# Emperor and imperial-family name signatures.
+# One signature per line. Multi-token signatures use commas — ALL tokens
+# must be present in the person's name fields for the signature to fire.
+# Single-token entries match if just that token is present.
+#
+# Used by name_filters.is_imperial_person() to bucket emperor/imperial-family
+# extractions out of the "discoveries" list. Tokens are matched lowercase
+# after bracket/digit cleanup.
+
+# Julio-Claudians
+augustus
+tiberius,caesar
+caligula
+claudius,caesar
+nero,caesar
+
+# Flavians
+vespasianus
+titus,caesar
+domitianus
+
+# Antonines and adoptive
+nerva,caesar
+traianus
+hadrianus
+antoninus,pius
+marcus,aurelius
+verus,lucius
+commodus
+
+# Severans
+septimius,severus
+septimius,geta
+caracalla
+aurelius,antoninus
+macrinus
+elagabalus
+heliogabalus
+severus,alexander
+
+# Third century
+maximinus,thrax
+gordianus
+philippus,arabs
+decius
+valerianus
+gallienus
+aurelianus
+probus
+carus
+diocletianus
+maximianus
+
+# Tetrarchy / Constantinian
+constantius,chlorus
+galerius
+constantinus
+licinius
+maxentius
+crispus
+
+# Later (often attested in late-antique African inscriptions)
+iulianus,apostata
+valentinianus
+valens
+theodosius
+honorius
+arcadius
+
+# Praetorian prefects executed with emperor-level damnatio memoriae
+fulvius,plautianus

@@ -1,0 +1,44 @@
+# Canonical Latin praenomina (post-process whitelist for 06_export_to_dataset.py).
+# Any value in the praenomen field NOT in this set gets rotated left
+# (praenomen -> nomen). Empty lines and lines starting with # are ignored.
+#
+# 18 standard male praenomina (with spelling variants Gaius/Caius, Kaeso/Caeso)
+Lucius
+Gaius
+Caius
+Marcus
+Quintus
+Publius
+Titus
+Sextus
+Tiberius
+Aulus
+Gnaeus
+Decimus
+Numerius
+Servius
+Manius
+Appius
+Kaeso
+Caeso
+Spurius
+Mamercus
+
+# Feminine forms — Roman women occasionally bore praenomina, often inscribed
+# in feminised form. Including these prevents the post-process from
+# misclassifying legitimate female praenomina.
+Gaia
+Caia
+Lucia
+Marcia
+Publia
+Quinta
+Sexta
+Tita
+Tiberia
+Aula
+Decima
+Numeria
+Servia
+Mania
+Appia

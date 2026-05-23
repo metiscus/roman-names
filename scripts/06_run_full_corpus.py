@@ -15,20 +15,23 @@ DAMAGE_THRESHOLD = 0.30
 BATCH_SIZE = 10
 OUTPUT_PATH = 'data/output/africa_proconsularis_ner_full.jsonl'
 
-PRAENOMINA = {
-    'Aulus', 'Appius', 'Gaius', 'Caius', 'Gnaeus', 'Decimus', 'Kaeso',
-    'Lucius', 'Marcus', 'Manius', 'Mamercus', 'Numerius', 'Publius',
-    'Quintus', 'Sextus', 'Servius', 'Spurius', 'Titus', 'Tiberius',
-}
+_LOOKUP_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'lookup')
 
-TRIBUS = {
-    'Aemilia', 'Aniensis', 'Arnensis', 'Camilia', 'Claudia', 'Clustumina',
-    'Collina', 'Cornelia', 'Esquilina', 'Fabia', 'Falerna', 'Galeria',
-    'Horatia', 'Lemonia', 'Maecia', 'Menenia', 'Oufentina', 'Palatina',
-    'Papiria', 'Pollia', 'Pomptina', 'Publilia', 'Pupinia', 'Quirina',
-    'Romilia', 'Sabatina', 'Scaptia', 'Sergia', 'Stellatina', 'Suburana',
-    'Teretina', 'Tromentina', 'Velina', 'Voltinia', 'Voturia',
-}
+
+def _load_lookup(filename):
+    """Load a one-token-per-line text file, preserving original case."""
+    path = os.path.join(_LOOKUP_DIR, filename)
+    result = set()
+    with open(path, encoding='utf-8') as f:
+        for line in f:
+            line = line.split('#', 1)[0].strip()
+            if line:
+                result.add(line)
+    return result
+
+
+PRAENOMINA = _load_lookup('praenomina_prompt.txt')
+TRIBUS = _load_lookup('tribus.txt')
 
 SYSTEM_PROMPT = f"""You are an expert Latin epigrapher specializing in the Roman inscriptions of Africa Proconsularis.
 You will be provided with a list of inscriptions, each with a unique ID.
