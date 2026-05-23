@@ -1,3 +1,7 @@
 *.jsonl filter=lfs diff=lfs merge=lfs -text
 *.geojson filter=lfs diff=lfs merge=lfs -text
 *.json filter=lfs diff=lfs merge=lfs -text
+# Webapp data files served as static assets — keep as regular git objects,
+# not LFS, so GitHub Pages can serve them without LFS bandwidth limits.
+webapp/data/*.geojson !filter !diff !merge -text
+webapp/data/*.json !filter !diff !merge -text
