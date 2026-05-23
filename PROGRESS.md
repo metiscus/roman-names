@@ -112,3 +112,46 @@ Conclusion: the empty rate is not a model failure. Africa Proconsularis genuinel
 
 ### Outstanding before full corpus run
 - Re-run eval (`05_evaluate_ner.py`) with raw inscription input to update headline F1 numbers — current 0.82 was measured on `clean_text_interpretive_word`.
+
+---
+
+## Next Province: Britannia
+
+The pipeline is largely province-agnostic; only ~5 lines are Africa-specific (province constant, output filename, system-prompt opening line, one few-shot example with Punic names). Britain looks like a clean second target.
+
+### Scope and validation
+
+| | Africa Proconsularis | Britannia |
+|---|---|---|
+| EDCS records | 33,044 | 19,192 |
+| After damage filter | 27,447 | 15,764 |
+| LIRE records with structured `people` data | 433 | **2,250** |
+| Estimated API cost | ~$6 | ~$3-4 |
+| Estimated runtime | ~4h | ~2.5h |
+
+Britain is ~60% the size of Africa and has ~5× more LIRE ground truth, so validation will be much stronger. Latin-dominant; minimal Greek to handle.
+
+### Independent cross-reference: RIB Online
+
+Roman Inscriptions of Britain (romaninscriptionsofbritain.org):
+- **License: CC BY 4.0** — texts and the underlying TEI XML are openly licensed. Compatible with CC BY-SA redistribution, attribution required.
+- **No bulk export or public API yet.** Linked-data RDF serialization is "underway" but not shipped. Currently only browsable HTML.
+- Structured endpoints (`/person/0`, `/place/0`, etc.) exist internally but aren't exposed for bulk consumption.
+
+Implication: primary validation stays LIRE-based (programmatic, no permission needed). Enhanced precision claims via 50-record manual lookup against RIB website — fine under their terms. No scraping for bulk RIB data without permission; defer joining RIB cross-references until they publish RDF.
+
+### What to change in the codebase
+
+1. `PROVINCE = 'Britannia'` and output filename (`britannia_ner_full.jsonl`).
+2. System prompt opening: "specializing in ... Africa Proconsularis" → "Britannia".
+3. Swap the African Punic-name few-shot example for a British one — military votive altars are the common pattern, e.g. `P(ublius) Viboleius Secundus aram d(onum) d(edit)`. Consider also adding a Celtic-name example and a unit-abbreviation note (`Leg(io) XX V(aleria) V(ictrix)`, `Ala I A(sturum)`, `Coh(ors)`) so unit names aren't parsed as persons.
+4. Re-run `03_generate_validation_set.py` against LIRE Britain to build a new eval set (~2,250 candidates).
+5. Same few-shot tweaks in `scripts/prompts/ner_v1.txt` for consistency.
+
+### Order of operations
+1. Finish Africa full run (in progress).
+2. Re-measure Africa F1 with the new input format to lock in headline numbers.
+3. Then Britain: half-day setup, ~2.5h runtime, ~$4. Manual RIB spot-check on the discoveries list.
+
+### Wider relevance
+Britain is well-studied (RIB is curated by classicists for decades), so the framing shifts from "discoveries" (Africa pitch) to "first openly-licensed structured CSV of British Roman name attestations with coordinates, dates, and source links." Useful as a data-analysis primitive even where the underlying material is well-known. Gives a cleaner pitch to UK-based scholars and the Roman Society community.
