@@ -68,11 +68,11 @@ def compute_evidence_score(person):
     return score
 
 
-def main():
-    eval_path = 'data/eval/africa_proconsularis_eval.jsonl'
-    corpus_path = 'data/output/africa_proconsularis_ner_full.jsonl'
+def main(province='africa_proconsularis'):
+    eval_path = f'data/eval/{province}_eval.jsonl'
+    corpus_path = f'data/output/{province}_ner_full.jsonl'
     edcs_path = 'data/EDCS_text_cleaned_2022-09-12.json'
-    output_path = 'data/triage_candidates.csv'
+    output_path = f'data/triage_candidates_{province}.csv'
 
     print(f"Loading EDCS for raw-inscription join...")
     with open(edcs_path) as f:
@@ -170,4 +170,9 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--province', default='africa_proconsularis',
+                        help='Province slug matching the eval/corpus filename prefix')
+    args = parser.parse_args()
+    main(province=args.province)

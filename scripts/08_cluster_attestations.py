@@ -268,11 +268,11 @@ def representative(members):
     return max(members, key=score)
 
 
-def main():
-    input_parquet = 'data/roman_names_africa_proconsularis.parquet'
+def main(province='africa_proconsularis'):
+    input_parquet = f'data/roman_names_{province}.parquet'
     output_parquet = input_parquet
-    output_csv = 'data/roman_names_africa_proconsularis.csv'
-    output_clusters = 'data/clusters_summary.csv'
+    output_csv = f'data/roman_names_{province}.csv'
+    output_clusters = f'data/clusters_summary_{province}.csv'
 
     print(f"Loading {input_parquet}...")
     df = pd.read_parquet(input_parquet)
@@ -428,4 +428,9 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--province', default='africa_proconsularis',
+                        help='Province slug matching the parquet filename prefix')
+    args = parser.parse_args()
+    main(province=args.province)

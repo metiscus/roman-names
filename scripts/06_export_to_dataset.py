@@ -44,11 +44,11 @@ def fix_praenomen(praenomen, nomen, cognomen):
     return None, new_nomen, new_cognomen
 
 
-def create_final_dataset():
+def create_final_dataset(province_slug='africa_proconsularis', province_name='Africa proconsularis'):
     # 1. Load the big NER results (JSONL format)
-    input_ner_path = 'data/output/africa_proconsularis_ner_full.jsonl'
-    output_parquet = 'data/roman_names_africa_proconsularis.parquet'
-    output_csv = 'data/roman_names_africa_proconsularis.csv'
+    input_ner_path = f'data/output/{province_slug}_ner_full.jsonl'
+    output_parquet = f'data/roman_names_{province_slug}.parquet'
+    output_csv = f'data/roman_names_{province_slug}.csv'
 
     if not os.path.exists(input_ner_path):
         print(f"Error: {input_ner_path} not found.")
@@ -129,7 +129,7 @@ def create_final_dataset():
             row = {
                 'attestation_id': attestation_id,
                 'source_id': record['id'],
-                'province': 'Africa proconsularis',
+                'province': province_name,
                 'praenomen': praenomen,
                 'nomen': nomen,
                 'cognomen': cognomen,
@@ -174,4 +174,12 @@ def create_final_dataset():
     print("="*30)
 
 if __name__ == "__main__":
-    create_final_dataset()
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--province', default='africa_proconsularis',
+                        help='Province slug matching the NER output filename prefix')
+    parser.add_argument('--province-name', default=None,
+                        help='Display name for province column (default: derived from slug)')
+    args = parser.parse_args()
+    pname = args.province_name or args.province.replace('_', ' ').title()
+    create_final_dataset(province_slug=args.province, province_name=pname)

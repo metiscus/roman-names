@@ -298,43 +298,93 @@ Pipeline-side recommendations for the next NER run (Britannia or hypothetical Af
 
 ---
 
-## Next Province: Britannia
+## Week 4: Multi-Province Expansion (May 2026)
 
-The pipeline is largely province-agnostic; only ~5 lines are Africa-specific (province constant, output filename, system-prompt opening line, one few-shot example with Punic names). Britain looks like a clean second target.
+### Status: Complete (Britannia)
 
-### Scope and validation
+**Goal:** Expand the pipeline to Britannia and Egypt.
 
-| | Africa Proconsularis | Britannia |
+### Accomplishments
+- **Pipeline Generalization:** Parameterized scripts (`03`, `04c`, `05`, `06`) to support multiple provinces via CLI.
+- **Dynamic Prompting:** Implemented `prompt_utils.py` to generate province-specific system prompts and few-shot examples (e.g., military units for Britannia, Punic names for Africa).
+- **Britannia Evaluation (pilot):**
+    - **Dataset:** 500-record evaluation set from LIRE (out of 2,250 available GT records).
+    - **Performance:** Adjusted F1 of **0.83** (Recall 0.87, Precision 0.79).
+    - **High-Status Detection:** Successfully extracted officials like `Titus Attius Tutor (praefectus)`.
+
+### Full Britannia Corpus Run (complete)
+
+- **15,735 records** processed → **9,094 attestations** extracted (55.7% empty rate — higher than Africa's 22.6%; expected given Britannia's proportion of fragmentary military and votive texts).
+- **68 praenomen reclassifications** (off-whitelist → nomen).
+- **Flags:** 55 deity, 312 imperial, 93 bare epithet, 2,588 fragmentary.
+- **Geo coverage:** 82.5% of inscriptions mappable (vs 71.3% Africa) — Britannia's LIRE coordinates are more complete.
+
+### Downstream pipeline (export → eval → cluster → webapp)
+
+`06_export_to_dataset.py`, `05b_eval_from_corpus.py`, `08_cluster_attestations.py`, and `09_build_webapp_data.py` all parameterized with `--province` CLI argument. Default remains `africa_proconsularis` for backwards compatibility. Cluster outputs now go to `data/clusters_summary_{province}.csv`.
+
+**Headline numbers (full Britannia corpus, raw inscription input):**
+
+| Metric | Britannia | Africa (for comparison) |
 |---|---|---|
-| EDCS records | 33,044 | 19,192 |
-| After damage filter | 27,447 | 15,764 |
-| LIRE records with structured `people` data | 433 | **2,250** |
-| Estimated API cost | ~$6 | ~$3-4 |
-| Estimated runtime | ~4h | ~2.5h |
+| Recall (adj, excl. damage) | **0.86** | 0.85 |
+| Precision (adj, excl. non-persons) | **0.86** | 0.68 |
+| F1 (adjusted) | **0.86** | 0.77 |
+| Candidate discoveries | 72 | 165 |
+| Eval records scored | 400 / 500 | 299 / 433 |
+| Damage-filtered (>30% lacunae) | 100 (20%) | 134 (31%) |
 
-Britain is ~60% the size of Africa and has ~5× more LIRE ground truth, so validation will be much stronger. Latin-dominant; minimal Greek to handle.
+Britannia precision is notably higher than Africa (0.86 vs 0.68). Likely reasons: more standardized Roman tria nomina in military/official inscriptions; fewer African/Punic name forms that confuse the classifier; Britannia prompt few-shots included centurion-roster patterns.
 
-### Independent cross-reference: RIB Online
+**Clustering (Britannia):**
+- 7,287 clusters covering 8,947 in-universe attestations
+- 6,518 singletons (89%), 769 multi-member clusters
+- Largest: `Flavius Cerialis` size 23 (high confidence — likely the Vindolanda prefect)
+- Heavy single-cognomen pool (5,963 / 8,947 = 67%) vs Africa — reflects the province's soldier/slave/native naming patterns
 
-Roman Inscriptions of Britain (romaninscriptionsofbritain.org):
-- **License: CC BY 4.0** — texts and the underlying TEI XML are openly licensed. Compatible with CC BY-SA redistribution, attribution required.
-- **No bulk export or public API yet.** Linked-data RDF serialization is "underway" but not shipped. Currently only browsable HTML.
-- Structured endpoints (`/person/0`, `/place/0`, etc.) exist internally but aren't exposed for bulk consumption.
+### Webapp: multi-province selector
 
-Implication: primary validation stays LIRE-based (programmatic, no permission needed). Enhanced precision claims via 50-record manual lookup against RIB website — fine under their terms. No scraping for bulk RIB data without permission; defer joining RIB cross-references until they publish RDF.
+`index.html` now loads province-specific data files (`inscriptions_{province}.geojson`, `clusters_{province}.json`) and re-centers the map on province switch.
 
-### What to change in the codebase
+- Africa Proconsularis: center `[34.5, 10.5]`, zoom 6 — 22,754 inscription features (19MB geojson)
+- Britannia: center `[54.0, -2.0]`, zoom 6 — 6,966 inscription features (4.8MB geojson)
 
-1. `PROVINCE = 'Britannia'` and output filename (`britannia_ner_full.jsonl`).
-2. System prompt opening: "specializing in ... Africa Proconsularis" → "Britannia".
-3. Swap the African Punic-name few-shot example for a British one — military votive altars are the common pattern, e.g. `P(ublius) Viboleius Secundus aram d(onum) d(edit)`. Consider also adding a Celtic-name example and a unit-abbreviation note (`Leg(io) XX V(aleria) V(ictrix)`, `Ala I A(sturum)`, `Coh(ors)`) so unit names aren't parsed as persons.
-4. Re-run `03_generate_validation_set.py` against LIRE Britain to build a new eval set (~2,250 candidates).
-5. Same few-shot tweaks in `scripts/prompts/ner_v1.txt` for consistency.
+**Known FP type from spot check:** `Comes` extracted as a standalone cognomen from EDCS-51600491 (Leintwardine / Bravonium). Raw text: `Comes Masloriu[s]` — model split this rather than reading *comes* as a title modifying Maslorius. Same pattern as Africa's `Pio Felici`. Add `comes`, `miles`, `eques`, `signifer`, `beneficiarius` etc. to a Britannia-specific status-title list for the post-process filter; or add a few-shot prompt example showing the `<title> <name>` pattern.
 
-### Order of operations
-1. Finish Africa full run (in progress).
-2. Re-measure Africa F1 with the new input format to lock in headline numbers.
-3. Then Britain: half-day setup, ~2.5h runtime, ~$4. Manual RIB spot-check on the discoveries list.
+### Triage — candidate discoveries (AI first pass, 2026-05-23)
 
-### Wider relevance
-Britain is well-studied (RIB is curated by classicists for decades), so the framing shifts from "discoveries" (Africa pitch) to "first openly-licensed structured CSV of British Roman name attestations with coordinates, dates, and source links." Useful as a data-analysis primitive even where the underlying material is well-known. Gives a cleaner pitch to UK-based scholars and the Roman Society community.
+`07_generate_triage_csv.py` parameterized for `--province`. Generated `data/triage_candidates_britannia.csv` (72 candidates). Full review in `followup/triage_review_britannia_v1.md` (AI-reviewer caveat applies — treat as hypothesis layer).
+
+**Headline (pending human spot-check):** ~57 / 72 genuine persons (~79% precision on candidates). Among score ≥ 4 candidates: ~89% (25/28).
+
+**Clear FPs (13):**
+- `Avus` — kinship term "grandfather", not a name (same pattern as Africa `Pio Felici`)
+- `Sanctiana` — centuria name with `-ana` adjectival suffix, not a person
+- `Romanus` (from EDCS-07801112) — abbreviation in a formula, not a person
+- Two suffix fragments (`[---]us`, `[---]inus`) — unrecoverable
+- `C. I. S` — just three initials
+- `Caledo` — part of Lossio Veda's extended name; the full person "Lossio Veda Caledo" was not extracted at all (missed!)
+- `Pro()`, `Iunlius` (corrupt text), and four 2–3-char fragments (`Do`, `Ap`, `Sat`, `Ati`)
+
+**Structural issues:** 13 centurion names in genitive (real persons, need nominative normalization). One father-name-extracted-instead-of-deceased case (EDCS-07800922, `civis Cornovia`).
+
+**Genuinely interesting cases:**
+- **C. Iulius Quartus** — Legio XX soldier from Celeia (Pannonia), tombstone at Chester
+- **Carsouna** — Celtic woman's name, wife of Senonian citizen Bruscus. Gallic family in Britain.
+- **Iulius Gaveronis f.** — soldier with Celtic-father filiation, Cohors I Nerviorum
+- **[---]norus, praepositus horreorum** — granary officer "during the most fortunate British expedition" (probably Severus 208–211)
+- **Tib. Claudius Similis** — subject of a Latin/Greek magical curse tablet; mother **Herennia Marcellina** also named but not extracted
+- **Rir[---]regipau(), devotee of Mars Barrex** — Mars Barrex is an extremely rare Celtic deity ("supreme king")
+- **Vedi[---]riconis, civis Cornovia** — Cornovian citizen (Wroxeter area), father's Celtic name
+- **Medolgeacus, Olloco, Vlataus, Saolimar** — Celtic/British native names, likely from curse tablets or votive dedications
+
+**New FP filter candidates:**
+- `avus`/`avia` as cognomen where status = kinship term
+- `-ana` centuria-adjective names (with context guard for real women's names)
+- min raw_name length ≥ 4 chars in `07_generate_triage_csv.py` (drops `Do`, `Ap`, `Sat`, `Ati`)
+
+### Next Steps
+- Human spot-check: verify Avus/Sanctiana FP calls; check whether Lossio Veda and Herennia Marcellina are in the full corpus output; read EDCS-07800922 (civis Cornovia) and EDCS-07801238 (Mars Barrex) against RIB.
+- Egypt: validate overlap with Trismegistos API, set up eval set, run pipeline.
+- Outreach: send courtesy email to Heřmánková (LIRE) with pilot results — both provinces now have headline numbers (Africa F1 0.77, Britannia F1 0.86).
+- Optional Britannia v2: add `comes`/military-title and kinship-term false-positive filters before next run.

@@ -10,11 +10,7 @@ from pathlib import Path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import name_filters
 
-# Paths
-DATA_PATH = Path("data/roman_names_africa_proconsularis.parquet")
-WEBAPP_DATA_DIR = Path("webapp/data")
-GEOJSON_OUTPUT = WEBAPP_DATA_DIR / "inscriptions.geojson"
-CLUSTERS_OUTPUT = WEBAPP_DATA_DIR / "clusters.json"
+# Paths resolved at runtime from --province arg (see __main__)
 
 def safe_int(val, default=0):
     if pd.isna(val) or val == '':
@@ -47,7 +43,12 @@ def get_marker_gender(genders):
         return 'female'
     return 'unknown'
 
-def build_webapp_data():
+def build_webapp_data(province='africa_proconsularis'):
+    DATA_PATH = Path(f"data/roman_names_{province}.parquet")
+    WEBAPP_DATA_DIR = Path("webapp/data")
+    GEOJSON_OUTPUT = WEBAPP_DATA_DIR / f"inscriptions_{province}.geojson"
+    CLUSTERS_OUTPUT = WEBAPP_DATA_DIR / f"clusters_{province}.json"
+
     print(f"Loading {DATA_PATH}...")
     df = pd.read_parquet(DATA_PATH)
     
@@ -177,4 +178,9 @@ def build_webapp_data():
     print(f"Unique clusters: {len(clusters_json)}")
 
 if __name__ == "__main__":
-    build_webapp_data()
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--province', default='africa_proconsularis',
+                        help='Province slug matching the parquet filename prefix')
+    args = parser.parse_args()
+    build_webapp_data(province=args.province)
