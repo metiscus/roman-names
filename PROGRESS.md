@@ -96,6 +96,19 @@ With cleaned input, the model fabricates names from the editor's interpretive fi
 - LIRE metadata join only covers ~20% of records. Added EDCS fallback for `findspot` and `raw_text` → 100% coverage.
 - Defensive `"null"` string scrub for existing partial-run data.
 
+### Empty-persons rate investigation
+
+The pre-fix partial run had 23% of processed records returning zero persons. Investigated 15-record sample drawn from the 1,574 empty records in the (Copy) partial output:
+
+- 71% of empty records have <30 chars of cleaned text (median 15 chars vs 69 chars for nonempty).
+- 28% have >30% damage in the raw inscription.
+
+Sample breakdown:
+- **10/15 correctly empty** — title-only inscriptions (`consuli pro praetore`), funeral formulas with name in lacunae (`fuit suis amabilis vixit in pace...`), `solvit`-only, military roster fragments, single Greek letter, 2-3 letter `tituli fabricationis` stamps.
+- **4/15 borderline** — single name-fragment letters (`APP`, `Cat`, `ilius`, `PV`) where a `fragmentary: true` attestation would be defensible. The cleaned-input run missed these because the lacuna context was stripped.
+- **1/15 unclear**.
+
+Conclusion: the empty rate is not a model failure. Africa Proconsularis genuinely contains many fragments and formula-only inscriptions with no extractable name. With the raw `inscription` input + properly firing damage filter, the empty rate in the new run is expected to drop substantially (heavily damaged records get filtered out before the API call, borderline fragments gain `fragmentary: true` attestations).
+
 ### Outstanding before full corpus run
 - Re-run eval (`05_evaluate_ner.py`) with raw inscription input to update headline F1 numbers — current 0.82 was measured on `clean_text_interpretive_word`.
-- Verify ~23% empty-persons rate on a small sample (could be legitimate formula-only inscriptions or model giving up).
