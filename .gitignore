@@ -9,3 +9,9 @@ __pycache__/
 
 # OS
 .DS_Store
+
+# Personal followup notes — not for repo
+followup/
+
+# Secrets
+.env

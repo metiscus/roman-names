@@ -54,7 +54,18 @@ TRIBUS (voting tribe) — must not be confused with nomen:
 
 NAME FIELD RULES:
 - praenomen, nomen, cognomen fields must contain ONLY name text — never gender values, never status words.
-- If a name element is uncertain or missing, use null — do not fill with gender or status values."""
+- If a name element is uncertain or missing, use null — do not fill with gender or status values.
+
+NAME COHERENCE — multiple cognomina / agnomen:
+- When consecutive Latin name elements appear with NO separator between them, they belong to the SAME person.
+- Separators that split persons: 'et', 'cum', filiation ('filius', 'filia', 'uxor', 'mater', 'pater'),
+  verbs ('posuit', 'fecit', 'vixit', 'dedit', 'pia', 'pius'), or a clear punctuation/line break.
+- If extra name elements follow without a separator, treat them as extended cognomen / agnomen
+  belonging to the same person.
+- Example: 'Aemilia Victoria Fipiorina pia vixit annos XXXV'
+  → ONE person: nomen='Aemilia', cognomen='Victoria Fipiorina' (NOT two persons)
+- Example: 'Aemilia Bonosa et Iulia Crispina'
+  → TWO persons (separated by 'et')."""
 
 
 GENDER_VALUES = {'male', 'female', 'unknown', 'homo', 'vir', 'mulier'}
@@ -69,6 +80,11 @@ class Person(BaseModel):
     fragmentary: bool = Field(False)
 
     def model_post_init(self, __context):
+        # Coerce literal "null" strings to actual None (model occasionally returns these)
+        for field in ('praenomen', 'nomen', 'cognomen', 'status', 'gender'):
+            val = getattr(self, field)
+            if isinstance(val, str) and val.strip().lower() == 'null':
+                object.__setattr__(self, field, None)
         # Guard against gender values leaking into name fields
         for field in ('praenomen', 'nomen', 'cognomen'):
             val = getattr(self, field)
