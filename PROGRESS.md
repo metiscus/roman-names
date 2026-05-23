@@ -194,10 +194,60 @@ LIRE remains the authority; this is a parallel resource that depends on it for v
 ### Next direction (user-set priority)
 
 1. **Triage** the 168 candidate discoveries (manual spot-check, EDCS context + scholarly cross-reference) to produce a real precision-of-discoveries number. Cheapest, biggest credibility unlock.
-2. **Dedup pass** — cluster on nomen+cognomen + findspot proximity + overlapping date, careful around 212 CE Constitutio Antoniniana. Turns N attestations into ~N' distinct individuals. Essential for prosopographical use.
+2. ✅ **Dedup pass** — done. See "Clustering" section below.
 3. **Webapp** — Leaflet + GeoJSON + GitHub Pages per `followup/webapp_plan.md`. Outreach surface.
 
 Britannia and Zenodo upload follow after these.
+
+### Clustering (dedup) — landed
+
+`scripts/08_cluster_attestations.py` implements connected-component clustering over name+location+date compatibility. Two artifacts:
+- `cluster_id`, `cluster_size`, `cluster_confidence` columns appended to the parquet/CSV.
+- `data/clusters_summary.csv` — one row per cluster with representative name, member IDs, findspots, date range, and flags. This is the file a classicist actually reads.
+
+**Universe:** 33,509 attestations (excluding 1,279 flagged is_deity / is_place / is_bare_epithet). is_imperial and fragmentary records ARE included with flags propagated.
+
+**Two pools:**
+- **Main pool** (15,237 records): both nomen + cognomen present. Bucket by `(nomen_prefix[:6], cognomen_prefix[:6])`, union within bucket if praenomen-compatible + location-compatible + date-compatible.
+- **Single-cognomen pool** (13,724 records): no nomen. Bucket by **exact** cognomen (not prefix — the 6-char prefix conflated Victor / Victorinus / Victorina / Victoricus which all share `victor`, blowing one cluster to size 75 in a debug pass). Stricter spatial filter: requires same findspot text, no coordinate fallback.
+
+**Compatibility:**
+- Praenomen: pass unless both present and differ (after Caius↔Gaius / Caeso↔Kaeso / Caia↔Gaia normalization).
+- Location: same findspot (case-insensitive) OR coords ≤50km. Permissive if either side has no location.
+- Date: range overlap. Permissive if either side has no dates.
+
+**Confidence labels:**
+- `low`: single-cognomen cluster with >1 member, OR post-212 CE cluster with majority Aurelius nomen (Constitutio Antoniniana effect).
+- `high`: everything else, including imperial clusters.
+- `excluded`: non-person (deity/place/epithet).
+
+**Results:**
+
+| Stat | Value |
+|---|---|
+| Total attestations | 34,788 |
+| In universe | 33,509 |
+| Total clusters | 28,740 |
+| Singletons (size 1) | 26,298 (92%) |
+| Multi-member clusters | 2,442 |
+| Largest cluster | 72 (C. Clodius Successus — North African lamp maker, confirmed via JSTOR 10.2307/4238723) |
+| Attestations in multi-clusters | 21.5% (target band 15–25%) |
+| `high` confidence | 29,087 |
+| `low` confidence | 4,422 |
+| `excluded` | 1,279 |
+
+**Sanity-check pass:**
+- Flavius Lucretius Florentinus Rusticus → 1 cluster, size 4 (all 4 attestations). ✓
+- Septimius Severus → 1 imperial cluster, size 29. ✓
+- Caracalla (M. Aurelius Antoninus) → 1 imperial cluster, size 28. ✓
+- C. Vibius Marsus → 2 singletons (same person, two cities, >50km apart). Known limitation: famous officials who travel across the province under-cluster by the 50km rule. Documented; downstream users can manually link via `clusters_summary.csv` if needed.
+
+**Cluster-of-many bare cognomens** (Victor × 47, Fortunatus × 35, Bonifatius × 27, Agnus × 22, Saturninus × 18, etc.) are common-cognomen pools at single findspots — almost certainly different individuals sharing a name. All correctly flagged `low` confidence. Downstream consumers filter these out for one-person-per-cluster analyses; aggregate analyses can still use them.
+
+**Known limitations to document with the deposit:**
+- 50km rule under-clusters traveling officials and merchant-stamp series across cities.
+- Single-cognomen clusters with low confidence may inflate or deflate person counts; treat as "set of attestations of this name at this place," not "this individual."
+- Latin morphology not handled — Victor and Victori (nom vs dat) won't cluster in single-cognomen pool. Acceptable since these were already low-confidence.
 
 ### Triage round 1 (AI reviewer, pending human re-verification)
 
