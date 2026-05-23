@@ -84,17 +84,25 @@ def is_imperial_person(person):
     """Person matches a known emperor or imperial-family signature.
 
     `[[name]]` damnatio memoriae brackets in raw_name are also an imperial-grade
-    signal — those only appear on individuals whose memory was condemned by the
-    Senate, almost always emperors or their close circle.
+    signal. We also check the status field for 'imperator' or 'augustus' as
+    a secondary signal for single-name emperor mentions.
     """
     raw = person.get('raw_name') or ''
     if '[[' in raw and ']]' in raw:
         return True
 
     tokens = _clean_tokens(person)
+    
+    # Check signatures (high confidence)
     for sig in EMPEROR_SIGNATURES:
         if sig <= tokens:
             return True
+            
+    # Check status field for clear imperial titles (helps single-name mentions)
+    status = (person.get('status') or '').lower()
+    if 'imperator' in status or 'emperor' in status or 'augustus' in status or 'augusta' in status:
+        return True
+
     return False
 
 
@@ -134,10 +142,10 @@ def classify_non_person_fp(person):
     Returns one of: 'deity', 'imperial', 'place', 'epithet', or None.
     Used by the eval to bucket discoveries.
     """
-    if is_deity(person):
-        return 'deity'
     if is_imperial_person(person):
         return 'imperial'
+    if is_deity(person):
+        return 'deity'
     if is_place(person):
         return 'place'
     if is_bare_epithet(person):

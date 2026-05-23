@@ -1,6 +1,7 @@
 # Data and Temp
 data/
 temp/
+!webapp/data/
 
 # Python
 venv/

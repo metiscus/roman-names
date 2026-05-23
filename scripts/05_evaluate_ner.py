@@ -1,5 +1,6 @@
 import json
 import re
+import argparse
 
 # Standard Latin praenomen abbreviations used in epigraphic databases (LIRE, EDCS)
 PRAENOMEN_EXPANSIONS = {
@@ -48,8 +49,10 @@ def names_match(sig_a, sig_b, threshold=0.75):
     matched = sum(1 for w in query if any(w[:6] == t[:6] for t in target))
     return matched / len(query) >= threshold
 
-def evaluate_ner():
-    input_path = 'data/eval/ner_results_500_batched.json'
+def evaluate_ner(province):
+    safe_name = province.lower().replace(' ', '_')
+    input_path = f'data/eval/{safe_name}_ner_results_batched.json'
+    
     try:
         with open(input_path, 'r', encoding='utf-8') as f:
             results = json.load(f)
@@ -65,7 +68,7 @@ def evaluate_ner():
 
     discoveries_other = []
 
-    print(f"Evaluating {len(results)} records...")
+    print(f"Evaluating {len(results)} records for '{province}'...")
 
     for record in results:
         ground_truth = record['ground_truth']
@@ -117,7 +120,7 @@ def evaluate_ner():
     f1_adj = 2 * (precision_adj * recall_adj) / (precision_adj + recall_adj) if (precision_adj + recall_adj) > 0 else 0
 
     print("-" * 40)
-    print("NER EVALUATION SUMMARY")
+    print(f"NER EVALUATION SUMMARY: {province}")
     print("-" * 40)
     print(f"True Positives:                  {tp}")
     print(f"False Negatives (damaged text):  {fn_damaged}  <- unanswerable from text alone")
@@ -138,4 +141,8 @@ def evaluate_ner():
             print(f"[{d['id']}] {d['name']} -> {d['expanded']} (Status: {d['status']})")
 
 if __name__ == "__main__":
-    evaluate_ner()
+    parser = argparse.ArgumentParser(description="Evaluate NER results for a specific province.")
+    parser.add_argument("--province", type=str, default="Africa proconsularis", help="The province name")
+    args = parser.parse_args()
+    
+    evaluate_ner(args.province)

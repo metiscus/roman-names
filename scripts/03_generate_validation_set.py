@@ -1,28 +1,32 @@
 import json
 import random
 import os
+import argparse
 
-def generate_validation_set():
+def generate_validation_set(province):
     input_file = 'data/LIRE_v1-2.geojson'
     output_dir = 'data/eval'
     os.makedirs(output_dir, exist_ok=True)
     
-    print(f"Loading {input_file}...")
+    # Standardize filename format
+    safe_name = province.lower().replace(' ', '_')
+    dev_path = os.path.join(output_dir, f'{safe_name}_dev.jsonl')
+    eval_path = os.path.join(output_dir, f'{safe_name}_eval.jsonl')
+
+    print(f"Loading {input_file} for province '{province}'...")
     with open(input_file, 'r', encoding='utf-8') as f:
         data = json.load(f)
     
     features = data['features']
-    print(f"Total features: {len(features)}")
+    print(f"Total features in LIRE: {len(features)}")
     
-    # Filter for Africa proconsularis with people data
-    # Priority: clean_text_interpretive_word_EDCS, then clean_text_interpretive_word, then inscription
     pool = []
     for feat in features:
         props = feat['properties']
         people_data = props.get('people')
         
         # Strictly require a valid list of people to ensure dense ground truth
-        if props.get('province') == 'Africa proconsularis' and isinstance(people_data, list) and len(people_data) > 0:
+        if props.get('province') == province and isinstance(people_data, list) and len(people_data) > 0:
             # Determine best text field
             text = props.get('clean_text_interpretive_word_EDCS') or \
                    props.get('clean_text_interpretive_word') or \
@@ -35,8 +39,12 @@ def generate_validation_set():
                     'ground_truth_people': props['people']
                 })
     
-    print(f"Filtered pool size (Africa proconsularis with people): {len(pool)}")
+    print(f"Filtered pool size ({province} with people): {len(pool)}")
     
+    if len(pool) == 0:
+        print(f"Error: No records found for province '{province}'.")
+        return
+
     if len(pool) < 550:
         print(f"Warning: Pool size {len(pool)} is less than the requested 550. Sampling all available.")
         random.shuffle(pool)
@@ -50,9 +58,6 @@ def generate_validation_set():
         eval_set = pool[50:550]
     
     # Write JSONL files
-    dev_path = os.path.join(output_dir, 'africa_proconsularis_dev.jsonl')
-    eval_path = os.path.join(output_dir, 'africa_proconsularis_eval.jsonl')
-    
     with open(dev_path, 'w', encoding='utf-8') as f:
         for item in dev_set:
             f.write(json.dumps(item, ensure_ascii=False) + '\n')
@@ -65,4 +70,8 @@ def generate_validation_set():
     print(f"Saved {len(eval_set)} records to {eval_path}")
 
 if __name__ == "__main__":
-    generate_validation_set()
+    parser = argparse.ArgumentParser(description="Generate validation set from LIRE for a specific province.")
+    parser.add_argument("--province", type=str, default="Africa proconsularis", help="The province name (e.g. 'Britannia', 'Aegyptus')")
+    args = parser.parse_args()
+    
+    generate_validation_set(args.province)
