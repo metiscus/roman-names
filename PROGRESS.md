@@ -128,11 +128,27 @@ Edge case to consider: feminine praenomina like `Publia` (fem. of Publius). Roma
 - 8-record random eyeball sample looked clean: emperors correctly tagged, multi-cognomen names handled, fragmentary signal preserving lacuna markers in name fields (e.g., `Gaius Ser[3] Soricius`).
 
 ### Next session pickup
-1. Confirm full Africa corpus run finished overnight.
-2. Add the praenomen-whitelist post-process to `06_export_to_dataset.py` (plus feminine praenomina handling).
-3. Re-export to CSV/Parquet, sanity-check counts.
-4. Re-run eval with raw inscription input to update headline F1.
+1. ✅ Confirm full Africa corpus run finished overnight. 27,446 records → 34,788 attestations.
+2. ✅ Praenomen-whitelist post-process landed in `06_export_to_dataset.py`. `CANONICAL_PRAENOMINA` set (18 male + spelling variants + feminine forms); off-list values rotate left (`praenomen → nomen`, displaced `nomen`+`cognomen` concatenated into new cognomen). 121 reclassifications in this run (~1.3% of persons with praenomen, ~0.4% of all persons). Sanity-checked: zero off-list values remain; Flavius Lucretius Florentinus Rusticus and other known mid-run problem cases now correctly structured.
+3. ✅ Re-exported. Final: 34,788 attestations.
+4. ✅ Re-evaluated with raw inscription input (`scripts/05b_eval_from_corpus.py`). Reuses corpus-run predictions instead of re-running NER, joins back to eval GT, applies the praenomen fix, and counts damage-filter-skipped inscriptions as `fn_filtered`. Results below.
 5. Then proceed to Britannia setup or webapp build.
+
+### Updated headline numbers (raw inscription input)
+
+| Metric | Old (clean_text, all 433 eval records) | New (raw inscription, 299 records post-damage-filter) |
+|---|---|---|
+| Recall (adj, excl. damage) | 0.93 | **0.85** |
+| Precision (adj, excl. imperial) | 0.73 | **0.68** |
+| F1 (adj) | 0.82 | **0.76** |
+| Potential discoveries | 226 | 186 |
+| Per-record discovery rate | 0.52 | **0.62** |
+
+The headline F1 drops from 0.82 to 0.76 on switching to raw-inscription input. Caveats:
+- **Apples-to-oranges denominators.** The old eval ran on all 433 records (the damage filter was the silent no-op). The new pipeline drops 134 inscriptions (31%) before the API call — 277 GT persons in those dropped records count as `fn_filtered` (unrecoverable from raw text). Scoring is on the 299 survivors, which skew shorter and more fragmentary.
+- **Precision regression source:** emperor-epithet phrases like `Pio Felici` and `Augusta Salutaris` slip past the imperial filter as "discoveries." Per-record discovery rate is actually higher (0.62 vs 0.52) — the model is more aggressive on the survived-damage-filter subset.
+- The qualitative tradeoff from the pre-run A/B test stands: with raw input the model correctly flags fragmentary names instead of fabricating restorations. The full-corpus run rate of `fragmentary: true` is 28.4% (up from 12% under clean-text), which is the desired behavior.
+- 0.76 adjusted F1 with 0.85 recall is still strong for unsupervised NER on noisy epigraphic text. Headline framing for outreach: "0.85 recall and 0.68 precision on inscriptions that survive a 30%-lacuna damage filter; 186 candidate name attestations on the 299-record eval set that don't match LIRE ground truth and warrant manual review."
 
 ---
 
