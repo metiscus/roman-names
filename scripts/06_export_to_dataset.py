@@ -3,6 +3,36 @@ import pandas as pd
 from tqdm import tqdm
 import os
 
+# Canonical Latin praenomina. Anything else in the praenomen field is a
+# misclassification (most often a nomen like Flavius/Iulius the model anchored
+# positionally) and gets rotated left at export time.
+CANONICAL_PRAENOMINA = {
+    # 18 standard male praenomina (Gaius/Caius and Kaeso/Caeso are spelling variants)
+    'Lucius', 'Gaius', 'Caius', 'Marcus', 'Quintus', 'Publius', 'Titus',
+    'Sextus', 'Tiberius', 'Aulus', 'Gnaeus', 'Decimus', 'Numerius',
+    'Servius', 'Manius', 'Appius', 'Kaeso', 'Caeso', 'Spurius', 'Mamercus',
+    # Feminine forms — Roman women occasionally bore praenomina
+    'Gaia', 'Caia', 'Lucia', 'Marcia', 'Publia', 'Quinta', 'Sexta', 'Tita',
+    'Tiberia', 'Aula', 'Decima', 'Numeria', 'Servia', 'Mania', 'Appia',
+}
+
+
+def fix_praenomen(praenomen, nomen, cognomen):
+    """Rotate left if praenomen is off-whitelist (model misclassification).
+
+    Returns (praenomen, nomen, cognomen). The mid-run audit found ~0.5% of
+    persons had a nomen (Fl./Iun./Iul./Fab. etc.) filed in the praenomen
+    field due to positional anchoring overriding the prompt rule.
+    """
+    if praenomen is None or praenomen in CANONICAL_PRAENOMINA:
+        return praenomen, nomen, cognomen
+
+    new_nomen = praenomen
+    parts = [p for p in (nomen, cognomen) if p]
+    new_cognomen = ' '.join(parts) if parts else None
+    return None, new_nomen, new_cognomen
+
+
 def create_final_dataset():
     # 1. Load the big NER results (JSONL format)
     input_ner_path = 'data/output/africa_proconsularis_ner_full.jsonl'
@@ -53,6 +83,7 @@ def create_final_dataset():
     # 3. Flatten and Join
     print(f"Flattening {len(ner_results)} records into name attestations...")
     rows = []
+    praenomen_fixes = 0
     for record in tqdm(ner_results):
         meta = dict(meta_map.get(record['id'], empty_meta))
         # Fall back to EDCS for the ~80% of records not in LIRE
@@ -72,13 +103,21 @@ def create_final_dataset():
                 if isinstance(v, str) and v.strip().lower() == 'null':
                     return None
                 return v
+            praenomen = clean(person.get('praenomen'))
+            nomen = clean(person.get('nomen'))
+            cognomen = clean(person.get('cognomen'))
+            fixed_praenomen, nomen, cognomen = fix_praenomen(praenomen, nomen, cognomen)
+            if fixed_praenomen != praenomen:
+                praenomen_fixes += 1
+            praenomen = fixed_praenomen
+
             row = {
                 'attestation_id': attestation_id,
                 'source_id': record['id'],
                 'province': 'Africa proconsularis',
-                'praenomen': clean(person.get('praenomen')),
-                'nomen': clean(person.get('nomen')),
-                'cognomen': clean(person.get('cognomen')),
+                'praenomen': praenomen,
+                'nomen': nomen,
+                'cognomen': cognomen,
                 'gender': clean(person.get('gender')),
                 'status': clean(person.get('status')),
                 'raw_name': person.get('raw_name'),
@@ -105,6 +144,7 @@ def create_final_dataset():
     print("FINAL DELIVERABLE CREATED")
     print("="*30)
     print(f"Total Names Extracted: {len(df)}")
+    print(f"Praenomen reclassifications (off-whitelist → nomen): {praenomen_fixes}")
     print(f"Parquet File: {output_parquet}")
     print(f"CSV File:     {output_csv}")
     print("="*30)
