@@ -118,3 +118,13 @@ manes
 manibus
 dii
 diis
+
+# Dalmatia/Pannonia/Noricum deities
+nymphae
+silvanus
+silvano
+silvani
+iana
+ianae
+nymphis
+nymphae
