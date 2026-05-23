@@ -33,6 +33,8 @@ is_imperial_inscription = eval_mod.is_imperial_inscription
 is_damaged = eval_mod.is_damaged
 names_match = eval_mod.names_match
 
+from name_filters import classify_non_person_fp
+
 
 def apply_praenomen_fix(persons):
     """Apply the same praenomen rotation that the export script uses."""
@@ -68,6 +70,8 @@ def main():
 
     tp = 0
     fp_imperial = 0
+    fp_deity = 0
+    fp_epithet = 0
     fp_other = 0
     fn = 0
     fn_damaged = 0
@@ -118,8 +122,18 @@ def main():
                 continue
             found = any(names_match(pred_sig, gs) for _, gs in gt_pairs if gs)
             if not found:
+                # Old imperial detection (status keywords + inscription-level formulae)
                 if is_imperial(p_raw) or is_imperial_inscription(text):
                     fp_imperial += 1
+                    continue
+                # New: deity / expanded-imperial / bare-epithet classifier
+                non_person = classify_non_person_fp(p_raw)
+                if non_person == 'imperial':
+                    fp_imperial += 1
+                elif non_person == 'deity':
+                    fp_deity += 1
+                elif non_person == 'epithet':
+                    fp_epithet += 1
                 else:
                     fp_other += 1
                     discoveries_other.append({
@@ -129,7 +143,7 @@ def main():
                         "status": p_raw.get('status'),
                     })
 
-    total_fp = fp_imperial + fp_other
+    total_fp = fp_imperial + fp_deity + fp_epithet + fp_other
     # Recall(raw) treats all unanswered GT (damaged + damage-filtered + real miss) as misses.
     # Recall(adjusted) only counts real misses — the honest model-quality measure.
     precision_raw = tp / (tp + total_fp) if (tp + total_fp) > 0 else 0
@@ -149,18 +163,20 @@ def main():
     print(f"False Negatives (damaged GT name):   {fn_damaged}  <- name in lacuna, unrecoverable")
     print(f"False Negatives (damage-filtered):   {fn_filtered}  <- whole inscription dropped")
     print(f"False Negatives (real misses):       {fn}")
-    print(f"Imperial filtered out:               {fp_imperial}")
-    print(f"Other Discoveries (potential):       {fp_other}")
+    print(f"FP — Imperial:                       {fp_imperial}")
+    print(f"FP — Deity / personification:        {fp_deity}")
+    print(f"FP — Bare imperial epithet:          {fp_epithet}")
+    print(f"Candidate Discoveries (real FPs):    {fp_other}")
     print("-" * 60)
     print(f"Recall (raw, incl. all damage):      {recall_raw:.2f}")
     print(f"Recall (adjusted, excl. damage):     {recall_adj:.2f}")
     print(f"Precision (raw):                     {precision_raw:.2f}")
-    print(f"Precision (adjusted, excl. imperial):{precision_adj:.2f}")
+    print(f"Precision (adj, excl. non-persons):  {precision_adj:.2f}")
     print(f"F1 (adjusted):                       {f1_adj:.2f}")
     print("-" * 60)
 
     if discoveries_other:
-        print(f"\nTOP 10 POTENTIAL DISCOVERIES (Non-Imperial):")
+        print(f"\nTOP 10 CANDIDATE DISCOVERIES (after deity/imperial/epithet filters):")
         for d in discoveries_other[:10]:
             print(f"[{d['id']}] {d['name']} -> {d['expanded']} (Status: {d['status']})")
 

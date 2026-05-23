@@ -1,7 +1,11 @@
 import json
 import pandas as pd
+import sys
 from tqdm import tqdm
 import os
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from name_filters import is_deity, is_imperial_person, is_bare_epithet
 
 # Canonical Latin praenomina. Anything else in the praenomen field is a
 # misclassification (most often a nomen like Flavius/Iulius the model anchored
@@ -111,6 +115,10 @@ def create_final_dataset():
                 praenomen_fixes += 1
             praenomen = fixed_praenomen
 
+            classifier_input = {
+                'praenomen': praenomen, 'nomen': nomen, 'cognomen': cognomen,
+                'raw_name': person.get('raw_name', ''),
+            }
             row = {
                 'attestation_id': attestation_id,
                 'source_id': record['id'],
@@ -122,6 +130,9 @@ def create_final_dataset():
                 'status': clean(person.get('status')),
                 'raw_name': person.get('raw_name'),
                 'fragmentary': person.get('fragmentary', False),
+                'is_deity': is_deity(classifier_input),
+                'is_imperial': is_imperial_person(classifier_input),
+                'is_bare_epithet': is_bare_epithet(classifier_input),
                 **meta,
             }
             rows.append(row)
@@ -144,6 +155,10 @@ def create_final_dataset():
     print("FINAL DELIVERABLE CREATED")
     print("="*30)
     print(f"Total Names Extracted: {len(df)}")
+    print(f"  flagged is_deity:        {df['is_deity'].sum()}")
+    print(f"  flagged is_imperial:     {df['is_imperial'].sum()}")
+    print(f"  flagged is_bare_epithet: {df['is_bare_epithet'].sum()}")
+    print(f"  flagged fragmentary:     {df['fragmentary'].sum()}")
     print(f"Praenomen reclassifications (off-whitelist → nomen): {praenomen_fixes}")
     print(f"Parquet File: {output_parquet}")
     print(f"CSV File:     {output_csv}")
