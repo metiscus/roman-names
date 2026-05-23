@@ -199,6 +199,53 @@ LIRE remains the authority; this is a parallel resource that depends on it for v
 
 Britannia and Zenodo upload follow after these.
 
+### Triage round 1 (AI reviewer, pending human re-verification)
+
+First-pass review of `data/triage_candidates.csv` came back from an AI agent (preserved in gitignored `followup/triage_review_v1.md` with the AI-source caveat). Headline claim: ~93/97 reviewed candidates marked True Person → ~96% precision on the reviewed subset. Treating as a hypothesis layer pending human spot-check — AI etymologies (`Luca bos` = "Lucanian cow" = elephant; `Augusta Emerita` etc.) sound confident in the way AI-reviewer claims do when they're hallucinating.
+
+Three systematic issues claimed:
+1. **Case preservation** — model leaves names in dative/genitive/ablative instead of nominative (e.g., `Publio Fabio Firmano` should normalise to `Publius Fabius Firmanus`). Particularly affects centurions in military rosters (genitive after `|` symbol).
+2. **Place/idiom FPs** — towns (Apisa, Augusta Emerita) and Latin idioms (`Luca bos` = elephant) extracted as persons.
+3. **Bracket blindness** — `Ner[vae(?)]` slipped past `is_imperial_person` because brackets broke token matching.
+
+### Refactor + quick filter fixes (this session)
+
+**Refactor to text-file lookups.** All hardcoded curated sets moved to `scripts/lookup/*.txt` so non-Python contributors can extend them:
+- `praenomina_canonical.txt` (35 entries — 18 male + variants + feminine forms; used by 06_export)
+- `praenomina_prompt.txt` (19 entries — male only; used by 06_run_full_corpus prompt)
+- `tribus.txt` (35 voting tribes; used by 06_run_full_corpus)
+- `deities.txt` (107 tokens; used by name_filters.is_deity)
+- `emperor_signatures.txt` (47 signatures, comma-separated for multi-token; used by name_filters.is_imperial_person)
+- `imperial_epithets.txt` (15 tokens; used by name_filters.is_bare_epithet)
+- `african_places.txt` (2 entries to start: apisa, emerita — extended as new FPs are flagged)
+
+**Filter improvements:**
+- `_clean_tokens()` helper in `name_filters.py` strips `[]()` + digits + `?+*` before tokenization, defeating bracket-blindness on `Ner[vae(?)]`-style imperial names.
+- New `is_place()` classifier: triggers only when cognomen alone matches a known town and there's no praenomen/nomen — conservative, won't false-flag a real person whose name shares a token with a place.
+- `'divi '` (genitive of `divus`) added to `IMPERIAL_FORMULAE` in `05_evaluate_ner.py` — catches `divi Nervae` ("of the divine Nerva") which earlier slipped through with only dative `'divo '` / `'divae '` present.
+
+**Results after fixes:**
+
+| Metric | Pre-filter | After deity/imperial/epithet (last session) | After place/bracket fix (this session) |
+|---|---|---|---|
+| FP — Imperial | 37 | 44 | 46 (+ Nerva via divi formula) |
+| FP — Deity | — | 6 | 5 |
+| FP — Place | — | — | **2** (Apisa, Emerita) |
+| FP — Epithet | — | 5 | 5 |
+| Candidate Discoveries | 186 | 168 | **165** |
+| Precision (adj) | 0.68 | 0.71 | 0.71 |
+| F1 (adj) | 0.76 | 0.77 | 0.77 |
+
+The `Lucae` (= elephant) case is not yet caught — would need a separate idiom/animal filter; bracketed for now since it's a rare edge case.
+
+Export deliverable now carries `is_place` boolean column alongside `is_deity` / `is_imperial` / `is_bare_epithet` / `fragmentary`. Africa run: 944 deity, 1,390 imperial, 332 epithet, 7 place, 10,262 fragmentary out of 34,788 (overlapping).
+
+Pipeline-side recommendations for the next NER run (Britannia or hypothetical Africa v2):
+- **Prompt rule for nominative lemmatization** — covers the case-preservation issue across senatorial dedications and military-roster centurions.
+- **Prompt rule for foreign filiation patterns** — `<Name1> <Name2>(genitive) f(ilius)` parsing for Punic/Libyan names (Boncarth, Asmun).
+- **Few-shot example for centurion `|` symbol** — explicit instruction to lemmatize the genitive name following it.
+- **Hold off re-running Africa** — current data ships with documented caveats; defer the $6 + 4h re-run decision until after Britannia validates the new prompt.
+
 ---
 
 ## Next Province: Britannia
