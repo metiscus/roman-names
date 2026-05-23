@@ -36,20 +36,20 @@ Example: 'C. Iulius Quirina Maximus' → praenomen=Gaius, nomen=Iulius, cognomen
 - If extra name elements follow without a separator, treat them as extended cognomen / agnomen
   belonging to the same person — do NOT split them into multiple persons.
 
+### TITULATURE vs. NAMES — critical:
+The following are honorific epithets or imperial titles. They MUST NOT be placed in the cognomen or nomen fields. Put them in the status field instead:
+- Augustus, Augusta (Empress/Empress-Mother)
+- Caesar (Crown Prince/Co-Emperor)
+- Pius, Pia (Dutiful/Pious)
+- Pertinax (Tenacious — when applied to Septimius Severus as an honorific)
+- Felix (Lucky/Happy)
+- Invictus (Unconquered)
+
+Example: 'Septimius Severus Pius Pertinax' → nomen=Septimius, cognomen=Severus, status='Pius Pertinax'
+Example: 'Iulia Augusta mater castrorum' → nomen=Iulia, cognomen=null, status='Augusta mater castrorum'
+
 ### JSON Schema:
-{
-  "persons": [
-    {
-      "praenomen": "string or null",
-      "nomen": "string or null",
-      "cognomen": "string or null",
-      "gender": "male | female | unknown",
-      "status": "string or null",
-      "raw_name": "The name as it appears in the text",
-      "fragmentary": true | false
-    }
-  ]
-}
+...
 
 ### Few-Shot Examples:
 
@@ -57,10 +57,10 @@ Example: 'C. Iulius Quirina Maximus' → praenomen=Gaius, nomen=Iulius, cognomen
 **Output:**
 {
   "persons": [
-    {"praenomen": "Lucius", "nomen": "Septimius", "cognomen": "Severus Pertinax", "gender": "male", "status": "emperor", "raw_name": "Lucio Septimio Severo Pertinaci", "fragmentary": false},
-    {"praenomen": "Marcus", "nomen": "Aurelius", "cognomen": "Antoninus", "gender": "male", "status": "emperor", "raw_name": "Marco Aurelio Antonino", "fragmentary": false},
-    {"praenomen": "Lucius", "nomen": "Septimius", "cognomen": "Geta", "gender": "male", "status": "emperor", "raw_name": "Lucio Septimio Getae", "fragmentary": false},
-    {"praenomen": "Quintus", "nomen": "Anicius", "cognomen": "Faustus", "gender": "male", "status": "legatus Augustorum", "raw_name": "Quinto Anicio Fausto", "fragmentary": false}
+    {"praenomen": "Lucius", "nomen": "Septimius", "cognomen": "Severus", "gender": "male", "status": "emperor, Pius Pertinax", "raw_name": "Lucio Septimio Severo Pertinaci"},
+    {"praenomen": "Marcus", "nomen": "Aurelius", "cognomen": "Antoninus", "gender": "male", "status": "emperor", "raw_name": "Marco Aurelio Antonino"},
+    {"praenomen": "Lucius", "nomen": "Septimius", "cognomen": "Geta", "gender": "male", "status": "emperor, Caesar", "raw_name": "Lucio Septimio Getae"},
+    {"praenomen": "Quintus", "nomen": "Anicius", "cognomen": "Faustus", "gender": "male", "status": "legatus Augustorum", "raw_name": "Quinto Anicio Fausto"}
   ]
 }
 

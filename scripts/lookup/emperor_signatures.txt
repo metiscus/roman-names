@@ -40,16 +40,25 @@ severus,alexander
 
 # Third century
 maximinus,thrax
+pupienus
+balbinus
 gordianus
 philippus,arabs
 decius
+hostilianus
+trebonianus,gallus
+gallus,vibius
+volusianus
+aemilianus
 valerianus
 gallienus
+claudius,gothicus
+quintillus
 aurelianus
+florianus
 probus
 carus
-diocletianus
-maximianus
+numerianus
 
 # Tetrarchy / Constantinian
 constantius,chlorus

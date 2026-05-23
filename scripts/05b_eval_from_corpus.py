@@ -49,9 +49,9 @@ def apply_praenomen_fix(persons):
     return fixed
 
 
-def main():
-    eval_path = 'data/eval/africa_proconsularis_eval.jsonl'
-    corpus_path = 'data/output/africa_proconsularis_ner_full.jsonl'
+def main(province='africa_proconsularis'):
+    eval_path = f'data/eval/{province}_eval.jsonl'
+    corpus_path = f'data/output/{province}_ner_full.jsonl'
 
     # Load corpus predictions keyed by ID
     corpus_preds = {}
@@ -156,7 +156,7 @@ def main():
     f1_adj = 2 * (precision_adj * recall_adj) / (precision_adj + recall_adj) if (precision_adj + recall_adj) > 0 else 0
 
     print("-" * 60)
-    print("NER EVALUATION — RAW INSCRIPTION INPUT (from full-corpus run)")
+    print(f"NER EVALUATION — {province.upper()} — RAW INSCRIPTION INPUT")
     print("-" * 60)
     print(f"Eval records total:                  {len(eval_records)}")
     print(f"  scored from corpus output:         {matched_records}")
@@ -186,4 +186,9 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--province', default='africa_proconsularis',
+                        help='Province slug matching the eval/corpus filename prefix')
+    args = parser.parse_args()
+    main(province=args.province)
