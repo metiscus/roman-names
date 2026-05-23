@@ -113,6 +113,27 @@ Conclusion: the empty rate is not a model failure. Africa Proconsularis genuinel
 ### Outstanding before full corpus run
 - Re-run eval (`05_evaluate_ner.py`) with raw inscription input to update headline F1 numbers — current 0.82 was measured on `clean_text_interpretive_word`.
 
+### Mid-run spot check (2,560 / 27,447 records processed)
+
+Stats are healthy: 3,083 persons extracted, 28.4% fragmentary flag rate (up from 12%), 22.6% empty rate (consistent with prior analysis), zero "null" string leaks, zero gender leaks. New raw-inscription input is doing what we wanted.
+
+**One real systematic bug found:** the model misclassifies `Fl./Iun./Iul./F./Fab.` abbreviation patterns as praenomen ~0.5% of the time (16/3,083 persons in the partial). When the inscription has `Fl(avius) Polybio` or `Iunius Amicus`, the model correctly expands the abbreviation to the full nomen but then files it in the praenomen field due to positional anchoring — overriding the explicit prompt rule that "Iulius, Flavius, Aurelius are NOMINA, not praenomina." Notable affected person: Flavius Lucretius Florentinus Rusticus, a late-antique governor of Tripolitania, wrongly classified in all 4 of his attestations.
+
+**Decision: post-process fix at export time, not a re-run.** The 18 canonical praenomina are a closed set, so any `praenomen` value outside that whitelist is by definition wrong. The export script can deterministically move it: `praenomen` → `nomen`, push existing `nomen` to `cognomen`. Three-line patch in `06_export_to_dataset.py`. More reliable than re-prompting (the rule didn't catch it the first time), saves the restart cost.
+
+Edge case to consider: feminine praenomina like `Publia` (fem. of Publius). Roman women occasionally had praenomina; the model's reading of `P(ublia) Ogulnia` may actually be correct. The whitelist needs feminine forms added (Publia, Gaia, Marcia, Lucia, Tita, Quinta, etc.) or this should be a soft warning rather than a hard reclassify. Address as part of the post-process patch.
+
+**Other findings cleared:**
+- 21 "tribus in nomen" flags from the heuristic check are all legitimate female nomina (`Aemilia`, `Cornelia`, `Fabia`, `Claudia`, etc.) — false alarms, no fix needed.
+- 8-record random eyeball sample looked clean: emperors correctly tagged, multi-cognomen names handled, fragmentary signal preserving lacuna markers in name fields (e.g., `Gaius Ser[3] Soricius`).
+
+### Next session pickup
+1. Confirm full Africa corpus run finished overnight.
+2. Add the praenomen-whitelist post-process to `06_export_to_dataset.py` (plus feminine praenomina handling).
+3. Re-export to CSV/Parquet, sanity-check counts.
+4. Re-run eval with raw inscription input to update headline F1.
+5. Then proceed to Britannia setup or webapp build.
+
 ---
 
 ## Next Province: Britannia
