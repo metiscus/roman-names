@@ -1,7 +1,11 @@
-# Data and Temp
-data/
+# Data and Temp — ignore contents but allow specific committed files
+data/*
+!data/roman_names_*.parquet
+!data/output/
+data/output/*
+!data/output/africa_proconsularis_ner_full.jsonl
+!data/output/britannia_ner_full.jsonl
 temp/
-!webapp/data/
 
 # Python
 venv/
