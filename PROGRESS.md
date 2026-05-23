@@ -9,16 +9,16 @@
 - **Environment Setup:** 
   - Python virtual environment initialized with `pandas`, `geopandas`, `requests`, `anthropic`, and `tqdm`.
 - **Data Acquisition:**
-  - Automated download of **EDCS 2022** dataset (465MB JSON) from Zenodo.
-  - Automated download of **LIRE** dataset (576MB GeoJSON) from Zenodo.
+  - Automated download of **EDCS 2022** dataset (465MB JSON).
+  - Automated download of **LIRE** dataset (576MB GeoJSON).
+- **Ground Truth Discovery:**
+  - Discovered that the **LIRE** dataset contains structured `people` data for **136,190** inscriptions, including 2,745 in Africa Proconsularis.
+  - Pivoted validation strategy to use LIRE's existing person data as the "Gold Standard," avoiding rate-limit risks with Trismegistos APIs.
 - **Exploratory Data Analysis:**
-  - Filtered EDCS for Egyptian provinces, identifying **1,077** target records for Phase 1 validation.
-  - Analyzed sample texts, confirming a mix of Latin/Greek and significant use of abbreviations.
-- **API Verification:**
-  - Successfully mapped EDCS IDs to **Trismegistos (TM) Text IDs** using the TexRelations API.
-  - Achieved 100% success rate on a 20-record test sample after correcting URL parameters.
+  - Analyzed Africa Proconsularis records in EDCS (33,713 total).
+  - Identified 2,745 records with ground-truth names and ~31,000 records needing extraction.
 
 ### Next Steps
-- Bridge TM Text IDs to **PER_IDs** (Person IDs) to retrieve name components for ground-truth validation.
-- Design and test the initial LLM NER prompt for Egyptian inscriptions.
-- Build the automated evaluation harness (NER output vs. TM ground truth).
+- Generate a validation dataset (500 records) from the Africa Proconsularis subset in LIRE.
+- Design and test the initial LLM NER prompt using this validation set.
+- Build the automated evaluation harness (LLM output vs. LIRE `people` field).
