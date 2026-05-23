@@ -1,43 +1,65 @@
 # Roman Name Attestations Webapp
 
-A static map visualization of Roman name attestations in Africa Proconsularis.
+A static map visualization of Roman personal name attestations extracted from Latin inscriptions, covering Africa Proconsularis and Britannia.
 
 ## Features
 
-- **Interactive Map:** Powered by Leaflet and OpenStreetMap.
+- **Interactive Map:** Powered by Leaflet with DARE Roman-period base tiles.
+- **Province Selector:** Switch between Africa Proconsularis and Britannia; map re-centers automatically.
 - **Marker Clustering:** Handles thousands of data points efficiently.
-- **Prosopographical Clusters:** Link between different inscriptions identified as mentioning the same person.
-- **Filtering:** Filter by name, confidence, gender, and special flags (Imperial, Deity, Fragmentary).
-- **Direct Links:** Each inscription links back to its original record on the [Epigraphik-Datenbank Clauss-Slaby (EDCS)](https://db.edcs.eu/).
+- **Prosopographical Clusters:** Link attestations across inscriptions identified as likely the same individual.
+- **Filtering:** Filter by name search, cluster confidence, gender, and flags (Imperial, Deity, Fragmentary).
+- **Direct Links:** Each inscription links back to its record on [EDCS](https://db.edcs.eu/).
+
+## Data
+
+| Province | Inscriptions | Attestations | Eval F1 |
+|---|---|---|---|
+| Africa Proconsularis | 22,754 | 34,788 | 0.77 |
+| Britannia | 6,966 | 9,094 | 0.86 |
+
+Extracted using Gemini 2.5 Flash with structured output. Validated against [LIRE](https://doi.org/10.5281/zenodo.5776109) ground truth. Source: [EDCS 2022](https://db.edcs.eu/).
 
 ## Local Development
 
-To view the webapp locally:
+Serve from the `webapp/` directory with any static file server:
 
-1. Ensure you have generated the data artifacts (see below).
-2. Open `webapp/index.html` in any modern web browser. No local server is required as it uses relative paths for data.
+```bash
+python3 -m http.server 8080 --directory webapp/
+# then open http://localhost:8080
+```
+
+Opening `index.html` directly via `file://` will fail due to browser CORS restrictions on local JSON/GeoJSON fetches.
 
 ## Regenerating Data
 
-If the underlying research data changes, you can regenerate the webapp artifacts by running:
+Run the full pipeline for each province (requires Python venv with dependencies):
 
 ```bash
-python scripts/09_build_webapp_data.py
+# Export NER results → parquet
+python scripts/06_export_to_dataset.py --province africa_proconsularis
+python scripts/06_export_to_dataset.py --province britannia --province-name "Britannia"
+
+# Deduplicate / cluster
+python scripts/08_cluster_attestations.py --province africa_proconsularis
+python scripts/08_cluster_attestations.py --province britannia
+
+# Build webapp data files
+python scripts/09_build_webapp_data.py --province africa_proconsularis
+python scripts/09_build_webapp_data.py --province britannia
 ```
 
-This script reads `data/roman_names_africa_proconsularis.parquet` and produces:
-- `webapp/data/inscriptions.geojson`
-- `webapp/data/clusters.json`
+Outputs per province: `webapp/data/inscriptions_{province}.geojson` and `webapp/data/clusters_{province}.json`.
 
 ## Deployment
 
-This webapp is designed for hosting on **GitHub Pages**. Simply point GitHub Pages to the `webapp/` folder on your `main` branch.
+Designed for **GitHub Pages**. Enable Pages in repo Settings → Pages → Source: GitHub Actions, then push to `main`. The Actions workflow in `.github/workflows/deploy.yml` handles the rest.
 
 ## Data Sources
 
-- **EDCS (Epigraphik-Datenbank Clauss-Slaby):** Source of inscription texts and metadata.
-- **LIRE (Latin Inscriptions of the Roman Empire):** Source of geographical coordinates for inscriptions.
+- **EDCS:** Epigraphik-Datenbank Clauss-Slaby — inscription texts and metadata.
+- **LIRE:** Latin Inscriptions of the Roman Empire — geographic coordinates and ground-truth people data used for validation.
 
 ## License
 
-The data is provided under **CC BY-SA**.
+Data: CC BY-SA. Code: MIT.
