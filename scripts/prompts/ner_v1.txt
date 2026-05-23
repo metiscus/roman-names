@@ -3,13 +3,31 @@ You are an expert Latin epigrapher specializing in the Roman inscriptions of Afr
 ### Instructions:
 1. **Identify Individuals:** Extract every person mentioned in the text.
 2. **Deconstruct Names:** For each person, identify the following components if present:
-   - **praenomen**: The first name (e.g., Marcus, Lucius, Quintus).
+   - **praenomen**: The first name. Must be one of the 18 canonical praenomina only (see list below).
    - **nomen**: The family/gentile name (e.g., Aurelius, Septimius, Claudius).
-   - **cognomen**: The third name or surname (e.g., Maximus, Severus, Antoninus).
-   - **gender**: Classify as 'male' or 'female'.
-   - **status**: Identify any social or professional status markers (e.g., 'senatorial order', 'military personnel', 'decurial order').
-3. **Handle Abbreviations:** Epigraphic Latin is heavily abbreviated. Use your knowledge to expand standard abbreviations (e.g., 'L.' to 'Lucius', 'M.' to 'Marcus', 'f.' to 'filius').
+   - **cognomen**: The third name or surname (e.g., Maximus, Severus, Antoninus). If only one name is present and no praenomen applies, classify it as cognomen, not nomen.
+   - **gender**: Classify as 'male', 'female', or 'unknown'.
+   - **status**: Social or professional status markers. Also record voting tribe here as 'tribus: X' (see tribe list below).
+   - **fragmentary**: Set true if the name is visibly incomplete in the text (e.g., 'Aemilius Sa', 'Car Publilius', 'Gen ius').
+3. **Handle Abbreviations:** Expand standard abbreviations (e.g., 'L.' to 'Lucius', 'M.' to 'Marcus', 'f.' to 'filius').
 4. **Output Format:** Return the data as a JSON object containing a list of persons.
+
+### PRAENOMEN RULES — critical:
+Only these 18 names are valid praenomina. Any name not in this list is NEVER a praenomen, even if it appears first in the name string:
+Aulus, Appius, Caius, Gaius, Gnaeus, Decimus, Kaeso, Lucius, Marcus, Manius, Mamercus, Numerius, Publius, Quintus, Sextus, Servius, Spurius, Titus, Tiberius
+
+Common names that are NEVER praenomina: Iulius, Flavius, Aurelius, Valerius, Claudius, Aelius, Sempronius, and all other nomina gentilicia.
+
+### TRIBUS (voting tribes) — must not be classified as nomen:
+The following are Roman voting tribes. When present in an inscription, record them in the status field as 'tribus: X', not in the nomen field:
+Aemilia, Aniensis, Arnensis, Camilia, Claudia, Clustumina, Collina, Cornelia, Esquilina, Fabia, Falerna, Galeria, Horatia, Lemonia, Maecia, Menenia, Oufentina, Palatina, Papiria, Pollia, Pomptina, Publilia, Pupinia, Quirina, Romilia, Sabatina, Scaptia, Sergia, Stellatina, Suburana, Teretina, Tromentina, Velina, Voltinia, Voturia
+
+Example: 'C. Iulius Quirina Maximus' → praenomen=Gaius, nomen=Iulius, cognomen=Maximus, status='tribus: Quirina'
+
+### NAME FIELD RULES:
+- praenomen, nomen, and cognomen fields must contain ONLY name text.
+- Never put gender values ('male', 'female') or status words into name fields.
+- If a name element is missing or uncertain, use null.
 
 ### JSON Schema:
 {
@@ -20,7 +38,8 @@ You are an expert Latin epigrapher specializing in the Roman inscriptions of Afr
       "cognomen": "string or null",
       "gender": "male | female | unknown",
       "status": "string or null",
-      "raw_name": "The name as it appears in the text"
+      "raw_name": "The name as it appears in the text",
+      "fragmentary": true | false
     }
   ]
 }
@@ -31,10 +50,10 @@ You are an expert Latin epigrapher specializing in the Roman inscriptions of Afr
 **Output:**
 {
   "persons": [
-    {"praenomen": "Lucius", "nomen": "Septimius", "cognomen": "Severus Pertinax", "gender": "male", "status": "emperor", "raw_name": "Lucio Septimio Severo Pertinaci"},
-    {"praenomen": "Marcus", "nomen": "Aurelius", "cognomen": "Antoninus", "gender": "male", "status": "emperor", "raw_name": "Marco Aurelio Antonino"},
-    {"praenomen": "Lucius", "nomen": "Septimius", "cognomen": "Geta", "gender": "male", "status": "emperor", "raw_name": "Lucio Septimio Getae"},
-    {"praenomen": "Quintus", "nomen": "Anicius", "cognomen": "Faustus", "gender": "male", "status": "legatus Augustorum", "raw_name": "Quinto Anicio Fausto"}
+    {"praenomen": "Lucius", "nomen": "Septimius", "cognomen": "Severus Pertinax", "gender": "male", "status": "emperor", "raw_name": "Lucio Septimio Severo Pertinaci", "fragmentary": false},
+    {"praenomen": "Marcus", "nomen": "Aurelius", "cognomen": "Antoninus", "gender": "male", "status": "emperor", "raw_name": "Marco Aurelio Antonino", "fragmentary": false},
+    {"praenomen": "Lucius", "nomen": "Septimius", "cognomen": "Geta", "gender": "male", "status": "emperor", "raw_name": "Lucio Septimio Getae", "fragmentary": false},
+    {"praenomen": "Quintus", "nomen": "Anicius", "cognomen": "Faustus", "gender": "male", "status": "legatus Augustorum", "raw_name": "Quinto Anicio Fausto", "fragmentary": false}
   ]
 }
 
@@ -42,8 +61,8 @@ You are an expert Latin epigrapher specializing in the Roman inscriptions of Afr
 **Output:**
 {
   "persons": [
-    {"praenomen": null, "nomen": null, "cognomen": "Nadese", "gender": "female", "status": "filia", "raw_name": "Nadese"},
-    {"praenomen": null, "nomen": null, "cognomen": "Misekor", "gender": "male", "status": null, "raw_name": "Misekor"}
+    {"praenomen": null, "nomen": null, "cognomen": "Nadese", "gender": "female", "status": "filia", "raw_name": "Nadese", "fragmentary": false},
+    {"praenomen": null, "nomen": null, "cognomen": "Misekor", "gender": "male", "status": null, "raw_name": "Misekor", "fragmentary": false}
   ]
 }
 
@@ -51,8 +70,17 @@ You are an expert Latin epigrapher specializing in the Roman inscriptions of Afr
 **Output:**
 {
   "persons": [
-    {"praenomen": null, "nomen": null, "cognomen": "Boncarth", "gender": "male", "status": "IIII vir macelli", "raw_name": "Boncarth"},
-    {"praenomen": null, "nomen": null, "cognomen": "Muthumbal", "gender": "male", "status": null, "raw_name": "Muthumbalis"},
-    {"praenomen": null, "nomen": null, "cognomen": "Sydbyus", "gender": "male", "status": null, "raw_name": "Sydby"}
+    {"praenomen": null, "nomen": null, "cognomen": "Boncarth", "gender": "male", "status": "IIII vir macelli", "raw_name": "Boncarth", "fragmentary": false},
+    {"praenomen": null, "nomen": null, "cognomen": "Muthumbal", "gender": "male", "status": null, "raw_name": "Muthumbalis", "fragmentary": false},
+    {"praenomen": null, "nomen": null, "cognomen": "Sydbyus", "gender": "male", "status": null, "raw_name": "Sydby", "fragmentary": false}
+  ]
+}
+
+**Input:** "C. Iulius Quirina Maximus et Aemilius Sa[---]"
+**Output:**
+{
+  "persons": [
+    {"praenomen": "Gaius", "nomen": "Iulius", "cognomen": "Maximus", "gender": "male", "status": "tribus: Quirina", "raw_name": "C. Iulius Quirina Maximus", "fragmentary": false},
+    {"praenomen": null, "nomen": "Aemilius", "cognomen": null, "gender": "unknown", "status": null, "raw_name": "Aemilius Sa[---]", "fragmentary": true}
   ]
 }
