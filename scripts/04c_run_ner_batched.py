@@ -1,5 +1,6 @@
 import os
 import json
+import re
 import time
 from tqdm import tqdm
 from google import genai
@@ -26,6 +27,14 @@ class InscriptionResult(BaseModel):
 class BatchNEROutput(BaseModel):
     results: List[InscriptionResult]
 
+DAMAGE_THRESHOLD = 0.30  # skip inscriptions where >30% of chars are in lacunae
+
+def damage_ratio(text):
+    """Fraction of characters inside editorial brackets (lacunae)."""
+    stripped = re.sub(r'\[[^\]]*\]', '', text)
+    damaged = len(text) - len(stripped)
+    return damaged / len(text) if text else 0
+
 def run_ner_eval_batched():
     api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:
@@ -34,16 +43,9 @@ def run_ner_eval_batched():
 
     client = genai.Client(api_key=api_key)
     
-    # System instruction for batching
-    system_prompt = """You are an expert Latin epigrapher specializing in the Roman inscriptions of Africa Proconsularis. 
-You will be provided with a list of inscriptions, each with a unique ID. 
-Your task is to perform Named Entity Recognition (NER) on each inscription and extract personal names.
-
-For each person identified:
-1. Deconstruct the name into praenomen, nomen, and cognomen.
-2. Identify gender ('male', 'female', or 'unknown') and social/professional status markers.
-3. Handle Abbreviations: Expand standard abbreviations (e.g., 'L.' to 'Lucius', 'M.' to 'Marcus', 'f.' to 'filius').
-4. Return a JSON object containing a 'results' list, where each item matches an ID to its extracted persons list."""
+    # Load system prompt from file
+    with open('scripts/prompts/ner_v1.txt', 'r', encoding='utf-8') as f:
+        system_prompt = f.read()
 
     # Load eval set
     eval_path = 'data/eval/africa_proconsularis_eval.jsonl'
@@ -52,12 +54,16 @@ For each person identified:
         for line in f:
             all_records.append(json.loads(line))
     
+    # Pre-filter heavily damaged inscriptions
+    skipped = [r for r in all_records if damage_ratio(r['text']) > DAMAGE_THRESHOLD]
+    all_records = [r for r in all_records if damage_ratio(r['text']) <= DAMAGE_THRESHOLD]
+    print(f"Skipped {len(skipped)} heavily damaged records (>{int(DAMAGE_THRESHOLD*100)}% lacunae).")
     print(f"Starting batched evaluation run for {len(all_records)} records...")
-    
+
     results_path = 'data/eval/ner_results_500_batched.json'
     batch_size = 10
     final_results = []
-    
+
     # Process in batches
     for i in tqdm(range(0, len(all_records), batch_size), desc="Processing batches"):
         batch = all_records[i:i+batch_size]
@@ -74,6 +80,7 @@ For each person identified:
                     'system_instruction': system_prompt,
                     'response_mime_type': 'application/json',
                     'response_schema': BatchNEROutput,
+                    'thinking_config': {'thinking_budget': 0},
                 }
             )
             
