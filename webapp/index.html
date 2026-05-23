@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Roman Name Attestations - Africa Proconsularis</title>
+    <title>Roman Name Attestations</title>
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
@@ -45,8 +45,13 @@
             border-bottom: 1px solid var(--border-color);
             background: var(--secondary-bg);
         }
-        .sidebar-header h1 { margin: 0 0 5px 0; font-size: 1.2rem; color: var(--primary-color); }
+        .sidebar-header h1 { margin: 0 0 8px 0; font-size: 1.2rem; color: var(--primary-color); }
         .sidebar-header p { margin: 0; font-size: 0.85rem; color: #666; }
+        #province-select {
+            width: 100%; padding: 6px 8px; border: 1px solid #ced4da;
+            border-radius: 5px; font-size: 0.9rem; background: white;
+            color: var(--primary-color); cursor: pointer; margin-bottom: 6px;
+        }
 
         .controls-area { padding: 15px; border-bottom: 1px solid var(--border-color); }
         .search-wrapper { position: relative; width: 100%; margin-bottom: 10px; }
@@ -132,7 +137,11 @@
         <div id="sidebar">
             <div class="sidebar-header">
                 <h1>Roman Names</h1>
-                <p id="summary-text">Africa Proconsularis</p>
+                <select id="province-select">
+                    <option value="africa_proconsularis">Africa Proconsularis</option>
+                    <option value="britannia">Britannia</option>
+                </select>
+                <p id="summary-text">Loading...</p>
             </div>
 
             <div class="controls-area">
@@ -197,6 +206,12 @@
     <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
 
     <script>
+        const PROVINCES = {
+            africa_proconsularis: { label: 'Africa Proconsularis', center: [34.5, 10.5], zoom: 6 },
+            britannia:            { label: 'Britannia',            center: [54.0, -2.0],  zoom: 6 },
+        };
+
+        let currentProvince = 'africa_proconsularis';
         let map, markers, allData, clustersLookup;
         let activeClusterId = null;
         let activeGeoIds = null;
@@ -212,7 +227,8 @@
         }
 
         function initMap() {
-            map = L.map('map', { center: [34.5, 10.5], zoom: 6, minZoom: 4, maxZoom: 11 });
+            const prov = PROVINCES[currentProvince];
+            map = L.map('map', { center: prov.center, zoom: prov.zoom, minZoom: 4, maxZoom: 11 });
             L.tileLayer('https://dh.gu.se/tiles/imperium/{z}/{x}/{y}.png', { 
                 attribution: '&copy; DARE', minZoom: 4, maxZoom: 11, crossOrigin: true 
             }).addTo(map);
@@ -236,13 +252,27 @@
         }
 
         async function loadData() {
+            document.getElementById('summary-text').innerText = 'Loading...';
             try {
-                const [g, c] = await Promise.all([fetch('data/inscriptions.geojson'), fetch('data/clusters.json')]);
+                const [g, c] = await Promise.all([
+                    fetch(`data/inscriptions_${currentProvince}.geojson`),
+                    fetch(`data/clusters_${currentProvince}.json`)
+                ]);
                 allData = await g.json();
                 clustersLookup = await c.json();
                 document.getElementById('summary-text').innerText = `${allData.features.length.toLocaleString()} inscriptions total.`;
                 update();
             } catch (e) { console.error(e); }
+        }
+
+        async function switchProvince(province) {
+            currentProvince = province;
+            activeClusterId = null; activeResultId = null; activeGeoIds = null;
+            document.getElementById('search-input').value = '';
+            markers.clearLayers();
+            const prov = PROVINCES[province];
+            map.setView(prov.center, prov.zoom);
+            await loadData();
         }
 
         function getPopupHtml(feature_props) {
@@ -418,7 +448,12 @@
         document.getElementById('reset-all-btn').addEventListener('click', () => {
             activeClusterId = null; activeResultId = null; activeGeoIds = null;
             document.getElementById('search-input').value = '';
-            update(); map.setView([34.5, 10.5], 6);
+            const prov = PROVINCES[currentProvince];
+            update(); map.setView(prov.center, prov.zoom);
+        });
+
+        document.getElementById('province-select').addEventListener('change', (e) => {
+            switchProvince(e.target.value);
         });
 
         document.querySelectorAll('input[type=checkbox]').forEach(c => c.addEventListener('change', update));

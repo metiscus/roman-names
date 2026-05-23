@@ -100,7 +100,7 @@ def is_imperial_person(person):
             
     # Check status field for clear imperial titles (helps single-name mentions)
     status = (person.get('status') or '').lower()
-    if 'imperator' in status or 'augustus' in status or 'augusta' in status:
+    if 'imperator' in status or 'emperor' in status or 'augustus' in status or 'augusta' in status:
         return True
 
     return False
