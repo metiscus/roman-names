@@ -21,3 +21,5 @@ noster
 pio
 felici
 invicto
+pertinaci
+pertinax

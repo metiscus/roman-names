@@ -118,7 +118,3 @@ manes
 manibus
 dii
 diis
-
-# Imperial cult — "Augusta" alone (no surrounding name) is the deified empress
-augusta
-augustae

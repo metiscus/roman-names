@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Roman Name Attestations - Africa Proconsularis</title>
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
+
+    <style>
+        :root {
+            --sidebar-width: 400px;
+            --primary-bg: #ffffff;
+            --secondary-bg: #f8f9fa;
+            --border-color: #dee2e6;
+            --primary-color: #2c3e50;
+            --accent-color: #e67e22;
+            --male-color: #3498db;
+            --female-color: #e91e63;
+            --mixed-color: #9b59b6;
+            --unknown-color: #95a5a6;
+        }
+        body, html {
+            margin: 0; padding: 0; height: 100%;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            overflow: hidden;
+        }
+        #app-container { display: flex; height: 100vh; width: 100vw; }
+        #map { flex: 1; height: 100%; z-index: 1; }
+
+        #sidebar {
+            width: var(--sidebar-width);
+            height: 100%;
+            background: var(--primary-bg);
+            border-left: 1px solid var(--border-color);
+            display: flex; gap: 0; flex-direction: column;
+            z-index: 1001;
+            box-shadow: -2px 0 10px rgba(0,0,0,0.1);
+        }
+
+        .sidebar-header {
+            padding: 20px;
+            border-bottom: 1px solid var(--border-color);
+            background: var(--secondary-bg);
+        }
+        .sidebar-header h1 { margin: 0 0 5px 0; font-size: 1.2rem; color: var(--primary-color); }
+        .sidebar-header p { margin: 0; font-size: 0.85rem; color: #666; }
+
+        .controls-area { padding: 15px; border-bottom: 1px solid var(--border-color); }
+        .search-wrapper { position: relative; width: 100%; margin-bottom: 10px; }
+        #search-input {
+            width: 100%; padding: 12px 35px 12px 12px; border: 1px solid #ced4da;
+            border-radius: 6px; box-sizing: border-box; font-size: 1rem;
+            outline: none;
+        }
+        #clear-search-btn {
+            position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+            background: none; border: none; font-size: 1.2rem; cursor: pointer; color: #adb5bd;
+            display: none;
+        }
+        #clear-search-btn:hover { color: #495057; }
+        
+        .filter-status-banner {
+            background: #d1ecf1; color: #0c5460;
+            padding: 10px; border-radius: 6px; font-size: 0.85rem;
+            margin-bottom: 10px; border: 1px solid #bee5eb;
+            display: none; flex-direction: column; gap: 8px;
+        }
+        .banner-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+        
+        .btn-small {
+            background: var(--accent-color); color: white; border: none;
+            padding: 4px 10px; border-radius: 4px; cursor: pointer;
+            font-size: 0.75rem; font-weight: bold; white-space: nowrap;
+        }
+        .btn-small:hover { background: #d35400; }
+        .btn-outline {
+            background: transparent; border: 1px solid var(--accent-color);
+            color: var(--accent-color);
+        }
+
+        .sidebar-scroll-area { flex: 1; overflow-y: auto; display: flex; flex-direction: column; }
+
+        #results-pane { display: none; }
+        .results-header {
+            padding: 10px 15px; background: #e9ecef; font-weight: bold;
+            font-size: 0.8rem; color: #495057; display: flex; justify-content: space-between;
+        }
+        .result-item {
+            padding: 12px 15px; border-bottom: 1px solid #eee; cursor: pointer;
+            display: flex; gap: 12px; transition: background 0.2s;
+        }
+        .result-item:hover { background: #f1f3f5; }
+        .result-item.active { background: #fff4e6; border-left: 4px solid var(--accent-color); padding-left: 11px; }
+        .result-number {
+            background: var(--primary-color); color: white;
+            width: 28px; height: 28px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.8rem; font-weight: bold; flex-shrink: 0;
+        }
+        .result-body { flex: 1; }
+        .result-name { font-weight: bold; display: block; font-size: 0.95rem; margin-bottom: 2px; }
+        .result-meta { color: #666; font-size: 0.8rem; }
+
+        #filters-pane { padding: 15px; }
+        .filter-group { margin-bottom: 20px; }
+        .filter-group h3 { margin: 0 0 10px 0; font-size: 0.9rem; color: #495057; text-transform: uppercase; letter-spacing: 0.5px; }
+        .filter-option { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; font-size: 0.9rem; cursor: pointer; }
+
+        .marker-pin {
+            width: 20px; height: 20px; border-radius: 50%;
+            border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            display: flex; align-items: center; justify-content: center;
+            color: white; font-size: 10px; font-weight: bold;
+        }
+
+        .popup-content { min-width: 250px; max-width: 300px; }
+        .person-entry { margin-bottom: 12px; padding: 10px; background: #f8f9fa; border-radius: 8px; border: 1px solid #eee; }
+        .person-name-header { font-weight: bold; font-size: 1rem; color: var(--primary-color); margin-bottom: 5px; display: block; }
+        .person-info { font-size: 0.85rem; color: #495057; }
+        .badge { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: bold; color: white; margin-top: 5px; }
+        .badge-imp { background: #c0392b; } .badge-deity { background: #8e44ad; }
+        .raw-text-area { font-family: serif; font-style: italic; font-size: 0.85rem; padding: 8px; background: #fff; border: 1px solid #ddd; border-radius: 4px; margin-top: 10px; display: none; }
+        .btn-link { color: #007bff; cursor: pointer; text-decoration: none; font-size: 0.8rem; }
+    </style>
+</head>
+<body>
+
+    <div id="app-container">
+        <div id="sidebar">
+            <div class="sidebar-header">
+                <h1>Roman Names</h1>
+                <p id="summary-text">Africa Proconsularis</p>
+            </div>
+
+            <div class="controls-area">
+                <div class="search-wrapper">
+                    <input type="text" id="search-input" placeholder="Search by name..." autocomplete="off" />
+                    <button id="clear-search-btn" title="Clear Search">&times;</button>
+                </div>
+                
+                <div id="filter-status-banner" class="filter-status-banner">
+                    <div class="banner-row">
+                        <span id="banner-text" style="font-weight:bold">Viewing area</span>
+                        <div style="display:flex; gap:5px">
+                            <button id="clear-geo-btn" class="btn-small btn-outline">Exit Group</button>
+                            <button id="reset-all-btn" class="btn-small">Reset Map</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="sidebar-scroll-area">
+                <div id="results-pane">
+                    <div class="results-header">
+                        <span id="results-label">RESULTS</span>
+                        <span id="results-count-label">0</span>
+                    </div>
+                    <div id="results-list"></div>
+                </div>
+
+                <div id="filters-pane">
+                    <div class="filter-group">
+                        <h3>Genders</h3>
+                        <label class="filter-option"><span style="width:12px; height:12px; border-radius:50%; background:var(--male-color)"></span><input type="checkbox" class="f-gender" value="male" checked> Male Only</label>
+                        <label class="filter-option"><span style="width:12px; height:12px; border-radius:50%; background:var(--female-color)"></span><input type="checkbox" class="f-gender" value="female" checked> Female Only</label>
+                        <label class="filter-option"><span style="width:12px; height:12px; border-radius:50%; background:var(--mixed-color)"></span><input type="checkbox" class="f-gender" value="mixed" checked> Mixed</label>
+                        <label class="filter-option"><span style="width:12px; height:12px; border-radius:50%; background:var(--unknown-color)"></span><input type="checkbox" class="f-gender" value="unknown" checked> Unknown</label>
+                    </div>
+
+                    <div class="filter-group">
+                        <h3>Inference</h3>
+                        <label class="filter-option"><input type="checkbox" class="f-conf" value="high" checked> High Confidence</label>
+                        <label class="filter-option"><input type="checkbox" class="f-conf" value="low" checked> Low Confidence</label>
+                    </div>
+
+                    <div class="filter-group">
+                        <h3>Exclude</h3>
+                        <label class="filter-option"><input type="checkbox" id="f-hide-imp"> Imperial Families</label>
+                        <label class="filter-option"><input type="checkbox" id="f-hide-deity"> Deities</label>
+                    </div>
+
+                    <div style="font-size: 0.8rem; color: #888; border-top: 1px solid #eee; padding-top: 15px;">
+                        Data: EDCS & LIRE. Tiles: DARE.<br>
+                        Click a marker to explore its contents in the sidebar.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="map"></div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
+
+    <script>
+        let map, markers, allData, clustersLookup;
+        let activeClusterId = null;
+        let activeGeoIds = null;
+        let currentResults = [];
+        let activeResultId = null;
+        let coordToMarkerMap = {};
+
+        const colors = { male: '#3498db', female: '#e91e63', mixed: '#9b59b6', unknown: '#95a5a6' };
+
+        function formatYear(y) {
+            if (y === 0 || y === null || y === undefined) return '';
+            return y < 0 ? Math.abs(y) + ' BC' : y + ' AD';
+        }
+
+        function initMap() {
+            map = L.map('map', { center: [34.5, 10.5], zoom: 6, minZoom: 4, maxZoom: 11 });
+            L.tileLayer('https://dh.gu.se/tiles/imperium/{z}/{x}/{y}.png', { 
+                attribution: '&copy; DARE', minZoom: 4, maxZoom: 11, crossOrigin: true 
+            }).addTo(map);
+
+            markers = L.markerClusterGroup({ 
+                maxClusterRadius: 40, 
+                disableClusteringAtZoom: 11,
+                spiderfyOnMaxZoom: false,
+                showCoverageOnHover: true,
+                zoomToBoundsOnClick: true,
+                iconCreateFunction: function(cluster) {
+                    let total = 0;
+                    cluster.getAllChildMarkers().forEach(m => { total += m.feature.weight || 1; });
+                    let c = ' marker-cluster-';
+                    if (total < 10) c += 'small'; else if (total < 100) c += 'medium'; else c += 'large';
+                    return new L.DivIcon({ html: '<div><span>' + total.toLocaleString() + '</span></div>', className: 'marker-cluster' + c, iconSize: new L.Point(40, 40) });
+                }
+            });
+
+            map.addLayer(markers);
+        }
+
+        async function loadData() {
+            try {
+                const [g, c] = await Promise.all([fetch('data/inscriptions.geojson'), fetch('data/clusters.json')]);
+                allData = await g.json();
+                clustersLookup = await c.json();
+                document.getElementById('summary-text').innerText = `${allData.features.length.toLocaleString()} inscriptions total.`;
+                update();
+            } catch (e) { console.error(e); }
+        }
+
+        function getPopupHtml(feature_props) {
+            const p = feature_props;
+            const dateStr = (p.date_from || p.date_to) ? ` (${formatYear(p.date_from)} to ${formatYear(p.date_to)})` : '';
+            let html = `<div class="popup-content">`;
+            p.persons.forEach(pers => {
+                const name = [pers.praenomen, pers.nomen, pers.cognomen].filter(x => x).join(' ') || pers.raw_name;
+                html += `<div class="person-entry"><span class="person-name-header">${name}${dateStr}</span><div class="person-info"><strong>Gender:</strong> ${pers.gender}<br>${pers.status ? `<strong>Status:</strong> ${pers.status}<br>` : ''}${pers.is_imperial ? '<span class="badge badge-imp">Imperial</span>' : ''}${pers.is_deity ? '<span class="badge badge-deity">Deity</span>' : ''}</div>${pers.cluster_id ? `<a class="btn-link" onclick="filterByCluster('${pers.cluster_id}')">See all ${pers.cluster_size} attestations ↗</a>` : ''}</div>`;
+            });
+            html += `<div style="font-size:0.8rem; color:#666; border-top:1px solid #eee; padding-top:8px;">Inscription: <strong>${p.edcs_id}</strong> | ${p.findspot}${!p.is_individual ? ' (Stacked)' : ''}<br><a href="${p.edcs_url}" target="_blank" class="btn-link">View on EDCS ↗</a><br><span class="btn-link" onclick="this.nextElementSibling.style.display='block';this.style.display='none'">Show raw text</span><div class="raw-text-area">${p.raw_text}</div></div></div>`;
+            return html;
+        }
+
+        function filterByCluster(cid) {
+            activeClusterId = cid;
+            activeGeoIds = null;
+            document.getElementById('search-input').value = '';
+            update();
+            if (currentResults.length > 0) {
+                const bounds = markers.getBounds();
+                if (bounds.isValid()) map.fitBounds(bounds, { padding: [50, 50] });
+            }
+        }
+
+        function update() {
+            markers.clearLayers();
+            coordToMarkerMap = {};
+            
+            const search = document.getElementById('search-input').value.toLowerCase();
+            const genders = Array.from(document.querySelectorAll('.f-gender:checked')).map(c => c.value);
+            const confs = Array.from(document.querySelectorAll('.f-conf:checked')).map(c => c.value);
+            const hideImp = document.getElementById('f-hide-imp').checked;
+            const hideDeity = document.getElementById('f-hide-deity').checked;
+
+            const isGeoFiltered = !!activeGeoIds || !!activeClusterId;
+            const isSearchFiltered = !!search;
+            const isAnyFiltered = isGeoFiltered || isSearchFiltered;
+            
+            // Visibility logic
+            document.getElementById('filters-pane').style.display = isAnyFiltered ? 'none' : 'block';
+            document.getElementById('results-pane').style.display = isAnyFiltered ? 'block' : 'none';
+            document.getElementById('filter-status-banner').style.display = isGeoFiltered ? 'flex' : 'none';
+            document.getElementById('clear-search-btn').style.display = isSearchFiltered ? 'block' : 'none';
+            
+            let bannerText = activeClusterId ? "Viewing Person" : "Viewing Local Group";
+            document.getElementById('banner-text').innerText = bannerText;
+            
+            let resultsLabel = "RESULTS";
+            if (isGeoFiltered && isSearchFiltered) resultsLabel = "RESULTS IN GROUP";
+            document.getElementById('results-label').innerText = resultsLabel;
+
+            // 1. Filter the full dataset
+            currentResults = allData.features.filter(f => {
+                if (activeClusterId && (!clustersLookup[activeClusterId] || !clustersLookup[activeClusterId].includes(f.properties.edcs_id))) return false;
+                if (activeGeoIds && !activeGeoIds.includes(f.properties.edcs_id)) return false;
+                if (!genders.includes(f.properties.marker_gender)) return false;
+
+                const match = f.properties.persons.filter(p => {
+                    if (search && !(`${p.praenomen} ${p.nomen} ${p.cognomen} ${p.raw_name}`.toLowerCase().includes(search))) return false;
+                    if (!confs.includes(p.cluster_confidence)) return false;
+                    if (hideImp && p.is_imperial) return false;
+                    if (hideDeity && p.is_deity) return false;
+                    return true;
+                });
+                return match.length > 0;
+            });
+
+            document.getElementById('results-count-label').innerText = currentResults.length;
+            renderResults();
+
+            // 2. Geographically group items
+            const geographicStacks = {};
+            currentResults.forEach(f => {
+                if (!f.geometry) return;
+                const coordKey = f.geometry.coordinates.join(',');
+                if (!geographicStacks[coordKey]) {
+                    geographicStacks[coordKey] = {
+                        coords: f.geometry.coordinates,
+                        ids: [],
+                        marker_gender: f.properties.marker_gender,
+                        items: []
+                    };
+                }
+                geographicStacks[coordKey].ids.push(f.properties.edcs_id);
+                geographicStacks[coordKey].items.push(f);
+            });
+
+            // 3. Add deduplicated points
+            Object.values(geographicStacks).forEach(stack => {
+                const latlng = [stack.coords[1], stack.coords[0]];
+                const color = colors[stack.marker_gender] || colors.unknown;
+                let label = null;
+                if (isAnyFiltered && currentResults.length <= 150) {
+                    label = currentResults.findIndex(r => r.properties.edcs_id === stack.ids[0]) + 1;
+                } else if (stack.ids.length > 1) {
+                    label = stack.ids.length;
+                }
+
+                const markerIcon = L.divIcon({
+                    html: `<div class="marker-pin" style="background:${color}">${label || ''}</div>`,
+                    className: '', iconSize: [20, 20], iconAnchor: [10, 10], popupAnchor: [0, -10]
+                });
+
+                const marker = L.marker(latlng, { icon: markerIcon });
+                marker.feature = { ids: stack.ids, weight: stack.ids.length };
+
+                marker.on('click', (e) => {
+                    if (stack.ids.length > 1 && !activeGeoIds) {
+                        activeGeoIds = stack.ids;
+                        update();
+                    } else {
+                        highlightResult(stack.ids[0]);
+                        marker.bindPopup(getPopupHtml(stack.items[0].properties)).openPopup();
+                    }
+                });
+
+                markers.addLayer(marker);
+                coordToMarkerMap[stack.coords.join(',')] = marker;
+            });
+        }
+
+        function renderResults() {
+            const list = document.getElementById('results-list');
+            list.innerHTML = currentResults.map((f, i) => {
+                const p = f.properties.persons[0];
+                const name = [p.praenomen, p.nomen, p.cognomen].filter(x => x).join(' ') || p.raw_name;
+                const dateRange = (f.properties.date_from || f.properties.date_to) ? 
+                    ` (${formatYear(f.properties.date_from)} - ${formatYear(f.properties.date_to)})` : '';
+                return `<div class="result-item ${!!f.geometry ? '' : 'unmapped'} ${activeResultId === f.properties.edcs_id ? 'active' : ''}" onclick="focusResult('${f.properties.edcs_id}')" id="res-${f.properties.edcs_id}"><div class="result-number">${i + 1}</div><div class="result-body"><span class="result-name">${name}${dateRange}</span><div class="result-meta">${f.properties.edcs_id} | ${f.properties.findspot}</div></div></div>`;
+            }).join('');
+        }
+
+        function focusResult(id) {
+            activeResultId = id;
+            const feature = currentResults.find(f => f.properties.edcs_id === id);
+            highlightResult(id);
+            if (feature.geometry) {
+                const coordKey = feature.geometry.coordinates.join(',');
+                const markerLayer = coordToMarkerMap[coordKey];
+                if (markerLayer) {
+                    markers.zoomToShowLayer(markerLayer, () => {
+                        markerLayer.bindPopup(getPopupHtml(feature.properties)).openPopup();
+                    });
+                }
+            }
+        }
+
+        function highlightResult(id) {
+            activeResultId = id;
+            document.querySelectorAll('.result-item').forEach(el => el.classList.remove('active'));
+            const el = document.getElementById('res-' + id);
+            if (el) {
+                el.classList.add('active');
+                el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+        }
+
+        // Hierarchy Controls
+        document.getElementById('search-input').addEventListener('input', debounce(() => update(), 300));
+        
+        document.getElementById('clear-search-btn').addEventListener('click', () => {
+            document.getElementById('search-input').value = '';
+            update();
+        });
+
+        document.getElementById('clear-geo-btn').addEventListener('click', () => {
+            activeGeoIds = null;
+            activeClusterId = null;
+            update();
+        });
+
+        document.getElementById('reset-all-btn').addEventListener('click', () => {
+            activeClusterId = null; activeResultId = null; activeGeoIds = null;
+            document.getElementById('search-input').value = '';
+            update(); map.setView([34.5, 10.5], 6);
+        });
+
+        document.querySelectorAll('input[type=checkbox]').forEach(c => c.addEventListener('change', update));
+
+        function debounce(f, w) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => f(...a), w); }; }
+        initMap(); loadData();
+    </script>
+</body>
+</html>
