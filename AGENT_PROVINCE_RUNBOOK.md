@@ -196,7 +196,17 @@ python3 scripts/08_cluster_attestations.py --province {{PROVINCE_SLUG}}
 
 This deduplicates near-identical name attestations across the corpus. Note the number of unique clusters vs total attestations.
 
-### 4d. Build webapp data
+### 4d. Build LIRE enrichment lookup (run once per repo, not per province)
+
+If `data/lire_enrichment.json` does not exist:
+
+```bash
+python3 scripts/10_build_lire_lookup.py
+```
+
+This reads `data/LIRE_v1-2.geojson` (~576MB) and writes `data/lire_enrichment.json` (~19MB). Takes ~2 minutes. Only needs to be run once; skip if the file already exists.
+
+### 4e. Build webapp data
 
 ```bash
 python3 scripts/09_build_webapp_data.py --province {{PROVINCE_SLUG}}
@@ -205,8 +215,18 @@ python3 scripts/09_build_webapp_data.py --province {{PROVINCE_SLUG}}
 This writes:
 - `webapp/data/inscriptions_{{PROVINCE_SLUG}}.geojson`
 - `webapp/data/clusters_{{PROVINCE_SLUG}}.json`
+- `webapp/data/enrichment_{{PROVINCE_SLUG}}.json`
 
-### 4e. Add province to the webapp selector
+### 4f. Add English translations (optional but recommended)
+
+```bash
+python3 scripts/11_translate_inscriptions.py --province {{PROVINCE_SLUG}} --dry-run
+python3 scripts/11_translate_inscriptions.py --province {{PROVINCE_SLUG}}
+```
+
+The dry run shows how many records will be translated and estimated batches. The full run costs a few cents per province. Translations are written directly into `webapp/data/enrichment_{{PROVINCE_SLUG}}.json` and displayed in popup cards. The script is interruptible — re-run without `--force` to resume.
+
+### 4g. Add province to the webapp selector
 
 Edit `webapp/index.html`. Find the `<select id="province-select">` block and add:
 
@@ -246,7 +266,8 @@ Summarise:
 2. Total name attestations extracted
 3. Any prompt changes made (what problem, what fix)
 4. Any new entries added to lookup files
-5. Any issues still present that warrant human attention
+5. Translation count and any issues with translation quality
+6. Any issues still present that warrant human attention
 
 ---
 
@@ -286,7 +307,9 @@ Summarise:
 | `scripts/05b_eval_from_corpus.py` | Score against LIRE ground truth |
 | `scripts/06_export_to_dataset.py` | Flatten NER output → Parquet |
 | `scripts/08_cluster_attestations.py` | Deduplication clustering |
-| `scripts/09_build_webapp_data.py` | Build GeoJSON + cluster JSON |
+| `scripts/09_build_webapp_data.py` | Build GeoJSON + cluster + enrichment JSON |
+| `scripts/10_build_lire_lookup.py` | Build LIRE enrichment lookup (run once) |
+| `scripts/11_translate_inscriptions.py` | Batch-translate inscription text with Gemini |
 | `scripts/lookup/deities.txt` | Deity name filter list |
 | `scripts/lookup/emperor_signatures.txt` | Imperial name signatures |
 | `data/output/{{PROVINCE_SLUG}}_ner_full.jsonl` | NER output (appended, resumable) |
