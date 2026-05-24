@@ -62,6 +62,16 @@ lauriacenses
 vinnu
 vinnuensis
 
+# Dacia places
+napoca
+apulum
+sarmizegetusa
+potaissa
+porolissum
+dierna
+tibiscum
+drobeta
+
 # Pannonia places
 carnuntum
 carnuntensis

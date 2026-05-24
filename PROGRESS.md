@@ -300,17 +300,20 @@ Pipeline-side recommendations for the next NER run (Britannia or hypothetical Af
 
 ## Week 4: Multi-Province Expansion (May 2026)
 
-### Status: Complete (Britannia)
+### Status: Complete (Britannia, Pannonia inferior)
 
-**Goal:** Expand the pipeline to Britannia and Egypt.
+**Goal:** Expand the pipeline to Britannia and Danubian provinces.
 
 ### Accomplishments
 - **Pipeline Generalization:** Parameterized scripts (`03`, `04c`, `05`, `06`) to support multiple provinces via CLI.
-- **Dynamic Prompting:** Implemented `prompt_utils.py` to generate province-specific system prompts and few-shot examples (e.g., military units for Britannia, Punic names for Africa).
-- **Britannia Evaluation (pilot):**
-    - **Dataset:** 500-record evaluation set from LIRE (out of 2,250 available GT records).
-    - **Performance:** Adjusted F1 of **0.83** (Recall 0.87, Precision 0.79).
-    - **High-Status Detection:** Successfully extracted officials like `Titus Attius Tutor (praefectus)`.
+- **Dynamic Prompting:** Implemented `prompt_utils.py` to generate province-specific system prompts and few-shot examples (e.g., military units for Britannia, Illyrian names for Pannonia).
+- **Britannia Evaluation:**
+    - **Performance:** Adjusted F1 of **0.86** (Recall 0.86, Precision 0.86).
+- **Pannonia inferior Run:**
+    - **Dataset:** Full corpus of 3,341 records processed.
+    - **Performance:** Adjusted F1 of **0.90** (Recall 0.92, Precision 0.87).
+    - **Key Findings:** High-quality extraction of Illyrian single names (Bato, Absucus) and complex military rosters. Correctly handled 2.0 persons per record in high-density military inscriptions.
+    - **Scale:** 4,937 name attestations extracted and clustered.
 
 ### Full Britannia Corpus Run (complete)
 
@@ -318,6 +321,14 @@ Pipeline-side recommendations for the next NER run (Britannia or hypothetical Af
 - **68 praenomen reclassifications** (off-whitelist → nomen).
 - **Flags:** 55 deity, 312 imperial, 93 bare epithet, 2,588 fragmentary.
 - **Geo coverage:** 82.5% of inscriptions mappable (vs 71.3% Africa) — Britannia's LIRE coordinates are more complete.
+
+### Full Pannonia inferior Corpus Run (complete)
+
+- **3,341 records** processed → **4,937 attestations** extracted.
+- **82 praenomen reclassifications** (off-whitelist → nomen).
+- **Flags:** 82 deity, 474 imperial, 33 bare epithet, 1,385 fragmentary.
+- **Geo coverage:** 96.5% of inscriptions mappable.
+
 
 ### Downstream pipeline (export → eval → cluster → webapp)
 
