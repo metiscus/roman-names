@@ -12,10 +12,11 @@ The pipeline uses **Gemini 2.5 Flash** (thinking disabled) with structured JSON 
 4. Identify social status and gender.
 
 ## Repository Structure
-- `data/` — Raw datasets (EDCS, LIRE) and evaluation sets.
-- `scripts/` — Python pipeline: data acquisition, NER extraction, evaluation.
+- `data/` — Raw datasets (EDCS, LIRE) and intermediate build artifacts.
+- `scripts/` — Python pipeline: data acquisition, NER extraction, clustering, evaluation, webapp build.
 - `scripts/prompts/` — Versioned NER prompts.
-- `docs/` — Implementation plans and research context.
+- `scripts/lookup/` — Curated text-file lookup tables (praenomina, deities, emperor signatures, etc.).
+- `webapp/` — Static Leaflet map visualization. See [`webapp/README.md`](webapp/README.md).
 
 ## Current Status
 - [x] Data acquisition complete (EDCS 465MB, LIRE 576MB).
@@ -23,8 +24,11 @@ The pipeline uses **Gemini 2.5 Flash** (thinking disabled) with structured JSON 
 - [x] NER pipeline validated — see results below.
 - [x] Scale to full Africa Proconsularis corpus (~33k records).
 - [x] Scale to Britannia corpus (~16k records).
-- [x] Scale to Pannonia inferior corpus (~3.3k records).
-- [ ] Manual review of discoveries list.
+- [x] Scale to Pannonia inferior, Dacia, Noricum, Dalmatia, Pannonia superior, Moesia superior.
+- [x] Prosopographical clustering across all provinces.
+- [x] Interactive webapp with enriched popups, permalinks, and external database links.
+- [ ] English translations of inscription text.
+- [ ] Manual review of candidate discoveries list.
 
 ## Evaluation Results
 
@@ -71,11 +75,18 @@ fragmentary rather than confident attestations.
 
 The prompt explains the bracket conventions to the model so it can parse them correctly.
 
+## Webapp
+
+An interactive map of all extracted attestations is available at [`webapp/`](webapp/). Features include province switching, name search, prosopographical cluster linking, enriched popups with interpretive text and external database links (CIL, EDH, Trismegistos, Ubi Erat Lupa), and shareable permalinks.
+
+See [`webapp/README.md`](webapp/README.md) for data details and instructions to regenerate.
+
 ## Future Directions
 
-- **Scale**: Run the pipeline on all undamaged Africa Proconsularis records in EDCS (~33k).
-- **Lacuna restoration**: For damaged records, an Ithaca-style model (cf. Assael et al., *Nature* 2022 — trained to restore damaged ancient Greek inscriptions) could eventually fill gaps that text-based NER cannot. This is a separate research direction.
-- **Other provinces**: The validated pipeline is transferable; each province needs province-specific few-shot examples for local naming conventions.
+- **English translations**: Batch-translate inscription text using a low-cost LLM or pull scholarly translations from EDH where available.
+- **Lacuna restoration**: For damaged records, an Ithaca-style model (cf. Assael et al., *Nature* 2022) could recover names in lacunae — an inherent limit of the text-based approach.
+- **Additional provinces**: The pipeline is transferable; each province needs province-specific few-shot examples.
+- **Manual review**: Spot-check the candidate discoveries list against RIB, PIR, and secondary scholarship to produce a precision-of-discoveries number.
 
 ## Methodology
 Full research plan: [roman_ner_research_plan.md](roman_ner_research_plan.md).

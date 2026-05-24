@@ -43,11 +43,26 @@ def get_marker_gender(genders):
         return 'female'
     return 'unknown'
 
+def load_lire_enrichment() -> dict:
+    path = Path("data/lire_enrichment.json")
+    if not path.exists():
+        print("  WARNING: data/lire_enrichment.json not found — run scripts/10_build_lire_lookup.py first")
+        return {}
+    print(f"Loading LIRE enrichment from {path}...")
+    with open(path, encoding="utf-8") as f:
+        data = json.load(f)
+    print(f"  {len(data):,} LIRE records loaded")
+    return data
+
+
 def build_webapp_data(province='africa_proconsularis'):
     DATA_PATH = Path(f"data/roman_names_{province}.parquet")
     WEBAPP_DATA_DIR = Path("webapp/data")
     GEOJSON_OUTPUT = WEBAPP_DATA_DIR / f"inscriptions_{province}.geojson"
     CLUSTERS_OUTPUT = WEBAPP_DATA_DIR / f"clusters_{province}.json"
+    ENRICHMENT_OUTPUT = WEBAPP_DATA_DIR / f"enrichment_{province}.json"
+
+    lire = load_lire_enrichment()
 
     print(f"Loading {DATA_PATH}...")
     df = pd.read_parquet(DATA_PATH)
@@ -90,6 +105,7 @@ def build_webapp_data(province='africa_proconsularis'):
     skipped_count = 0
     mappable_count = 0
     clusters_map = {}
+    enrichment_map = {}
 
     for source_id, group in grouped:
         first_row = group.iloc[0]
@@ -159,6 +175,32 @@ def build_webapp_data(province='africa_proconsularis'):
         }
         features.append(feature)
 
+        # Build enrichment entry for this inscription (loaded async by webapp)
+        enrich: dict = {}
+        raw_type = first_row.get('inscription_type', '')
+        if pd.isna(raw_type):
+            raw_type = ''
+        raw_type = str(raw_type) if raw_type else ''
+        insc_type = ''
+        if raw_type and raw_type not in ('{}', '', 'nan'):
+            try:
+                parsed = json.loads(raw_type)
+                if isinstance(parsed, list) and parsed:
+                    insc_type = ', '.join(parsed)
+                elif isinstance(parsed, str):
+                    insc_type = parsed
+            except (json.JSONDecodeError, TypeError):
+                insc_type = str(raw_type).strip()
+        if insc_type:
+            enrich['inscription_type'] = insc_type
+        lire_rec = lire.get(source_id, {})
+        for key in ('text_edition', 'publication', 'cil_ace_id', 'edh_id', 'tm_uri', 'photo_url', 'lupa_url'):
+            val = lire_rec.get(key)
+            if val:
+                enrich[key] = val
+        if enrich:
+            enrichment_map[source_id] = enrich
+
     clusters_json = {str(k): list(v) for k, v in clusters_map.items()}
 
     WEBAPP_DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -172,10 +214,16 @@ def build_webapp_data(province='africa_proconsularis'):
     with open(CLUSTERS_OUTPUT, "w", encoding="utf-8") as f:
         json.dump(clusters_json, f, ensure_ascii=False)
 
+    print(f"Writing enrichment data to {ENRICHMENT_OUTPUT}...")
+    with open(ENRICHMENT_OUTPUT, "w", encoding="utf-8") as f:
+        json.dump(enrichment_map, f, ensure_ascii=False, separators=(",", ":"))
+
     print("\nStats:")
     print(f"Total inscriptions: {len(grouped)}")
     print(f"Mappable inscriptions: {mappable_count} ({mappable_count/len(grouped):.1%})")
     print(f"Unique clusters: {len(clusters_json)}")
+    enrich_pct = len(enrichment_map) / len(grouped) if grouped else 0
+    print(f"Enriched inscriptions: {len(enrichment_map)} ({enrich_pct:.1%})")
 
 if __name__ == "__main__":
     import argparse

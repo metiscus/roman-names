@@ -1,15 +1,20 @@
-# Roman Name Attestations Webapp
+# Roman Name Attestations — Webapp
 
-A static map visualization of Roman personal name attestations extracted from Latin inscriptions, covering Africa Proconsularis and Britannia.
+A static map visualization of Roman personal name attestations extracted from Latin inscriptions across eight provinces of the Roman Empire.
 
 ## Features
 
-- **Interactive Map:** Powered by Leaflet with DARE Roman-period base tiles.
-- **Province Selector:** Switch between Africa Proconsularis and Britannia; map re-centers automatically.
-- **Marker Clustering:** Handles thousands of data points efficiently.
-- **Prosopographical Clusters:** Link attestations across inscriptions identified as likely the same individual.
-- **Filtering:** Filter by name search, cluster confidence, gender, and flags (Imperial, Deity, Fragmentary).
-- **Direct Links:** Each inscription links back to its record on [EDCS](https://db.edcs.eu/).
+- **Interactive Map:** Leaflet with DARE Roman-period base tiles. Marker clustering handles large corpora efficiently.
+- **Province Selector:** Switch between eight provinces; map re-centers and reloads data automatically.
+- **Name Search & Filtering:** Real-time search by praenomen/nomen/cognomen. Filter by gender, cluster confidence, and special categories (Imperial families, Deities).
+- **Prosopographical Clusters:** Attestations identified as likely the same individual are linked across inscriptions.
+- **Enriched Popups:** Each inscription popup shows:
+  - Inscription type (funerary, honorific, votive, etc.)
+  - Interpreted Latin text (expanded abbreviations, lacunae resolved)
+  - Publication reference (CIL, AE, and other corpora)
+  - External database links: EDCS, CIL ACE, EDH, Trismegistos, Ubi Erat Lupa
+- **Permalinks:** URL hash encodes province + inscription + search state. Use the 🔗 Copy link button in any popup to share a direct link to a specific inscription.
+- **About Modal:** First-visit introduction; re-openable via the `?` button.
 
 ## Data
 
@@ -17,49 +22,77 @@ A static map visualization of Roman personal name attestations extracted from La
 |---|---|---|---|
 | Africa Proconsularis | 22,754 | 34,788 | 0.77 |
 | Britannia | 6,966 | 9,094 | 0.86 |
+| Dalmatia | 5,928 | — | — |
+| Dacia | 3,016 | 5,452 | 0.85 |
+| Noricum | 2,737 | — | — |
+| Pannonia inferior | 2,390 | 4,937 | 0.90 |
+| Pannonia superior | 4,127 | — | — |
+| Moesia superior | 1,151 | — | — |
 
-Extracted using Gemini 2.5 Flash with structured output. Validated against [LIRE](https://doi.org/10.5281/zenodo.5776109) ground truth. Source: [EDCS 2022](https://db.edcs.eu/).
+NER extracted using Gemini 2.5 Flash with structured output. Validated against [LIRE](https://doi.org/10.5281/zenodo.5776109) ground truth. Source: [EDCS 2022](https://db.edcs.eu/).
+
+Popup enrichment data (interpretive text, publication refs, external links) sourced from [LIRE v1.2](https://doi.org/10.5281/zenodo.5776109).
 
 ## Local Development
 
-Serve from the `webapp/` directory with any static file server:
+Serve from the repo root with any static file server:
 
 ```bash
 python3 -m http.server 8080 --directory webapp/
 # then open http://localhost:8080
 ```
 
-Opening `index.html` directly via `file://` will fail due to browser CORS restrictions on local JSON/GeoJSON fetches.
+Opening `index.html` directly via `file://` will fail due to browser CORS restrictions on local JSON fetches.
 
 ## Regenerating Data
 
 Run the full pipeline for each province (requires Python venv with dependencies):
 
 ```bash
-# Export NER results → parquet
+# Export NER results → parquet (if re-running NER)
 python scripts/06_export_to_dataset.py --province africa_proconsularis
-python scripts/06_export_to_dataset.py --province britannia --province-name "Britannia"
 
 # Deduplicate / cluster
 python scripts/08_cluster_attestations.py --province africa_proconsularis
-python scripts/08_cluster_attestations.py --province britannia
 
-# Build webapp data files
+# Build LIRE enrichment lookup (run once; ~2 min on first run)
+python scripts/10_build_lire_lookup.py
+
+# Build webapp data files (GeoJSON + clusters + enrichment)
 python scripts/09_build_webapp_data.py --province africa_proconsularis
-python scripts/09_build_webapp_data.py --province britannia
 ```
 
-Outputs per province: `webapp/data/inscriptions_{province}.geojson` and `webapp/data/clusters_{province}.json`.
+Repeat `08` and `09` for each province slug:
+`africa_proconsularis` · `britannia` · `dalmatia` · `dacia` · `noricum` · `pannonia_inferior` · `pannonia_superior` · `moesia_superior`
+
+### Outputs per province
+
+| File | Description |
+|---|---|
+| `webapp/data/inscriptions_{province}.geojson` | Map features (coordinates, persons, dates) |
+| `webapp/data/clusters_{province}.json` | Cluster → EDCS-ID lookup |
+| `webapp/data/enrichment_{province}.json` | Async-loaded popup enrichment (type, text, links) |
+
+`data/lire_enrichment.json` is an intermediate build artifact (~19MB) produced by `10_build_lire_lookup.py`; it does not need to be committed.
 
 ## Deployment
 
-Designed for **GitHub Pages**. Enable Pages in repo Settings → Pages → Source: GitHub Actions, then push to `main`. The Actions workflow in `.github/workflows/deploy.yml` handles the rest.
+Designed for **GitHub Pages**. Enable Pages in repo Settings → Pages → Source: GitHub Actions, then push to `master`. The Actions workflow in `.github/workflows/deploy.yml` handles the rest.
 
 ## Data Sources
 
-- **EDCS:** Epigraphik-Datenbank Clauss-Slaby — inscription texts and metadata.
-- **LIRE:** Latin Inscriptions of the Roman Empire — geographic coordinates and ground-truth people data used for validation.
+- **[EDCS](https://db.edcs.eu/):** Epigraphik-Datenbank Clauss-Slaby — inscription texts and metadata.
+- **[LIRE v1.2](https://doi.org/10.5281/zenodo.5776109):** Latin Inscriptions of the Roman Empire — geographic coordinates, interpretive text, publication references, and cross-database IDs used for popup enrichment and NER validation.
+- **[CIL ACE](https://cil.bbaw.de/):** Corpus Inscriptionum Latinarum — inscription pages with photos.
+- **[EDH](https://edh.ub.uni-heidelberg.de/):** Epigraphic Database Heidelberg.
+- **[Trismegistos](https://www.trismegistos.org/):** Cross-database text identifier registry.
+- **[Ubi Erat Lupa](https://lupa.at/):** Photographic database of Roman stone monuments (Danube provinces especially).
+- **[DARE](https://dh.gu.se/dare/):** Digital Atlas of the Roman Empire — map tiles.
 
 ## License
 
 Data: CC BY-SA. Code: MIT.
+
+## Feedback
+
+Bug reports and feature ideas: [GitHub Issues](https://github.com/metiscus/roman-names/issues)

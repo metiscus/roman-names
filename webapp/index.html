@@ -129,14 +129,89 @@
         .badge-imp { background: #c0392b; } .badge-deity { background: #8e44ad; }
         .raw-text-area { font-family: serif; font-style: italic; font-size: 0.85rem; padding: 8px; background: #fff; border: 1px solid #ddd; border-radius: 4px; margin-top: 10px; display: none; }
         .btn-link { color: #007bff; cursor: pointer; text-decoration: none; font-size: 0.8rem; }
+
+        /* Intro / About modal */
+        #intro-modal {
+            position: fixed; inset: 0; z-index: 9999;
+            background: rgba(0,0,0,0.6); backdrop-filter: blur(3px);
+            display: flex; align-items: center; justify-content: center;
+        }
+        #intro-modal.hidden { display: none; }
+        .intro-card {
+            background: white; border-radius: 12px; padding: 32px;
+            max-width: 520px; width: 90%; box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-height: 90vh; overflow-y: auto;
+        }
+        .intro-card h2 { margin: 0 0 12px 0; color: var(--primary-color); font-size: 1.4rem; }
+        .intro-card p { margin: 0 0 12px 0; font-size: 0.9rem; color: #444; line-height: 1.6; }
+        .intro-card ul { margin: 0 0 12px 0; padding-left: 20px; font-size: 0.9rem; color: #444; line-height: 1.8; }
+        .intro-sources { font-size: 0.8rem; color: #888; border-top: 1px solid #eee; padding-top: 12px; }
+        .intro-sources a { color: #888; }
+        .intro-footer { display: flex; justify-content: flex-end; margin-top: 20px; }
+        #intro-dismiss-btn {
+            background: var(--accent-color); color: white; border: none;
+            padding: 10px 24px; border-radius: 6px; cursor: pointer;
+            font-size: 1rem; font-weight: bold;
+        }
+        #intro-dismiss-btn:hover { background: #d35400; }
+        .btn-about {
+            background: none; border: 1px solid #ced4da; color: #888;
+            border-radius: 50%; width: 22px; height: 22px; cursor: pointer;
+            font-size: 0.75rem; display: inline-flex; align-items: center; justify-content: center;
+            vertical-align: middle; margin-left: 5px; flex-shrink: 0;
+        }
+        .btn-about:hover { background: #f0f0f0; color: var(--primary-color); }
+
+        /* Enhanced popup elements */
+        .inscr-type { background: #6c757d; }
+        .text-edition-area { font-size: 0.85rem; padding: 8px; background: #fff; border: 1px solid #ddd; border-radius: 4px; margin-top: 6px; line-height: 1.5; }
+        .pub-ref { font-size: 0.75rem; color: #888; font-style: italic; margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 280px; }
+        .db-links { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+        .db-link { font-size: 0.75rem; color: #007bff; text-decoration: none; white-space: nowrap; }
+        .db-link:hover { text-decoration: underline; }
+        .btn-copy-link {
+            float: right; background: none; border: 1px solid #ced4da; color: #888;
+            border-radius: 4px; padding: 2px 7px; cursor: pointer; font-size: 0.7rem; margin-left: 6px;
+        }
+        .btn-copy-link:hover { background: #f0f0f0; color: var(--primary-color); }
     </style>
 </head>
 <body>
 
+    <!-- About modal — shown on first visit, re-opened via "?" button -->
+    <div id="intro-modal" class="hidden">
+        <div class="intro-card">
+            <h2>Roman Name Attestations</h2>
+            <p>This map explores personal names recorded in Roman inscriptions across the imperial provinces. Data is drawn from the <a href="https://db.edcs.eu/" target="_blank">Epigraphic Database Clauss-Slaby (EDCS)</a>, which contains over 500,000 Latin inscriptions.</p>
+            <p>Names were extracted using automated Named Entity Recognition (NER) and grouped into <em>prosopographical clusters</em> — sets of inscriptions that likely refer to the same individual. Each marker on the map represents one or more inscriptions from a single find-spot.</p>
+            <p><strong>How to use:</strong></p>
+            <ul>
+                <li>Select a province to focus the map</li>
+                <li>Search by name (praenomen, nomen, or cognomen)</li>
+                <li>Click a marker to see the people named in that inscription</li>
+                <li>Use filters to explore by gender, confidence level, or social category</li>
+                <li>Follow "See all N attestations" to find all known appearances of a name</li>
+            </ul>
+            <div class="intro-sources">
+                Data: <a href="https://db.edcs.eu/" target="_blank">EDCS</a>,
+                <a href="https://doi.org/10.5281/zenodo.5776109" target="_blank">LIRE v1.2</a>,
+                <a href="https://cil.bbaw.de/" target="_blank">CIL</a>,
+                <a href="https://edh.ub.uni-heidelberg.de/" target="_blank">EDH</a>,
+                <a href="https://www.trismegistos.org/" target="_blank">Trismegistos</a>,
+                <a href="https://lupa.at/" target="_blank">Ubi Erat Lupa</a>.
+                Map tiles: <a href="https://dh.gu.se/dare/" target="_blank">DARE</a>.<br>
+                Bug reports &amp; ideas: <a href="https://github.com/metiscus/roman-names/issues" target="_blank">GitHub Issues</a>
+            </div>
+            <div class="intro-footer">
+                <button id="intro-dismiss-btn">Get Started</button>
+            </div>
+        </div>
+    </div>
+
     <div id="app-container">
         <div id="sidebar">
             <div class="sidebar-header">
-                <h1>Roman Names</h1>
+                <h1 style="display:flex; align-items:center">Roman Names <button class="btn-about" id="about-btn" title="About this map">?</button></h1>
                 <select id="province-select">
                     <option value="all">All Regions</option>
                     <option value="africa_proconsularis">Africa Proconsularis</option>
@@ -200,7 +275,8 @@
 
                     <div style="font-size: 0.8rem; color: #888; border-top: 1px solid #eee; padding-top: 15px;">
                         Data: <a href="https://db.edcs.eu/" target="_blank" style="color:#888">EDCS</a> &amp; <a href="https://doi.org/10.5281/zenodo.5776109" target="_blank" style="color:#888">LIRE</a>. Tiles: <a href="https://dh.gu.se/dare/" target="_blank" style="color:#888">DARE</a>.<br>
-                        Click a marker to explore its contents in the sidebar.
+                        Click a marker to explore its contents in the sidebar.<br><br>
+                        <a href="https://github.com/metiscus/roman-names" target="_blank" style="color:#888">★ GitHub</a> — bug reports &amp; ideas welcome.
                     </div>
                 </div>
             </div>
@@ -232,6 +308,8 @@
         let currentResults = [];
         let activeResultId = null;
         let coordToMarkerMap = {};
+        let enrichmentData = {};
+        let enrichmentPromise = Promise.resolve();
 
         const colors = { male: '#3498db', female: '#e91e63', mixed: '#9b59b6', unknown: '#95a5a6' };
 
@@ -265,6 +343,22 @@
             map.addLayer(markers);
         }
 
+        async function loadEnrichment(province) {
+            enrichmentData = {};
+            try {
+                if (province === 'all') {
+                    const provKeys = Object.keys(PROVINCES).filter(k => k !== 'all');
+                    const results = await Promise.all(
+                        provKeys.map(p => fetch(`data/enrichment_${p}.json`).then(r => r.json()).catch(() => ({})))
+                    );
+                    results.forEach(d => Object.assign(enrichmentData, d));
+                } else {
+                    enrichmentData = await fetch(`data/enrichment_${province}.json`)
+                        .then(r => r.json()).catch(() => ({}));
+                }
+            } catch(e) { /* silently ignore enrichment errors */ }
+        }
+
         async function loadData() {
             document.getElementById('summary-text').innerText = 'Loading...';
             try {
@@ -296,12 +390,15 @@
                 }
                 document.getElementById('summary-text').innerText = `${allData.features.length.toLocaleString()} inscriptions total.`;
                 update();
+                enrichmentPromise = loadEnrichment(currentProvince);
             } catch (e) { console.error(e); }
         }
 
         async function switchProvince(province) {
             currentProvince = province;
             activeClusterId = null; activeResultId = null; activeGeoIds = null;
+            enrichmentData = {};
+            pushHash({ province: province !== 'all' ? province : null, inscription: null, search: null });
             document.getElementById('search-input').value = '';
             markers.clearLayers();
             const prov = PROVINCES[province];
@@ -311,13 +408,45 @@
 
         function getPopupHtml(feature_props) {
             const p = feature_props;
+            const enrich = enrichmentData[p.edcs_id] || {};
             const dateStr = (p.date_from || p.date_to) ? ` (${formatYear(p.date_from)} to ${formatYear(p.date_to)})` : '';
             let html = `<div class="popup-content">`;
             p.persons.forEach(pers => {
                 const name = [pers.praenomen, pers.nomen, pers.cognomen].filter(x => x).join(' ') || pers.raw_name;
                 html += `<div class="person-entry"><span class="person-name-header">${name}${dateStr}</span><div class="person-info"><strong>Gender:</strong> ${pers.gender}<br>${pers.status ? `<strong>Status:</strong> ${pers.status}<br>` : ''}${pers.is_imperial ? '<span class="badge badge-imp">Imperial</span>' : ''}${pers.is_deity ? '<span class="badge badge-deity">Deity</span>' : ''}</div>${pers.cluster_id ? `<a class="btn-link" onclick="filterByCluster('${pers.cluster_id}')">See all ${pers.cluster_size} attestations ↗</a>` : ''}</div>`;
             });
-            html += `<div style="font-size:0.8rem; color:#666; border-top:1px solid #eee; padding-top:8px;">Inscription: <strong>${p.edcs_id}</strong> | ${p.findspot}${!p.is_individual ? ' (Stacked)' : ''}<br><a href="${p.edcs_url}" target="_blank" class="btn-link">View on EDCS ↗</a><br><span class="btn-link" onclick="this.nextElementSibling.style.display='block';this.style.display='none'">Show raw text</span><div class="raw-text-area">${p.raw_text}</div></div></div>`;
+
+            const inscrType = enrich.inscription_type || '';
+            html += `<div style="font-size:0.8rem; color:#666; border-top:1px solid #eee; padding-top:8px;">`;
+            html += `<button id="cpl-${p.edcs_id}" class="btn-copy-link" onclick="copyPermalink('${p.edcs_id}')">🔗 Copy link</button>`;
+            html += `Inscription: <strong>${p.edcs_id}</strong> | ${p.findspot}${!p.is_individual ? ' (Stacked)' : ''}`;
+            if (inscrType) html += `<br><span class="badge inscr-type">${escHtml(inscrType)}</span>`;
+            html += `<br><a href="${p.edcs_url}" target="_blank" class="btn-link">View on EDCS ↗</a>`;
+
+            // External database links
+            const links = [];
+            if (enrich.cil_ace_id) links.push(`<a href="https://cil.bbaw.de/ace/id/${enrich.cil_ace_id}" target="_blank" class="db-link">CIL ↗</a>`);
+            if (enrich.lupa_url) links.push(`<a href="${enrich.lupa_url}" target="_blank" class="db-link">Lupa ↗</a>`);
+            if (enrich.photo_url) links.push(`<a href="${enrich.photo_url}" target="_blank" class="db-link">Photo ↗</a>`);
+            if (enrich.edh_id) links.push(`<a href="https://edh.ub.uni-heidelberg.de/edh/inschrift/${enrich.edh_id}" target="_blank" class="db-link">EDH ↗</a>`);
+            if (enrich.tm_uri) links.push(`<a href="${enrich.tm_uri}" target="_blank" class="db-link">Trismegistos ↗</a>`);
+            if (links.length) html += `<div class="db-links">${links.join('')}</div>`;
+
+            // Publication reference
+            if (enrich.publication) {
+                const pub = enrich.publication.length > 80 ? enrich.publication.slice(0, 80) + '…' : enrich.publication;
+                html += `<div class="pub-ref" title="${escHtml(enrich.publication)}">Ref: ${escHtml(pub)}</div>`;
+            }
+
+            // Raw text toggle
+            html += `<br><span class="btn-link" onclick="this.nextElementSibling.style.display='block';this.style.display='none'">Show raw text</span><div class="raw-text-area">${p.raw_text}</div>`;
+
+            // Interpreted text toggle
+            if (enrich.text_edition) {
+                html += `<br><span class="btn-link" onclick="this.nextElementSibling.style.display='block';this.style.display='none'">Show interpreted text</span><div class="text-edition-area" style="display:none">${escHtml(enrich.text_edition)}</div>`;
+            }
+
+            html += `</div></div>`;
             return html;
         }
 
@@ -420,6 +549,7 @@
                         update();
                     } else {
                         highlightResult(stack.ids[0]);
+                        pushHash({ inscription: stack.ids[0] });
                         marker.bindPopup(getPopupHtml(stack.items[0].properties)).openPopup();
                     }
                 });
@@ -442,9 +572,10 @@
 
         function focusResult(id) {
             activeResultId = id;
+            pushHash({ inscription: id });
             const feature = currentResults.find(f => f.properties.edcs_id === id);
             highlightResult(id);
-            if (feature.geometry) {
+            if (feature && feature.geometry) {
                 const coordKey = feature.geometry.coordinates.join(',');
                 const markerLayer = coordToMarkerMap[coordKey];
                 if (markerLayer) {
@@ -452,6 +583,18 @@
                         markerLayer.bindPopup(getPopupHtml(feature.properties)).openPopup();
                     });
                 }
+            }
+        }
+
+        function openInscriptionById(edcs_id) {
+            const feature = allData.features.find(f => f.properties.edcs_id === edcs_id);
+            if (!feature || !feature.geometry) return;
+            const coordKey = feature.geometry.coordinates.join(',');
+            const markerLayer = coordToMarkerMap[coordKey];
+            if (markerLayer) {
+                markers.zoomToShowLayer(markerLayer, () => {
+                    markerLayer.bindPopup(getPopupHtml(feature.properties)).openPopup();
+                });
             }
         }
 
@@ -466,7 +609,10 @@
         }
 
         // Hierarchy Controls
-        document.getElementById('search-input').addEventListener('input', debounce(() => update(), 300));
+        document.getElementById('search-input').addEventListener('input', debounce(() => {
+            update();
+            pushHash({ search: document.getElementById('search-input').value || null, inscription: null });
+        }, 300));
         
         document.getElementById('clear-search-btn').addEventListener('click', () => {
             document.getElementById('search-input').value = '';
@@ -482,6 +628,7 @@
         document.getElementById('reset-all-btn').addEventListener('click', () => {
             activeClusterId = null; activeResultId = null; activeGeoIds = null;
             document.getElementById('search-input').value = '';
+            pushHash({ inscription: null, search: null });
             const prov = PROVINCES[currentProvince];
             update(); map.setView(prov.center, prov.zoom);
         });
@@ -493,7 +640,69 @@
         document.querySelectorAll('input[type=checkbox]').forEach(c => c.addEventListener('change', update));
 
         function debounce(f, w) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => f(...a), w); }; }
-        initMap(); loadData();
+        function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+        // Permalink / URL hash helpers
+        function readHash() {
+            return Object.fromEntries(new URLSearchParams(window.location.hash.slice(1)));
+        }
+        function pushHash(updates) {
+            const params = new URLSearchParams(window.location.hash.slice(1));
+            Object.entries(updates).forEach(([k, v]) => {
+                if (v != null && v !== '') params.set(k, v);
+                else params.delete(k);
+            });
+            const str = params.toString();
+            history.replaceState(null, '', str ? '#' + str : location.pathname + location.search);
+        }
+        function copyPermalink(edcs_id) {
+            pushHash({ inscription: edcs_id });
+            const btn = document.getElementById('cpl-' + edcs_id);
+            navigator.clipboard.writeText(location.href).then(() => {
+                if (btn) { btn.textContent = '✓ Copied!'; setTimeout(() => { btn.textContent = '🔗 Copy link'; }, 1800); }
+            }).catch(() => {
+                if (btn) { btn.textContent = location.href.length > 40 ? '…' + location.href.slice(-37) : location.href; }
+            });
+        }
+
+        // Intro modal logic
+        (function() {
+            const modal = document.getElementById('intro-modal');
+            if (!localStorage.getItem('intro_dismissed')) {
+                modal.classList.remove('hidden');
+            }
+            document.getElementById('intro-dismiss-btn').addEventListener('click', () => {
+                localStorage.setItem('intro_dismissed', '1');
+                modal.classList.add('hidden');
+            });
+            document.getElementById('about-btn').addEventListener('click', () => {
+                modal.classList.remove('hidden');
+            });
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    localStorage.setItem('intro_dismissed', '1');
+                    modal.classList.add('hidden');
+                }
+            });
+        })();
+
+        // Restore state from URL hash on load
+        (async () => {
+            const hash = readHash();
+            if (hash.province && PROVINCES[hash.province]) {
+                currentProvince = hash.province;
+                document.getElementById('province-select').value = currentProvince;
+            }
+            if (hash.search) {
+                document.getElementById('search-input').value = hash.search;
+            }
+            initMap();
+            await loadData();
+            if (hash.inscription) {
+                await enrichmentPromise;
+                openInscriptionById(hash.inscription);
+            }
+        })();
     </script>
 </body>
 </html>

@@ -57,7 +57,7 @@ def get_system_prompt(province):
   ]}]
 }"""
     elif province.lower() in ('dalmatia', 'pannonia superior', 'pannonia inferior',
-                              'noricum', 'dacia'):
+                              'noricum', 'dacia', 'moesia superior'):
         extra_examples = """
 **Input:** "Bato Platoris f(ilius) eq(ues) alae / Claudiae novae / vix(it) an(nos) XXXV / Epicadus f(ilius) p(osuit)"
 **Output:**
