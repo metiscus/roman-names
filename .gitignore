@@ -5,6 +5,7 @@ data/*
 data/output/*
 !data/output/africa_proconsularis_ner_full.jsonl
 !data/output/britannia_ner_full.jsonl
+!data/output/dalmatia_ner_full.jsonl
 temp/
 
 # Python

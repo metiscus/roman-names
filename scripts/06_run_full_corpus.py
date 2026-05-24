@@ -85,9 +85,13 @@ def load_processed_ids(output_path):
 def main():
     parser = argparse.ArgumentParser(description="Run full corpus NER for a specific province.")
     parser.add_argument("--province", type=str, default="Africa proconsularis", help="The province name")
+    parser.add_argument("--stop-after", type=int, default=None, metavar="N",
+                        help="Stop after processing N new records (for supervised runs). "
+                             "Re-run without this flag to continue from where it stopped.")
     args = parser.parse_args()
 
     province = args.province
+    stop_after = args.stop_after
     safe_name = province.lower().replace(' ', '_')
     output_path = f'data/output/{safe_name}_ner_full.jsonl'
 
@@ -105,6 +109,10 @@ def main():
     remaining = [r for r in all_records if r['id'] not in processed_ids]
     print(f"Already processed: {len(processed_ids)} | Remaining: {len(remaining)}")
 
+    if stop_after:
+        remaining = remaining[:stop_after]
+        print(f"--stop-after {stop_after}: will process at most {len(remaining)} records this run.")
+
     if not remaining:
         print("All records already processed.")
         return
@@ -112,6 +120,7 @@ def main():
     system_prompt = get_system_prompt(province)
 
     errors = 0
+    new_count = 0
     with open(output_path, 'a', encoding='utf-8') as out_f:
         for i in tqdm(range(0, len(remaining), BATCH_SIZE), desc="Processing"):
             batch = remaining[i:i + BATCH_SIZE]
@@ -135,6 +144,7 @@ def main():
                         'id': pred['id'],
                         'persons': pred['persons'],
                     }, ensure_ascii=False) + '\n')
+                    new_count += 1
                 out_f.flush()
 
             except Exception as e:
@@ -144,8 +154,11 @@ def main():
                     print("  Quota hit — stopping.")
                     break
 
-    processed_now = len(load_processed_ids(output_path))
-    print(f"\nDone. Total records in output: {processed_now} / {len(all_records)} | Errors: {errors}")
+    total_now = len(load_processed_ids(output_path))
+    print(f"\nThis run: {new_count} new records | Total in output: {total_now} / {len(all_records)} | Errors: {errors}")
+    if stop_after and new_count >= stop_after:
+        remaining_after = len(all_records) - total_now
+        print(f"Stopped at requested limit. {remaining_after} records remaining — re-run to continue.")
 
 if __name__ == "__main__":
     main()
