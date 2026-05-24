@@ -56,6 +56,12 @@ PROVINCE_ABBREVS = {
     'Alpes Maritimae':              'AP',
 }
 
+# Province abbreviations excluded from GT because the rinscriptions.xls export
+# has too many missing rows (R1b1 internal rank ≠ our reconstructed rank):
+#   MI: 63 missing → up to 63-position drift → nearly all GT entries are wrong
+#   PS: 4 missing → variable drift → spot-checks confirm wrong matches
+UNRELIABLE_ABBREVS = {'MI', 'PS'}
+
 
 # ---------------------------------------------------------------------------
 # Download helpers
@@ -237,6 +243,11 @@ def parse_people(people_rows, code_to_tm, tm_to_edcs):
             stats['no_code'] += 1
             continue
 
+        m_abbrev = re.match(r'^\d+([A-Za-z]+)$', code)
+        if m_abbrev and m_abbrev.group(1) in UNRELIABLE_ABBREVS:
+            stats['unreliable_province'] += 1
+            continue
+
         tm = code_to_tm.get(code)
         if tm is None:
             stats['code_not_found'] += 1
@@ -267,6 +278,7 @@ def parse_people(people_rows, code_to_tm, tm_to_edcs):
         stats['ok'] += 1
 
     print(f"  Resolved:         {stats['ok']:,} person records")
+    print(f"  Unreliable prov:  {stats['unreliable_province']:,}  (MI/PS excluded — rank drift too large)")
     print(f"  Code not found:   {stats['code_not_found']:,}  (province name mismatch / unknown)")
     print(f"  No TM bridge:     {stats['no_tm_bridge']:,}  (inscription has no TM ID in R1b1)")
     print(f"  TM not in LIRE:   {stats['tm_not_in_lire']:,}")
