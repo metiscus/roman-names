@@ -300,7 +300,7 @@ Pipeline-side recommendations for the next NER run (Britannia or hypothetical Af
 
 ## Week 4: Multi-Province Expansion (May 2026)
 
-### Status: Complete (Britannia, Pannonia inferior)
+### Status: Complete (Britannia, Pannonia inferior, Dacia)
 
 **Goal:** Expand the pipeline to Britannia and Danubian provinces.
 
@@ -312,8 +312,13 @@ Pipeline-side recommendations for the next NER run (Britannia or hypothetical Af
 - **Pannonia inferior Run:**
     - **Dataset:** Full corpus of 3,341 records processed.
     - **Performance:** Adjusted F1 of **0.90** (Recall 0.92, Precision 0.87).
-    - **Key Findings:** High-quality extraction of Illyrian single names (Bato, Absucus) and complex military rosters. Correctly handled 2.0 persons per record in high-density military inscriptions.
+    - **Key Findings:** High-quality extraction of Illyrian single names (Bato, Absucus) and complex military rosters.
     - **Scale:** 4,937 name attestations extracted and clustered.
+- **Dacia Run:**
+    - **Dataset:** Full corpus of 5,375 records processed.
+    - **Performance:** Adjusted F1 of **0.85** (Recall 0.88, Precision 0.83).
+    - **Key Findings:** Excellent handling of Greek script names and extremely high-density military rosters (up to 49 individuals in one record).
+    - **Scale:** 5,452 name attestations extracted and clustered.
 
 ### Full Britannia Corpus Run (complete)
 
@@ -328,6 +333,13 @@ Pipeline-side recommendations for the next NER run (Britannia or hypothetical Af
 - **82 praenomen reclassifications** (off-whitelist → nomen).
 - **Flags:** 82 deity, 474 imperial, 33 bare epithet, 1,385 fragmentary.
 - **Geo coverage:** 96.5% of inscriptions mappable.
+
+### Full Dacia Corpus Run (complete)
+
+- **5,375 records** processed → **5,452 attestations** extracted.
+- **76 praenomen reclassifications** (off-whitelist → nomen).
+- **Flags:** 64 deity, 388 imperial, 49 bare epithet, 1,665 fragmentary.
+- **Geo coverage:** 93.0% of inscriptions mappable.
 
 
 ### Downstream pipeline (export → eval → cluster → webapp)
