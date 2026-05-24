@@ -97,6 +97,14 @@ def get_system_prompt(province):
   "results": [{"id": "D5", "persons": [
     {"praenomen": null, "nomen": "Ripanius", "cognomen": "Flavianus", "gender": "male", "status": "aedilicia potestate Claudii Viruni", "raw_name": "Ripanio Flaviano"}
   ]}]
+}
+
+**Input:** "|(Hastata posterior) / |(centuria) Pol(l)i / Veri"
+**Output:**
+{
+  "results": [{"id": "D6", "persons": [
+    {"praenomen": null, "nomen": "Pollius", "cognomen": "Verus", "gender": "male", "status": null, "raw_name": "Pol(l)i Veri"}
+  ]}]
 }"""
     else:
         extra_examples = ""
