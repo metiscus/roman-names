@@ -41,3 +41,37 @@ iader
 scardona
 epidaurum
 vicus
+
+# Noricum places
+virunum
+viruni
+poetovio
+poetovionensis
+teurnia
+teurniensium
+iuvavum
+iuvavensium
+solva
+solvae
+aguntum
+aguntini
+celeia
+celeiae
+lauriacum
+lauriacenses
+vinnu
+vinnuensis
+
+# Pannonia places
+carnuntum
+carnuntensis
+aquincum
+aquincenses
+savaria
+savariensis
+brigetio
+brigetienses
+siscia
+scarbantia
+arrabona
+mursa

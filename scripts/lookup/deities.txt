@@ -120,7 +120,6 @@ dii
 diis
 
 # Dalmatia/Pannonia/Noricum deities
-nymphae
 silvanus
 silvano
 silvani
@@ -128,3 +127,75 @@ iana
 ianae
 nymphis
 nymphae
+
+# Noricum/Celtic deities
+veica
+veicae
+noriceia
+noriceiae
+grannus
+granno
+sirona
+sironae
+belenus
+beleno
+toutates
+esanicos
+belatucadrus
+belatucadro
+mogontia
+sedatus
+sedato
+bedaius
+bedaio
+genuclis
+latobius
+latobio
+alaunius
+alaunio
+nutrices
+nutricibus
+belinicus
+belinico
+campestribus
+quadruviis
+triviis
+quadriviis
+bivviis
+viviis
+
+# Noricum/Pannonia Celtic deities (also appear as cognomina — filter carefully)
+adsalluta
+adsallutae
+epona
+eponae
+visucius
+visucio
+dobrates
+dobrati
+savus
+savo
+iasae
+bindus
+bindo
+teutanus
+teutano
+
+# Muses (appear as mosaic/relief labels in Pannonia/Noricum)
+clio
+euterpe
+thalia
+melpomene
+terpsichore
+erato
+polyhymnia
+urania
+calliope
+
+# Imperial personifications
+pietas
+pietati
+concordia
+concordiae
+victoria
+victoriae
