@@ -57,10 +57,12 @@ PROVINCE_ABBREVS = {
 }
 
 # Province abbreviations excluded from GT because the rinscriptions.xls export
-# has too many missing rows (R1b1 internal rank ≠ our reconstructed rank):
-#   MI: 63 missing → up to 63-position drift → nearly all GT entries are wrong
-#   PS: 4 missing → variable drift → spot-checks confirm wrong matches
-UNRELIABLE_ABBREVS = {'MI', 'PS'}
+# has missing rows vs R1b1 internal count, causing rank drift that corrupts the bridge.
+# Verified by spot-checking: R1b1 GT people don't match EDCS inscription texts.
+#   MI: 63 missing → severe drift
+#   PS: 4 missing → variable drift
+#   MS: 2 missing → drift confirmed by spot-check (adjacent Coelii give spurious 67% token match)
+UNRELIABLE_ABBREVS = {'MI', 'PS', 'MS'}
 
 
 # ---------------------------------------------------------------------------

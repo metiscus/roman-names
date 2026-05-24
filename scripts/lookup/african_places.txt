@@ -85,3 +85,23 @@ siscia
 scarbantia
 arrabona
 mursa
+
+# Moesia Superior places
+# Main cities and forts — confirmed Roman sites only
+viminacium
+viminacii
+naissus
+naissatenses
+singidunum
+singidunenses
+ratiaria
+ratiarienses
+scupi
+scupinorum
+margum
+ulpiana
+timacum
+remesiana
+pincum
+tricornium
+
