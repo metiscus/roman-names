@@ -1,5 +1,6 @@
 # Data and Temp — ignore contents but allow specific committed files
 data/*
+!data/r1b1_gt.json
 !data/roman_names_*.parquet
 !data/output/
 data/output/*

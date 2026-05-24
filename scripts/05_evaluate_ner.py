@@ -1,4 +1,5 @@
 import json
+import os
 import re
 import argparse
 
@@ -112,6 +113,9 @@ def evaluate_ner(province):
                         "status": p_raw.get('status'),
                     })
 
+    print_summary(province, 'LIRE GT', tp, fp_imperial, fp_other, fn, fn_damaged, discoveries_other)
+
+def print_summary(province, label, tp, fp_imperial, fp_other, fn, fn_damaged, discoveries_other):
     total_fp = fp_imperial + fp_other
     precision_raw = tp / (tp + total_fp) if (tp + total_fp) > 0 else 0
     precision_adj = tp / (tp + fp_other) if (tp + fp_other) > 0 else 0
@@ -120,7 +124,7 @@ def evaluate_ner(province):
     f1_adj = 2 * (precision_adj * recall_adj) / (precision_adj + recall_adj) if (precision_adj + recall_adj) > 0 else 0
 
     print("-" * 40)
-    print(f"NER EVALUATION SUMMARY: {province}")
+    print(f"NER EVALUATION SUMMARY: {province} [{label}]")
     print("-" * 40)
     print(f"True Positives:                  {tp}")
     print(f"False Negatives (damaged text):  {fn_damaged}  <- unanswerable from text alone")
@@ -140,9 +144,87 @@ def evaluate_ner(province):
         for d in discoveries_other[:10]:
             print(f"[{d['id']}] {d['name']} -> {d['expanded']} (Status: {d['status']})")
 
+
+def evaluate_r1b1(province):
+    """Evaluate full corpus NER output against Romans 1by1 ground truth."""
+    safe_name = province.lower().replace(' ', '_')
+    full_path = f'data/output/{safe_name}_ner_full.jsonl'
+
+    if not os.path.exists(full_path):
+        print(f"Error: {full_path} not found. Run the full corpus script first.")
+        return
+
+    r1b1_gt = json.load(open('data/r1b1_gt.json'))
+
+    print("Loading EDCS text lookup...")
+    edcs_text = {}
+    for rec in json.load(open('data/EDCS_text_cleaned_2022-09-12.json')):
+        edcs_text[rec['EDCS-ID']] = (
+            rec.get('clean_text_interpretive_word') or rec.get('inscription', '')
+        )
+
+    ner_records = {}
+    with open(full_path) as f:
+        for line in f:
+            r = json.loads(line)
+            ner_records[r['id']] = r['persons']
+
+    overlap_ids = set(ner_records.keys()) & set(r1b1_gt.keys())
+    print(f"NER records: {len(ner_records)}, R1b1 GT: {len(r1b1_gt)}, Overlap: {len(overlap_ids)}")
+
+    if not overlap_ids:
+        print("No overlap — R1b1 GT has no entries for this province's NER output.")
+        return
+
+    tp = fp_imperial = fp_other = fn = fn_damaged = 0
+    discoveries_other = []
+
+    for edcs_id in sorted(overlap_ids):
+        gt_people = r1b1_gt[edcs_id]
+        predictions = ner_records[edcs_id]
+        text = edcs_text.get(edcs_id, '')
+
+        gt_pairs = [(p, get_person_signature(p)) for p in gt_people if isinstance(p, dict)]
+        pred_pairs = [(p, get_person_signature(p)) for p in predictions if isinstance(p, dict)]
+        pred_signatures = [sig for _, sig in pred_pairs]
+
+        for p_gt, gt_sig in gt_pairs:
+            if not gt_sig:
+                continue
+            if any(names_match(gt_sig, ps) for ps in pred_signatures if ps):
+                tp += 1
+            else:
+                fn += 1
+
+        for p_raw, pred_sig in pred_pairs:
+            if not pred_sig:
+                continue
+            if len(p_raw.get('raw_name', '')) <= 1:
+                continue
+            found = any(names_match(pred_sig, gs) for _, gs in gt_pairs if gs)
+            if not found:
+                if is_imperial(p_raw) or is_imperial_inscription(text):
+                    fp_imperial += 1
+                else:
+                    fp_other += 1
+                    discoveries_other.append({
+                        "id": edcs_id,
+                        "name": p_raw.get('raw_name', 'Unknown'),
+                        "expanded": " ".join(filter(None, [p_raw.get('praenomen'), p_raw.get('nomen'), p_raw.get('cognomen')])),
+                        "status": p_raw.get('status'),
+                    })
+
+    print_summary(province, 'R1b1 GT', tp, fp_imperial, fp_other, fn, fn_damaged, discoveries_other)
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Evaluate NER results for a specific province.")
     parser.add_argument("--province", type=str, default="Africa proconsularis", help="The province name")
+    parser.add_argument("--source", choices=["lire", "r1b1"], default="lire",
+                        help="GT source: lire (eval set, default) or r1b1 (full corpus vs Romans 1by1)")
     args = parser.parse_args()
-    
-    evaluate_ner(args.province)
+
+    if args.source == "r1b1":
+        evaluate_r1b1(args.province)
+    else:
+        evaluate_ner(args.province)
