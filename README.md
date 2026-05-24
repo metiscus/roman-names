@@ -33,6 +33,7 @@ The pipeline uses **Gemini 2.5 Flash** (thinking disabled) with structured JSON 
 | Africa Proconsularis | 0.85 | 0.71 | 0.77 | 165 |
 | Britannia | 0.86 | 0.86 | 0.86 | 72 |
 | Pannonia inferior | 0.92 | 0.87 | 0.90 | 107 |
+| Dacia | 0.88 | 0.83 | 0.85 | 112 |
 
 **Key finding:** 65% of false negatives are inscriptions where the ground-truth name is partially or fully in lacunae (`[---]`). The model cannot recover these from the raw text — this is an inherent limit of the text-based approach, not a model failure.
 
