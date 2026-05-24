@@ -31,3 +31,13 @@ emerita
 # calama
 # mactaris
 # carthago
+
+# Dalmatia/Pannonia/Noricum places
+salona
+salonae
+narona
+naronae
+iader
+scardona
+epidaurum
+vicus
