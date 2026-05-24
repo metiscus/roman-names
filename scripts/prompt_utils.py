@@ -89,6 +89,14 @@ def get_system_prompt(province):
   "results": [{"id": "D4", "persons": [
     {"praenomen": null, "nomen": "Valerius", "cognomen": "Valens", "gender": "male", "status": "domo Salona", "raw_name": "Val. Valenti"}
   ]}]
+}
+
+**Input:** "Ripanio Flaviano aedil(icia) potestate Claud(ii) Vir(uni) defuncto"
+**Output:**
+{
+  "results": [{"id": "D5", "persons": [
+    {"praenomen": null, "nomen": "Ripanius", "cognomen": "Flavianus", "gender": "male", "status": "aedilicia potestate Claudii Viruni", "raw_name": "Ripanio Flaviano"}
+  ]}]
 }"""
     else:
         extra_examples = ""
