@@ -121,13 +121,18 @@
             color: white; font-size: 10px; font-weight: bold;
         }
 
-        .popup-content { min-width: 250px; max-width: 300px; }
-        .person-entry { margin-bottom: 12px; padding: 10px; background: #f8f9fa; border-radius: 8px; border: 1px solid #eee; }
-        .person-name-header { font-weight: bold; font-size: 1rem; color: var(--primary-color); margin-bottom: 5px; display: block; }
-        .person-info { font-size: 0.85rem; color: #495057; }
-        .badge { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: bold; color: white; margin-top: 5px; }
+        .popup-content { min-width: 260px; max-width: 340px; }
+        .persons-list { margin-bottom: 8px; }
+        .person-entry { padding: 5px 0 5px 8px; border-left: 3px solid var(--primary-color); margin-bottom: 6px; }
+        .person-entry:last-child { margin-bottom: 0; }
+        .person-name-line { font-weight: bold; font-size: 0.95rem; color: var(--primary-color); }
+        .person-date { font-weight: normal; font-size: 0.8rem; color: #888; margin-left: 4px; }
+        .person-meta { font-size: 0.78rem; color: #666; margin-top: 2px; display: flex; flex-wrap: wrap; align-items: center; gap: 5px; }
+        .gender-chip { font-size: 0.75rem; color: #555; }
+        .person-status { color: #666; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .badge { display: inline-block; padding: 1px 5px; border-radius: 3px; font-size: 0.65rem; font-weight: bold; color: white; }
         .badge-imp { background: #c0392b; } .badge-deity { background: #8e44ad; }
-        .raw-text-area { font-family: serif; font-style: italic; font-size: 0.85rem; padding: 8px; background: #fff; border: 1px solid #ddd; border-radius: 4px; margin-top: 10px; display: none; }
+        .raw-text-area { font-family: serif; font-style: italic; font-size: 0.85rem; padding: 8px; background: #fff; border: 1px solid #ddd; border-radius: 4px; margin-top: 6px; display: none; }
         .btn-link { color: #007bff; cursor: pointer; text-decoration: none; font-size: 0.8rem; }
 
         /* Intro / About modal */
@@ -165,13 +170,19 @@
         /* Enhanced popup elements */
         .inscr-type { background: #6c757d; }
         .text-edition-area { font-size: 0.85rem; padding: 8px; background: #fff; border: 1px solid #ddd; border-radius: 4px; margin-top: 6px; line-height: 1.5; }
-        .pub-ref { font-size: 0.75rem; color: #888; font-style: italic; margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 280px; }
-        .db-links { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
-        .db-link { font-size: 0.75rem; color: #007bff; text-decoration: none; white-space: nowrap; }
+        .inscription-summary { margin-bottom: 7px; font-size: 0.8rem; color: #555; font-style: italic; line-height: 1.45; }
+        .inscription-summary::before { content: 'Summary: '; font-style: normal; font-weight: 600; font-size: 0.68rem; color: #5b9bd5; text-transform: uppercase; letter-spacing: 0.04em; }
+        .translation-block { margin-bottom: 8px; padding: 7px 10px; background: #f0f7ff; border-left: 3px solid #5b9bd5; border-radius: 0 4px 4px 0; font-size: 0.85rem; line-height: 1.55; max-height: 130px; overflow-y: auto; }
+        .translation-label { font-size: 0.65rem; font-weight: 600; color: #5b9bd5; text-transform: uppercase; letter-spacing: 0.04em; display: block; margin-bottom: 3px; }
+        .popup-footer { font-size: 0.75rem; color: #777; border-top: 1px solid #eee; padding-top: 7px; margin-top: 4px; }
+        .popup-footer-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 3px; }
+        .pub-ref { font-size: 0.72rem; color: #999; font-style: italic; margin-top: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 300px; }
+        .db-links { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 5px; }
+        .db-link { font-size: 0.72rem; color: #007bff; text-decoration: none; white-space: nowrap; }
         .db-link:hover { text-decoration: underline; }
         .btn-copy-link {
-            float: right; background: none; border: 1px solid #ced4da; color: #888;
-            border-radius: 4px; padding: 2px 7px; cursor: pointer; font-size: 0.7rem; margin-left: 6px;
+            background: none; border: 1px solid #ced4da; color: #888;
+            border-radius: 4px; padding: 2px 7px; cursor: pointer; font-size: 0.68rem;
         }
         .btn-copy-link:hover { background: #f0f0f0; color: var(--primary-color); }
     </style>
@@ -406,45 +417,72 @@
             await loadData();
         }
 
+        function genderSymbol(g) {
+            if (g === 'male') return '♂';
+            if (g === 'female') return '♀';
+            return '';
+        }
+
         function getPopupHtml(feature_props) {
             const p = feature_props;
             const enrich = enrichmentData[p.edcs_id] || {};
-            const dateStr = (p.date_from || p.date_to) ? ` (${formatYear(p.date_from)} to ${formatYear(p.date_to)})` : '';
+            const dateStr = (p.date_from || p.date_to) ? ` (${formatYear(p.date_from)}–${formatYear(p.date_to)})` : '';
             let html = `<div class="popup-content">`;
+
+            // — Persons list (compact) —
+            html += `<div class="persons-list">`;
             p.persons.forEach(pers => {
                 const name = [pers.praenomen, pers.nomen, pers.cognomen].filter(x => x).join(' ') || pers.raw_name;
-                html += `<div class="person-entry"><span class="person-name-header">${name}${dateStr}</span><div class="person-info"><strong>Gender:</strong> ${pers.gender}<br>${pers.status ? `<strong>Status:</strong> ${pers.status}<br>` : ''}${pers.is_imperial ? '<span class="badge badge-imp">Imperial</span>' : ''}${pers.is_deity ? '<span class="badge badge-deity">Deity</span>' : ''}</div>${pers.cluster_id ? `<a class="btn-link" onclick="filterByCluster('${pers.cluster_id}')">See all ${pers.cluster_size} attestations ↗</a>` : ''}</div>`;
+                const sym = genderSymbol(pers.gender);
+                const statusTxt = pers.status ? pers.status.slice(0, 50) + (pers.status.length > 50 ? '…' : '') : '';
+                html += `<div class="person-entry">`;
+                html += `<div class="person-name-line">${name}<span class="person-date">${dateStr}</span></div>`;
+                html += `<div class="person-meta">`;
+                if (sym) html += `<span class="gender-chip">${sym}</span>`;
+                if (statusTxt) html += `<span class="person-status">${escHtml(statusTxt)}</span>`;
+                if (pers.is_imperial) html += `<span class="badge badge-imp">Imperial</span>`;
+                if (pers.is_deity) html += `<span class="badge badge-deity">Deity</span>`;
+                if (pers.cluster_id) html += `<a class="btn-link" onclick="filterByCluster('${pers.cluster_id}')">↗ ${pers.cluster_size} attestations</a>`;
+                html += `</div></div>`;
             });
+            html += `</div>`;
 
+            // — Summary (one-sentence overview, shown first) —
+            if (enrich.summary) {
+                html += `<div class="inscription-summary">${escHtml(enrich.summary)}</div>`;
+            }
+
+            // — Full translation (scrollable block) —
+            if (enrich.translation) {
+                html += `<div class="translation-block"><span class="translation-label">Translation</span>${escHtml(enrich.translation)}</div>`;
+            }
+
+            // — Compact footer —
             const inscrType = enrich.inscription_type || '';
-            html += `<div style="font-size:0.8rem; color:#666; border-top:1px solid #eee; padding-top:8px;">`;
+            html += `<div class="popup-footer">`;
+            html += `<div class="popup-footer-row">`;
+            html += `<span><strong>${p.edcs_id}</strong> · ${escHtml(p.findspot)}${!p.is_individual ? ' <em>(stacked)</em>' : ''}</span>`;
             html += `<button id="cpl-${p.edcs_id}" class="btn-copy-link" onclick="copyPermalink('${p.edcs_id}')">🔗 Copy link</button>`;
-            html += `Inscription: <strong>${p.edcs_id}</strong> | ${p.findspot}${!p.is_individual ? ' (Stacked)' : ''}`;
-            if (inscrType) html += `<br><span class="badge inscr-type">${escHtml(inscrType)}</span>`;
-            html += `<br><a href="${p.edcs_url}" target="_blank" class="btn-link">View on EDCS ↗</a>`;
+            html += `</div>`;
+            if (inscrType) html += `<div><span class="badge inscr-type">${escHtml(inscrType)}</span></div>`;
 
-            // External database links
-            const links = [];
+            // External links row
+            const links = [`<a href="${p.edcs_url}" target="_blank" class="db-link">EDCS ↗</a>`];
             if (enrich.cil_ace_id) links.push(`<a href="https://cil.bbaw.de/ace/id/${enrich.cil_ace_id}" target="_blank" class="db-link">CIL ↗</a>`);
             if (enrich.lupa_url) links.push(`<a href="${enrich.lupa_url}" target="_blank" class="db-link">Lupa ↗</a>`);
             if (enrich.photo_url) links.push(`<a href="${enrich.photo_url}" target="_blank" class="db-link">Photo ↗</a>`);
             if (enrich.edh_id) links.push(`<a href="https://edh.ub.uni-heidelberg.de/edh/inschrift/${enrich.edh_id}" target="_blank" class="db-link">EDH ↗</a>`);
             if (enrich.tm_uri) links.push(`<a href="${enrich.tm_uri}" target="_blank" class="db-link">Trismegistos ↗</a>`);
-            if (links.length) html += `<div class="db-links">${links.join('')}</div>`;
+            html += `<div class="db-links">${links.join('')}</div>`;
 
-            // Publication reference
             if (enrich.publication) {
-                const pub = enrich.publication.length > 80 ? enrich.publication.slice(0, 80) + '…' : enrich.publication;
+                const pub = enrich.publication.length > 90 ? enrich.publication.slice(0, 90) + '…' : enrich.publication;
                 html += `<div class="pub-ref" title="${escHtml(enrich.publication)}">Ref: ${escHtml(pub)}</div>`;
             }
 
-            // Raw text toggle
-            html += `<br><span class="btn-link" onclick="this.nextElementSibling.style.display='block';this.style.display='none'">Show raw text</span><div class="raw-text-area">${p.raw_text}</div>`;
-
-            // Interpreted text toggle
-            if (enrich.text_edition) {
-                html += `<br><span class="btn-link" onclick="this.nextElementSibling.style.display='block';this.style.display='none'">Show interpreted text</span><div class="text-edition-area" style="display:none">${escHtml(enrich.text_edition)}</div>`;
-            }
+            // Latin text toggles
+            if (p.raw_text) html += `<br><span class="btn-link" onclick="const d=this.nextElementSibling;const s=d.style.display==='block';d.style.display=s?'none':'block';this.textContent=s?'Show raw text':'Hide raw text'">Show raw text</span><div class="raw-text-area">${escHtml(p.raw_text)}</div>`;
+            if (enrich.text_edition) html += `<br><span class="btn-link" onclick="const d=this.nextElementSibling;const s=d.style.display==='block';d.style.display=s?'none':'block';this.textContent=s?'Show interpreted text':'Hide interpreted text'">Show interpreted text</span><div class="text-edition-area" style="display:none">${escHtml(enrich.text_edition)}</div>`;
 
             html += `</div></div>`;
             return html;

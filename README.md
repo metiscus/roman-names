@@ -27,7 +27,7 @@ The pipeline uses **Gemini 2.5 Flash** (thinking disabled) with structured JSON 
 - [x] Scale to Pannonia inferior, Dacia, Noricum, Dalmatia, Pannonia superior, Moesia superior.
 - [x] Prosopographical clustering across all provinces.
 - [x] Interactive webapp with enriched popups, permalinks, and external database links.
-- [ ] English translations of inscription text.
+- [x] English translations of inscription text (optional pipeline; run `scripts/11_translate_inscriptions.py`).
 - [ ] Manual review of candidate discoveries list.
 
 ## Evaluation Results
@@ -83,7 +83,7 @@ See [`webapp/README.md`](webapp/README.md) for data details and instructions to 
 
 ## Future Directions
 
-- **English translations**: Batch-translate inscription text using a low-cost LLM or pull scholarly translations from EDH where available.
+- **English translations**: `scripts/11_translate_inscriptions.py` batch-translates inscription text with Gemini 2.5 Flash. Run with `--province all --limit N` to control cost. Translations are stored in `webapp/data/enrichment_{province}.json` and displayed in popups when available. A 25-inscription sample (across all provinces and types) showed high quality results.
 - **Lacuna restoration**: For damaged records, an Ithaca-style model (cf. Assael et al., *Nature* 2022) could recover names in lacunae — an inherent limit of the text-based approach.
 - **Additional provinces**: The pipeline is transferable; each province needs province-specific few-shot examples.
 - **Manual review**: Spot-check the candidate discoveries list against RIB, PIR, and secondary scholarship to produce a precision-of-discoveries number.
