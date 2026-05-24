@@ -21,18 +21,18 @@ The pipeline uses **Gemini 2.5 Flash** (thinking disabled) with structured JSON 
 - [x] Data acquisition complete (EDCS 465MB, LIRE 576MB).
 - [x] Evaluation set generated: 433 Africa Proconsularis records with LIRE ground truth.
 - [x] NER pipeline validated — see results below.
-- [ ] Scale to full Africa Proconsularis corpus (~33k records).
+- [x] Scale to full Africa Proconsularis corpus (~33k records).
+- [x] Scale to Britannia corpus (~16k records).
+- [x] Scale to Pannonia inferior corpus (~3.3k records).
 - [ ] Manual review of discoveries list.
 
-## Evaluation Results (Africa Proconsularis pilot, 433 records)
+## Evaluation Results
 
-| Metric | Value | Notes |
-|--------|-------|-------|
-| Recall (raw) | 0.71 | Includes damaged inscriptions in denominator |
-| **Recall (adjusted)** | **0.93** | Excluding lacunae where GT is unrecoverable from text |
-| Precision (adjusted) | 0.73 | After filtering known imperial titulature |
-| **F1 (adjusted)** | **0.82** | Primary headline metric |
-| Potential discoveries | 226 | Names found by model, absent from LIRE |
+| Province | Recall (adj) | Precision (adj) | F1 (adj) | Discoveries |
+|----------|--------------|-----------------|----------|-------------|
+| Africa Proconsularis | 0.85 | 0.71 | 0.77 | 165 |
+| Britannia | 0.86 | 0.86 | 0.86 | 72 |
+| Pannonia inferior | 0.92 | 0.87 | 0.90 | 107 |
 
 **Key finding:** 65% of false negatives are inscriptions where the ground-truth name is partially or fully in lacunae (`[---]`). The model cannot recover these from the raw text — this is an inherent limit of the text-based approach, not a model failure.
 

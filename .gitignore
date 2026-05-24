@@ -8,6 +8,7 @@ data/output/*
 !data/output/dalmatia_ner_full.jsonl
 !data/output/noricum_ner_full.jsonl
 !data/output/pannonia_superior_ner_full.jsonl
+!data/output/pannonia_inferior_ner_full.jsonl
 temp/
 
 # Python

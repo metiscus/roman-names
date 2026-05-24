@@ -119,6 +119,18 @@ manibus
 dii
 diis
 
+# Mithraic epithets (Pannonia/Danubian provinces)
+nabarze
+
+# Magical/Gnostic names (amulets, curse tablets, Danubian provinces)
+abrasax
+iao
+ablanathanalba
+
+# Dacian/Getae deities
+zalmoxis
+salmoxis
+
 # Dalmatia/Pannonia/Noricum deities
 silvanus
 silvano
