@@ -137,6 +137,12 @@ def main():
                         'thinking_config': {'thinking_budget': 0},
                     },
                 )
+                if response.parsed is None:
+                    errors += 1
+                    print(f"\n  Error on batch {i}: Parsing failed. Raw response:")
+                    print(response.text)
+                    continue
+
                 batch_data = response.parsed.model_dump()
 
                 for pred in batch_data['results']:
