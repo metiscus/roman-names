@@ -202,7 +202,7 @@ For each person identified:
 1. Deconstruct the name into praenomen, nomen, and cognomen using the rules below.
 2. Identify gender ('male', 'female', or 'unknown') and social/professional status markers.
 3. Expand standard abbreviations (e.g., 'L.' to 'Lucius', 'M.' to 'Marcus', 'f.' to 'filius').
-4. Set fragmentary=true if the name text contains ANY bracket notation — a restored reading ([P], [abc]) or a gap ([3], [---]) — since both indicate the stone was physically damaged at that point. Also set fragmentary=true if the inscription ends with an open bracket '[' (unclosed lacuna) near the name. Do NOT set fragmentary=true for unresolved abbreviations or parenthetical expansions like '(ius)'.
+4. fragmentary flag: set fragmentary=true ONLY when the name's OWN tokens are damaged — i.e. the raw_name you record contains a bracket: a restored reading ([P], [abc]), a gap ([3], [---]), or a trailing unclosed '['. If raw_name contains NO bracket, fragmentary MUST be false — even when other parts of the inscription are damaged. A complete, legible name on a broken stone is NOT fragmentary. When a name is cut off by a lacuna, keep the bracket in raw_name (e.g. 'Aurelius Saturn[3]', 'Iulius Roga[') so the damage stays visible. Do NOT set fragmentary=true for unresolved abbreviations or parenthetical expansions like '(ius)'.
 5. Return a JSON object containing a 'results' list, where each item matches an ID to its extracted persons list.
 
 INSCRIPTION CONVENTIONS:
@@ -228,15 +228,15 @@ TRIBUS:
 - {', '.join(sorted(TRIBUS))}
 - Tribus may be abbreviated: Cl. or Cl(audia) = Claudia, Fab. = Fabia, Volt. = Voltinia, Pal. = Palatina. An abbreviated tribus typically appears between the filiation marker (f. / fil.) and the cognomen — expand it and record as 'tribus: [full name]'.
 
-CASE NORMALIZATION — always store names in the NOMINATIVE case:
-- Latin inscriptions put names in dative (for the deceased: 'Iulio', 'Tonneiae') or genitive (filiation/possession: 'Iulii', 'Aviani', 'Gargili'). Always convert to nominative.
+CASE NORMALIZATION — store every name in the NOMINATIVE case. This is mandatory and the single most common error. The stone almost always shows names in the dative (honouring the deceased: 'Iulio', 'Geminio Crescenti', 'Tonneiae') or genitive (filiation/possession: 'Iulii', 'Aviani', 'Gargili'). DECLINE them back to the nominative — never copy the inflected surface form into a name field.
+- SELF-CHECK (nomen): a nominative nomen ends in -us, -ius, or (feminine) -a. If you are about to write a nomen ending in -o or -i, you have copied a dative/genitive — fix it: Geminio→Geminius, Apertio→Apertius, Porcio→Porcius, Lurio→Lurius, Axio→Axius, Oppi→Oppius, Sergi→Sergius, Viri→Virius.
 - Genitive -i → nominative -us: Aviani→Avianus, Gargili→Gargilius, Caecili→Caecilius, Septi→Septius
 - Genitive -ii → nominative -ius: Iulii→Iulius, Flavii→Flavius, Aquilii→Aquilius
-- Genitive -ae → nominative -a: Tonneiae→Tonneia, Iuliae→Iulia, Aemiliae→Aemilia
-- Dative -o → nominative -us: Iulio→Iulius, Aurelio→Aurelius, Valenti→Valens (3rd decl.)
-- Dative -ae → nominative -a: same as genitive -ae above
-- Dative/genitive 3rd decl. (Catoni→Cato, Marcioni→Marcion, Frontoni→Fronto) — remove the dative ending
-- The raw_name field must preserve the original text exactly as it appears.
+- Genitive/dative -ae → nominative -a: Tonneiae→Tonneia, Iuliae→Iulia, Aemiliae→Aemilia
+- Dative -o → nominative -us (applies to BOTH nomina and cognomina): Iulio→Iulius, Aurelio→Aurelius, Geminio→Geminius, Rufo→Rufus, Marcello→Marcellus, Saturnino→Saturninus.
+- 3rd-declension cognomina (dative/genitive → nominative): Valenti→Valens, Crescenti/Crescente→Crescens, Victori/Victoris→Victor, Magni→Magnus, Apri→Aper, Materni→Maternus.
+- Narrow exception: a FEW cognomina are genuinely nominative already in -o (their genitive is -onis): Cato, Fronto, Hilario, Pantaleo, Naso. Leave only THESE in -o; convert every other -o form to -us.
+- The raw_name field must preserve the original inflected text exactly as it appears.
 
 STATUS extraction:
 - Status should only contain descriptive titles (miles, veteranus, uxor, filius, etc.).
@@ -325,6 +325,17 @@ EXAMPLES:
     "id": "T6",
     "persons": [
       {{"praenomen": null, "nomen": "Titia", "cognomen": "Procula", "gender": "female", "status": null, "raw_name": "Titiae [P]roculae", "fragmentary": true}}
+    ]
+  }}]
+}}
+
+**Input:** "L(ucio) Geminio / Crescenti / vix(it) an(nos) XL"
+**Output:**
+{{
+  "results": [{{
+    "id": "T7",
+    "persons": [
+      {{"praenomen": "Lucius", "nomen": "Geminius", "cognomen": "Crescens", "gender": "male", "status": null, "raw_name": "L. Geminio Crescenti", "fragmentary": false}}
     ]
   }}]
 }}

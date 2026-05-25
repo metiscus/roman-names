@@ -88,6 +88,15 @@ def check_person(predicted: dict, expected: dict) -> list[str]:
         if exp_substr not in pred_val:
             failures.append(f"{field}: expected to contain '{expected[key]}', got '{predicted.get(field)}'")
 
+    # Placement-agnostic name check: the expanded form must appear in SOME name
+    # field (praenomen/nomen/cognomen). Use when downstream export normalizes the
+    # field — e.g. a nomen the model intermittently files under praenomen.
+    if 'name_contains' in expected:
+        joined = ' '.join((norm(predicted.get(f)) or '') for f in ('praenomen', 'nomen', 'cognomen'))
+        sub = norm(expected['name_contains'])
+        if sub and sub not in joined:
+            failures.append(f"name: expected some name field to contain '{expected['name_contains']}', got '{joined.strip()}'")
+
     if 'fragmentary' in expected:
         pred_frag = predicted.get('fragmentary', False)
         if pred_frag != expected['fragmentary']:
