@@ -5,7 +5,7 @@ Automated extraction and classification of personal names from the corpus of Lat
 ## Project Goal
 Produce a structured, openly published index of personal names from Roman inscriptions, starting with provinces currently lacking dense prosopographical coverage. The pilot province is **Africa Proconsularis**.
 
-The pipeline uses **Gemini 2.5 Flash** (thinking disabled) with structured JSON output to:
+The pipeline uses **Gemini 2.5 Flash-Lite** (thinking disabled, batch size 30, up to 20 concurrent workers) with structured JSON output to:
 1. Identify individuals in raw Latin inscription text.
 2. Expand standard epigraphic abbreviations (e.g. `M.` → Marcus, `L.` → Lucius).
 3. Classify name components (praenomen, nomen, cognomen).
@@ -19,15 +19,14 @@ The pipeline uses **Gemini 2.5 Flash** (thinking disabled) with structured JSON 
 - `webapp/` — Static Leaflet map visualization. See [`webapp/README.md`](webapp/README.md).
 
 ## Current Status
-- [x] Data acquisition complete (EDCS 465MB, LIRE 576MB).
-- [x] Evaluation set generated: 433 Africa Proconsularis records with LIRE ground truth.
+- [x] Data acquisition: EDCS 465MB, LIRE v3.0 474MB (upgraded from v1.2; 182k → ground-truth records).
+- [x] Evaluation set generated from LIRE ground truth per province.
 - [x] NER pipeline validated — see results below.
-- [x] Scale to full Africa Proconsularis corpus (~33k records).
-- [x] Scale to Britannia corpus (~16k records).
-- [x] Scale to Pannonia inferior, Dacia, Noricum, Dalmatia, Pannonia superior, Moesia superior.
+- [x] Scale to full corpus: Africa Proconsularis, Britannia, Numidia, Dalmatia, Pannonia Superior/Inferior, Noricum, Dacia, Moesia Superior/Inferior.
 - [x] Prosopographical clustering across all provinces.
 - [x] Interactive webapp with enriched popups, permalinks, and external database links.
 - [x] English translations of inscription text (optional pipeline; run `scripts/11_translate_inscriptions.py`).
+- [ ] Full rerun with improved prompt (nominative normalization, abbreviation expansion, generic few-shots).
 - [ ] Manual review of candidate discoveries list.
 
 ## Evaluation Results
