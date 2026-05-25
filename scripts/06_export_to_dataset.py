@@ -45,6 +45,38 @@ def fix_praenomen(praenomen, nomen, cognomen):
     return None, new_nomen, new_cognomen
 
 
+# Cognomina genuinely nominative in -o (3rd decl, genitive -onis) — never
+# "corrected", in case one is misfiled into the nomen field. Mirrors the prompt's
+# CASE NORMALIZATION carve-out.
+_NOMINATIVE_O_NAMES = {'cato', 'fronto', 'hilario', 'pantaleo', 'naso', 'scipio',
+                       'varro', 'cicero', 'nero', 'pollio', 'milo'}
+
+
+def fix_nomen_case(nomen):
+    """Deterministically convert an oblique-case nomen to the nominative.
+
+    A Roman nomen (gentilicium) is 2nd-declension and is essentially never
+    nominative in -o or -ii; those endings are a dative (-o) or genitive (-ii)
+    the model failed to decline. The conversion is unambiguous:
+        dative   -o  -> -us   (Iulio->Iulius, Geminio->Geminius, Magno->Magnus)
+        genitive -ii -> -ius  (Iulii->Iulius, Flavii->Flavius)
+    Single -i genitives are LEFT ALONE — ambiguous between -us and -ius
+    (Aviani->Avianus vs Gargili->Gargilius). Cognomina are never passed here, so
+    valid -o nominatives like Cato/Scipio are safe (and double-guarded above).
+    """
+    if not isinstance(nomen, str):
+        return nomen
+    n = nomen.strip()
+    if not n.isalpha() or len(n) < 3 or n.lower() in _NOMINATIVE_O_NAMES:
+        return nomen
+    low = n.lower()
+    if low.endswith('ii'):
+        return n[:-2] + 'ius'
+    if low.endswith('o'):
+        return n[:-1] + 'us'
+    return nomen
+
+
 def create_final_dataset(province_slug='africa_proconsularis', province_name='Africa proconsularis'):
     # 1. Load the big NER results (JSONL format)
     input_ner_path = OUTPUT_DIR / f'{province_slug}_ner_full.jsonl'
@@ -94,6 +126,7 @@ def create_final_dataset(province_slug='africa_proconsularis', province_name='Af
     print(f"Flattening {len(ner_results)} records into name attestations...")
     rows = []
     praenomen_fixes = 0
+    nomen_fixes = 0
     for record in tqdm(ner_results):
         meta = dict(meta_map.get(record['id'], empty_meta))
         # Fall back to EDCS for the ~80% of records not in LIRE
@@ -120,6 +153,11 @@ def create_final_dataset(province_slug='africa_proconsularis', province_name='Af
             if fixed_praenomen != praenomen:
                 praenomen_fixes += 1
             praenomen = fixed_praenomen
+            # Deterministic mop-up of oblique-case nomina the model left undeclined.
+            new_nomen = fix_nomen_case(nomen)
+            if new_nomen != nomen:
+                nomen_fixes += 1
+            nomen = new_nomen
 
             classifier_input = {
                 'praenomen': praenomen, 'nomen': nomen, 'cognomen': cognomen,
@@ -168,6 +206,7 @@ def create_final_dataset(province_slug='africa_proconsularis', province_name='Af
     print(f"  flagged is_place:        {df['is_place'].sum()}")
     print(f"  flagged fragmentary:     {df['fragmentary'].sum()}")
     print(f"Praenomen reclassifications (off-whitelist → nomen): {praenomen_fixes}")
+    print(f"Nomen nominalizations (oblique → nominative):        {nomen_fixes}")
     print(f"Parquet File: {output_parquet}")
     print(f"CSV File:     {output_csv}")
     print("="*30)
