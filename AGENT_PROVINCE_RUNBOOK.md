@@ -6,9 +6,11 @@ This document gives complete instructions for an AI agent to run the NER pipelin
 
 ## Project Context
 
-This pipeline extracts personal names from Latin inscriptions using Gemini 2.5 Flash with structured output. The source corpus is EDCS (Epigraphik-Datenbank Clauss-Slaby). The output is one row per name attestation in Parquet format, plus GeoJSON and cluster files for a web map.
+This pipeline extracts personal names from Latin inscriptions using **Gemini 2.5 Flash-Lite** with structured output. The source corpus is EDCS (Epigraphik-Datenbank Clauss-Slaby). The output is one row per name attestation in Parquet format, plus GeoJSON and cluster files for a web map.
 
-The pipeline has already been run successfully on **Africa Proconsularis** (F1 0.77) and **Britannia** (F1 0.85). You are running it on a new province. The methodology is proven but the prompt may need minor tuning for province-specific naming patterns.
+The pipeline has been run on Africa Proconsularis, Britannia, Numidia, Dalmatia, Pannonia Superior/Inferior, Noricum, Dacia, Moesia Superior/Inferior. The methodology is proven but the prompt may need minor tuning for province-specific naming patterns.
+
+Data file paths are centralised in `scripts/config.py` — do not hardcode paths elsewhere.
 
 ---
 
@@ -32,12 +34,24 @@ Province slug (lowercase, underscores): **`{{PROVINCE_SLUG}}`** (e.g. `dalmatia`
 
 ---
 
+## Step 0: Regression Baseline
+
+Before starting a new province run, verify the prompt is healthy:
+
+```bash
+python3 scripts/run_regression.py --model gemini-2.5-flash-lite
+```
+
+All 20 tests should pass. If any fail, fix `scripts/prompt_utils.py` before proceeding — the issue will affect every record in the run.
+
+---
+
 ## Step 1: Gut-Check Run — First 100 Records
 
 Run the first 100 records only:
 
 ```bash
-python3 scripts/06_run_full_corpus.py --province "{{PROVINCE_NAME}}" --stop-after 100
+python3 scripts/06_run_full_corpus.py --province "{{PROVINCE_NAME}}" --stop-after 100 --model gemini-2.5-flash-lite
 ```
 
 Then spot-check **all 100** with ground truth:
@@ -128,7 +142,7 @@ Edit the `model_post_init` method in `06_run_full_corpus.py` to add the bad valu
 After a clean Step 1, continue to 500:
 
 ```bash
-python3 scripts/06_run_full_corpus.py --province "{{PROVINCE_NAME}}" --stop-after 500
+python3 scripts/06_run_full_corpus.py --province "{{PROVINCE_NAME}}" --stop-after 500 --model gemini-2.5-flash-lite
 ```
 
 Spot-check 50 recent records with ground truth:
@@ -148,10 +162,10 @@ If clean, proceed. If new systematic issues appear, fix and decide whether to re
 ## Step 3: Full Corpus Run
 
 ```bash
-python3 scripts/06_run_full_corpus.py --province "{{PROVINCE_NAME}}"
+python3 scripts/06_run_full_corpus.py --province "{{PROVINCE_NAME}}" --model gemini-2.5-flash-lite --workers 20
 ```
 
-This resumes from the last processed record. Let it run to completion. If it hits a quota error (429), wait 60 seconds and rerun — it will resume automatically.
+`--workers 20` runs 20 concurrent API calls. Flash-Lite allows 4,000 RPM / 4M TPM; at batch size 30 and ~3k tokens per batch this is well within limits. Increase to `--workers 40` for large provinces (Roma). The script resumes from the last processed record if interrupted; 429 errors trigger automatic backoff and retry.
 
 While it runs, you can check progress:
 ```bash
@@ -204,7 +218,7 @@ If `data/lire_enrichment.json` does not exist:
 python3 scripts/10_build_lire_lookup.py
 ```
 
-This reads `data/LIRE_v1-2.geojson` (~576MB) and writes `data/lire_enrichment.json` (~19MB). Takes ~2 minutes. Only needs to be run once; skip if the file already exists.
+This reads `LIRE_PATH` (currently `data/LIRE_v3-0.geojson`, set in `scripts/config.py`) and writes `data/lire_enrichment.json`. Takes ~2 minutes. Only needs to be run once per LIRE version; if you upgrade LIRE, delete the old enrichment file and re-run.
 
 ### 4e. Build webapp data
 

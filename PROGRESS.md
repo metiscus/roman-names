@@ -416,3 +416,78 @@ Britannia precision is notably higher than Africa (0.86 vs 0.68). Likely reasons
 - Egypt: validate overlap with Trismegistos API, set up eval set, run pipeline.
 - Outreach: send courtesy email to Heřmánková (LIRE) with pilot results — both provinces now have headline numbers (Africa F1 0.77, Britannia F1 0.86).
 - Optional Britannia v2: add `comes`/military-title and kinship-term false-positive filters before next run.
+
+---
+
+## Week 5: Cost Optimisation, Prompt Hardening, and Full Rerun Prep (May 2026)
+
+### Status: In Progress
+
+**Goal:** Reduce per-record cost for the remaining ~430k records (Roma, Latium, Hispania, Gallia, Germania…), fix known prompt defects, upgrade LIRE ground truth, and prepare for a full corpus rerun.
+
+### Cost Analysis
+
+Switched primary model from **Gemini 2.5 Flash** (standard) to **Gemini 2.5 Flash-Lite**:
+
+| Model | Input $/1M | Output $/1M | Est. remaining cost |
+|---|---|---|---|
+| 2.5 Flash | $0.30 | $2.50 | ~$130 |
+| 2.5 Flash-Lite | $0.10 | $0.40 | ~$22 |
+
+Validated Flash-Lite on a 500-record Africa Proconsularis regression: **F1 0.83** — equal to or better than the Standard model on the same sample.
+
+### Prompt Improvements (`scripts/prompt_utils.py`)
+
+All changes apply globally across provinces:
+
+1. **Nominative case normalization** — added explicit CASE NORMALIZATION section with a conversion table. Prior data contained ~394 confirmed genitive/dative forms stored instead of nominative (e.g., `Aviani` instead of `Avianus`, `Gargili` instead of `Gargilius`, `Caecili` instead of `Caecilius`, `Valenti` instead of `Valens`). Two new global few-shot examples cover filiation-in-genitive (`Faustiniani` → `Faustinianus + pater`) and DM-genitive (`Gargili` → `Gargilius, fragmentary=true`).
+
+2. **Abbreviation expansion** — clarified that `C(a)ecil(ius)` must always expand to `Caecilius`; never store just the abbreviated letter. Affects ~8 confirmed cases in Africa, likely hundreds in Roma.
+
+3. **Fragmentary flag scoping** — restricted to actual lacuna markers `[---]` / `[3]` only. Previously fired on unresolved abbreviations (`P. Clod.`, `Sabel.`), producing false-positive fragmentary flags.
+
+4. **Generic province few-shots** — the `else` branch (covering **444k records** including Roma's 121k) previously had zero examples. Now includes three representative examples: freedman naming (`T. Statilius T. l. Aper`), senatorial tria nomina with tribus (`L. Caecilius Volt. Metellus`), and slave/single-cognomen (`Philargyrus Caesaris serv.`).
+
+### Source Data Upgrade
+
+- **LIRE v3.0** (Zenodo record 8431452): 182,852 records vs the prior v1.2's 136,190 — a 34% increase in ground truth coverage. All scripts now point at `LIRE_v3-0.geojson`; run `python3 scripts/00_download_data.py` to fetch the file.
+- **EDCS**: still at 2022-09-12 v2.0 — this is the current published version, no upgrade available.
+
+### Config Refactor (`scripts/config.py`)
+
+All versioned data paths moved to a single `scripts/config.py` module. Updating a dataset now requires changing one line. Scripts updated: `00`, `01`, `03`, `05`, `05b`, `06_export`, `06_run`, `07`, `09`, `10`, `build_r1b1_gt`, `spot_check`, `test_inscription_vs_clean`.
+
+### Regression Test Suite (`scripts/run_regression.py`)
+
+20-case regression suite covering:
+- Basic correct extractions (tria nomina, tribus, multi-person)
+- Prior failure modes confirmed fixed (Tonneia nomen/cognomen, status leakage, praenomen rotation)
+- New nominalization fixes (Gargili→Gargilius, Faustiniani→Faustinianus, Valenti→Valens)
+- Abbreviation expansion (C(a)ecil(ius)→Caecilius)
+- Edge cases (Celtic names, Punic filiation, fragmentary, empty inscriptions, centurion genitive)
+
+Run: `python3 scripts/run_regression.py [--model gemini-2.5-flash-lite]`
+
+### Parallel Execution (`scripts/06_run_full_corpus.py`)
+
+Added `--workers N` flag (default 10) using `ThreadPoolExecutor`. Flash-Lite allows 4,000 RPM / 4M TPM — at 30 inscriptions per batch and ~3k tokens per batch, the TPM ceiling allows ~1,300 concurrent requests/min. With `--workers 20`, the remaining ~430k records should process in under 30 minutes. Includes exponential backoff on 429 errors.
+
+Default model changed from `gemini-2.5-flash` → `gemini-2.5-flash-lite`.
+
+### Quality Audit of Existing Data
+
+Cross-province analysis of all 61k processed records found:
+- No gender-word leakage into name fields (0 occurrences)
+- No status leakage of the Tonneia/Ofelius type
+- Genitive forms: 394 confirmed cases (all pre-nominalization-fix data)
+- Single-letter nomen failures: 8 in Africa, 57 in Numidia, 26 in Dalmatia — all from heavily abbreviated source texts, present in Standard Flash runs too (not a Flash-Lite regression)
+- Africa Proconsularis empty-inscription rate 23.7%: verified correct — all genuinely nameless texts
+
+### Next Steps (Full Rerun)
+
+1. Download LIRE v3.0: `python3 scripts/00_download_data.py`
+2. Rebuild LIRE enrichment: `python3 scripts/10_build_lire_lookup.py`
+3. Run regression suite to confirm prompt improvements: `python3 scripts/run_regression.py`
+4. Full rerun all provinces with `--model gemini-2.5-flash-lite --workers 20`
+5. Re-evaluate all provinces against LIRE v3.0 ground truth for updated F1 numbers
+6. Re-run export, cluster, and webapp build for each province

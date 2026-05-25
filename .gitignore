@@ -26,5 +26,8 @@ __pycache__/
 # Personal followup notes — not for repo
 followup/
 
+# Claude Code project instructions (local only)
+CLAUDE.md
+
 # Secrets
 .env
