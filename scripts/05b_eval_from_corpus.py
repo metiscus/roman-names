@@ -23,6 +23,7 @@ spec = importlib.util.spec_from_file_location("export_mod", os.path.join(os.path
 export_mod = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(export_mod)
 fix_praenomen = export_mod.fix_praenomen
+fix_nomen_case = export_mod.fix_nomen_case
 
 # Reuse the scoring logic from 05_evaluate_ner.py
 spec5 = importlib.util.spec_from_file_location("eval_mod", os.path.join(os.path.dirname(__file__), "05_evaluate_ner.py"))
@@ -38,13 +39,14 @@ from name_filters import classify_non_person_fp
 
 
 def apply_praenomen_fix(persons):
-    """Apply the same praenomen rotation that the export script uses."""
+    """Apply the same praenomen rotation + nomen nominalization the export uses,
+    so the eval scores the actual deliverable, not the raw model output."""
     fixed = []
     for p in persons:
         new_p = dict(p)
         pr, no, co = fix_praenomen(new_p.get('praenomen'), new_p.get('nomen'), new_p.get('cognomen'))
         new_p['praenomen'] = pr
-        new_p['nomen'] = no
+        new_p['nomen'] = fix_nomen_case(no)
         new_p['cognomen'] = co
         fixed.append(new_p)
     return fixed
