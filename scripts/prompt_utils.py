@@ -36,6 +36,12 @@ def get_system_prompt(province):
   "results": [{"id": "B2", "persons": [
     {"praenomen": "Publius", "nomen": "Rustius", "cognomen": "Felix", "gender": "male", "status": "tribus: Fabia, miles legionis II Augustae", "raw_name": "P. Rustio Fabia Felici"}
   ]}]
+}
+
+**Input:** "Deo Marti Belatucadro / v(otum) s(olvit) l(ibens) m(erito)"
+**Output:**
+{
+  "results": [{"id": "B3", "persons": []}]
 }"""
     elif province.lower() == 'africa proconsularis':
         extra_examples = """
@@ -53,7 +59,7 @@ def get_system_prompt(province):
 **Output:**
 {
   "results": [{"id": "A2", "persons": [
-    {"praenomen": null, "nomen": "Aemilia", "cognomen": "Victoria Fipiorina", "gender": "female", "status": null, "raw_name": "Aemilia Victoria Fipiorina"}
+    {"praenomen": null, "nomen": "Aemilia", "cognomen": "Victoria Fipiorina", "gender": "female", "status": "pia", "raw_name": "Aemilia Victoria Fipiorina"}
   ]}]
 }"""
     elif province.lower() in ('dalmatia', 'pannonia superior', 'pannonia inferior',
@@ -105,6 +111,20 @@ def get_system_prompt(province):
   "results": [{"id": "D6", "persons": [
     {"praenomen": null, "nomen": "Pollius", "cognomen": "Verus", "gender": "male", "status": null, "raw_name": "Pol(l)i Veri"}
   ]}]
+}
+
+**Input:** "C(aius) Sempronius C(ai) fil(ius) / Cl(audia) Marcellinus"
+**Output:**
+{
+  "results": [{"id": "D7", "persons": [
+    {"praenomen": "Gaius", "nomen": "Sempronius", "cognomen": "Marcellinus", "gender": "male", "status": "tribus: Claudia", "raw_name": "C. Sempronius C. fil. Cl. Marcellinus"}
+  ]}]
+}
+
+**Input:** "I(ovi) O(ptimo) M(aximo) / et Gen(io) loci / v(otum) s(olvit) l(ibens) m(erito)"
+**Output:**
+{
+  "results": [{"id": "D8", "persons": []}]
 }"""
     else:
         # Generic examples for Roma, Italia, Hispania, Gallia, Germania, and all other provinces.
@@ -143,13 +163,14 @@ For each person identified:
 1. Deconstruct the name into praenomen, nomen, and cognomen using the rules below.
 2. Identify gender ('male', 'female', or 'unknown') and social/professional status markers.
 3. Expand standard abbreviations (e.g., 'L.' to 'Lucius', 'M.' to 'Marcus', 'f.' to 'filius').
-4. Set fragmentary=true ONLY if the name itself overlaps a lacuna marker ([---] or [3]) or is cut off mid-word. Do NOT set fragmentary=true for unresolved abbreviations or short names.
+4. Set fragmentary=true if the name text contains ANY bracket notation — a restored reading ([P], [abc]) or a gap ([3], [---]) — since both indicate the stone was physically damaged at that point. Also set fragmentary=true if the inscription ends with an open bracket '[' (unclosed lacuna) near the name. Do NOT set fragmentary=true for unresolved abbreviations or parenthetical expansions like '(ius)'.
 5. Return a JSON object containing a 'results' list, where each item matches an ID to its extracted persons list.
 
 INSCRIPTION CONVENTIONS:
-- '[abc]' = letters abc are damaged but restored by editors. Treat as present.
+- '[abc]' = letters damaged on stone but restored by editors. Treat as present; but flag the name as fragmentary (see rule 4).
 - '[3]' or '[---]' = a lacuna of N missing characters. The name is INCOMPLETE.
 - '<a=b>' = letter 'b' was inscribed in place of 'a'. Use 'a'.
+- '{{abc}}' = letters erroneously engraved on the stone; DELETE them. 'Br{{p}}ituenda' → 'Brituenda'.
 - '/' = line break. Ignore.
 - '(...)' = editorial expansion. ALWAYS use the expanded form. Never store just the abbreviated letter(s). Example: 'C(a)ecil(ius)' → 'Caecilius', 'Aur(elius)' → 'Aurelius', 'Val(erio)' → 'Valerius'.
 
@@ -165,6 +186,7 @@ NOMEN vs COGNOMEN:
 TRIBUS:
 - These are Roman voting tribes, not nomina. Record in status as 'tribus: X':
 - {', '.join(sorted(TRIBUS))}
+- Tribus may be abbreviated: Cl. or Cl(audia) = Claudia, Fab. = Fabia, Volt. = Voltinia, Pal. = Palatina. An abbreviated tribus typically appears between the filiation marker (f. / fil.) and the cognomen — expand it and record as 'tribus: [full name]'.
 
 CASE NORMALIZATION — always store names in the NOMINATIVE case:
 - Latin inscriptions put names in dative (for the deceased: 'Iulio', 'Tonneiae') or genitive (filiation/possession: 'Iulii', 'Aviani', 'Gargili'). Always convert to nominative.
@@ -190,6 +212,7 @@ NAME FIELD RULES:
 NAME COHERENCE:
 - Consecutive Latin name elements without a separator ('et', 'cum', verbs, filiation) belong to the SAME person.
 - Separators that split persons: 'et', 'cum', filiation (filius, filia, uxor, mater, pater, soror, frater), or verbs (vixit, fecit, posuit).
+- Filiation direction: in 'Bato Platoris f(ilius)', Bato is the subject (his inscription), Plator is the father — extract Plator with status 'pater'. The 'f(ilius)' belongs to Bato's filiation, NOT to Plator's status.
 
 EXAMPLES:
 {extra_examples}
@@ -247,6 +270,17 @@ EXAMPLES:
     "id": "T5",
     "persons": [
       {{"praenomen": null, "nomen": "Aemilia", "cognomen": null, "gender": "female", "status": "pia, uxor", "raw_name": "Aemiliae Piae"}}
+    ]
+  }}]
+}}
+
+**Input:** "Titiae / L(uci) f(iliae) / [P]roculae / ["
+**Output:**
+{{
+  "results": [{{
+    "id": "T6",
+    "persons": [
+      {{"praenomen": null, "nomen": "Titia", "cognomen": "Procula", "gender": "female", "status": null, "raw_name": "Titiae [P]roculae", "fragmentary": true}}
     ]
   }}]
 }}

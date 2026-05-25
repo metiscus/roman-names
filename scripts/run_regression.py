@@ -14,6 +14,7 @@ Usage:
 import os
 import sys
 import json
+import time
 import argparse
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -154,25 +155,39 @@ def run_tests(model: str, filter_ids: list[str] | None, verbose: bool):
     for province, province_tests in by_province.items():
         batch_input = [{'id': t['id'], 'text': t['input']} for t in province_tests]
         system_prompt = get_system_prompt(province)
-        try:
-            response = client.models.generate_content(
-                model=model,
-                contents=f"Please process this batch of inscriptions: {json.dumps(batch_input, ensure_ascii=False)}",
-                config={
-                    'system_instruction': system_prompt,
-                    'response_mime_type': 'application/json',
-                    'response_schema': BatchNEROutput,
-                    'thinking_config': {'thinking_budget': 0},
-                },
-            )
-            if response.parsed:
-                for result in response.parsed.results:
-                    all_results[result.id] = [p.model_dump() for p in result.persons]
-            else:
+        backoff = 5
+        for attempt in range(4):
+            try:
+                response = client.models.generate_content(
+                    model=model,
+                    contents=f"Please process this batch of inscriptions: {json.dumps(batch_input, ensure_ascii=False)}",
+                    config={
+                        'system_instruction': system_prompt,
+                        'response_mime_type': 'application/json',
+                        'response_schema': BatchNEROutput,
+                        'thinking_config': {'thinking_budget': 0},
+                    },
+                )
+                if response.parsed:
+                    for result in response.parsed.results:
+                        all_results[result.id] = [p.model_dump() for p in result.persons]
+                else:
+                    for t in province_tests:
+                        all_results[t['id']] = None
+                break
+            except Exception as e:
+                err_str = str(e)
+                if '503' in err_str or '429' in err_str or 'quota' in err_str.lower() or 'UNAVAILABLE' in err_str:
+                    print(f"  RETRY ({attempt+1}/4) for province '{province}': {err_str[:80]}")
+                    time.sleep(backoff)
+                    backoff = min(backoff * 2, 30)
+                    continue
+                print(f"  ERROR calling model for province '{province}': {e}")
                 for t in province_tests:
                     all_results[t['id']] = None
-        except Exception as e:
-            print(f"  ERROR calling model for province '{province}': {e}")
+                break
+        else:
+            print(f"  ERROR: max retries exceeded for province '{province}'")
             for t in province_tests:
                 all_results[t['id']] = None
 
