@@ -4,6 +4,7 @@ import re
 import time
 import argparse
 import threading
+from collections import Counter
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from tqdm import tqdm
 from google import genai
@@ -19,7 +20,8 @@ from config import EDCS_PATH, OUTPUT_DIR
 load_dotenv()
 
 DAMAGE_THRESHOLD = 0.30
-BATCH_SIZE = 30
+BATCH_SIZE = 15            # smaller batches cut output-truncation parse errors and improve per-item rule adherence
+MAX_OUTPUT_TOKENS = 65536  # explicit high cap so dense (large-roster) batches don't truncate mid-JSON
 
 # Pricing (est) per 1M tokens
 PRICING = {
@@ -28,6 +30,30 @@ PRICING = {
 }
 
 GENDER_VALUES = {'male', 'female', 'unknown', 'homo', 'vir', 'mulier'}
+
+# Substrings marking a transient, worth-retrying API failure.
+RETRYABLE = ('429', 'quota', 'resource', 'rate', '500', '502', '503', '504',
+             'unavailable', 'deadline', 'timeout', 'timed out', 'internal',
+             'connection', 'reset', 'temporarily', 'overloaded')
+
+
+def _is_retryable(err_str):
+    s = (err_str or '').lower()
+    return any(m in s for m in RETRYABLE)
+
+
+def _err_label(err_str):
+    """Coarse category for the end-of-run error breakdown."""
+    s = (err_str or '').lower()
+    if 'parse_error' in s:
+        return 'parse_error (truncated/invalid JSON)'
+    if '429' in s or 'quota' in s or 'rate' in s:
+        return 'rate_limit (429)'
+    if any(m in s for m in ('500', '502', '503', '504', 'unavailable', 'internal', 'overloaded')):
+        return 'server_5xx'
+    if any(m in s for m in ('timeout', 'timed out', 'deadline', 'connection', 'reset')):
+        return 'network/timeout'
+    return 'other'
 
 class Person(BaseModel):
     praenomen: Optional[str] = Field(None)
@@ -138,11 +164,13 @@ def main():
     rates = PRICING.get(model, PRICING["gemini-2.5-flash-lite"])
     write_lock = threading.Lock()
     counters = {'new': 0, 'errors': 0, 'cost': 0.0}
+    err_types = Counter()
 
     def process_batch(batch):
         batch_input = [{'id': r['id'], 'text': r['text']} for r in batch]
         backoff = 5
-        for attempt in range(4):
+        last_err = "max_retries"
+        for attempt in range(5):
             try:
                 response = client.models.generate_content(
                     model=model,
@@ -152,22 +180,27 @@ def main():
                         'response_mime_type': 'application/json',
                         'response_schema': BatchNEROutput,
                         'thinking_config': {'thinking_budget': 0},
+                        'max_output_tokens': MAX_OUTPUT_TOKENS,
                     },
                 )
                 usage = response.usage_metadata
                 cost = (usage.prompt_token_count * rates["in"] / 1_000_000) + \
                        (usage.candidates_token_count * rates["out"] / 1_000_000)
                 if response.parsed is None:
-                    return None, cost, "parse_error"
-                return response.parsed.results, cost, None
-            except Exception as e:
-                err_str = str(e)
-                if '429' in err_str or 'quota' in err_str.lower() or 'Resource' in err_str:
+                    # Usually truncation / MAX_TOKENS — a re-roll often succeeds.
+                    last_err = "parse_error"
                     time.sleep(backoff)
                     backoff = min(backoff * 2, 60)
                     continue
-                return None, 0.0, err_str
-        return None, 0.0, "max_retries"
+                return response.parsed.results, cost, None
+            except Exception as e:
+                last_err = str(e)
+                if _is_retryable(last_err):
+                    time.sleep(backoff)
+                    backoff = min(backoff * 2, 60)
+                    continue
+                return None, 0.0, last_err  # non-retryable — give up immediately
+        return None, 0.0, last_err
 
     with open(output_path, 'a', encoding='utf-8') as out_f:
         with ThreadPoolExecutor(max_workers=workers) as executor:
@@ -179,6 +212,7 @@ def main():
                     counters['cost'] += cost
                     if error:
                         counters['errors'] += 1
+                        err_types[_err_label(error)] += 1
                     elif results:
                         for pred in results:
                             out_f.write(json.dumps({
@@ -194,6 +228,11 @@ def main():
     total_now = len(load_processed_ids(output_path))
     print(f"\nThis run: {counters['new']} new records | Total: {total_now} / {len(all_records)} | "
           f"Errors: {counters['errors']} | Cost: ${counters['cost']:.4f}")
+    if err_types:
+        print(f"Error breakdown (each failed batch ~{BATCH_SIZE} records):")
+        for label, count in err_types.most_common():
+            print(f"  {count:5d} x {label}")
+        print("  Re-run the same command to retry — resume skips already-written IDs.")
     if stop_after and counters['new'] >= stop_after:
         print(f"Stopped at requested limit. {len(all_records) - total_now} records remaining — re-run to continue.")
 
