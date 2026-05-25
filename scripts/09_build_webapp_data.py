@@ -9,6 +9,7 @@ from pathlib import Path
 # Ensure name_filters can be imported when running from any directory
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import name_filters
+from config import LIRE_ENRICHMENT_PATH
 
 # Paths resolved at runtime from --province arg (see __main__)
 
@@ -44,9 +45,9 @@ def get_marker_gender(genders):
     return 'unknown'
 
 def load_lire_enrichment() -> dict:
-    path = Path("data/lire_enrichment.json")
+    path = LIRE_ENRICHMENT_PATH
     if not path.exists():
-        print("  WARNING: data/lire_enrichment.json not found — run scripts/10_build_lire_lookup.py first")
+        print(f"  WARNING: {path} not found — run scripts/10_build_lire_lookup.py first")
         return {}
     print(f"Loading LIRE enrichment from {path}...")
     with open(path, encoding="utf-8") as f:

@@ -3,6 +3,7 @@ A/B test: feed the model raw 'inscription' (with lacunae markers) vs 'clean_text
 on the same sample of eval records, compare precision/recall/fragmentary signal.
 """
 import os
+import sys
 import json
 import random
 import time
@@ -11,11 +12,14 @@ from pydantic import BaseModel, Field
 from typing import List, Optional
 from dotenv import load_dotenv
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from config import EDCS_PATH, EVAL_DIR, OUTPUT_DIR as _OUTPUT_DIR
+
 load_dotenv()
 
 SAMPLE_SIZE = 30
 RANDOM_SEED = 7
-OUTPUT_DIR = 'data/output/ab_test'
+OUTPUT_DIR = str(_OUTPUT_DIR / 'ab_test')
 
 PRAENOMINA = {
     'Aulus', 'Appius', 'Gaius', 'Caius', 'Gnaeus', 'Decimus', 'Kaeso',
@@ -176,9 +180,9 @@ def main():
     os.makedirs(OUTPUT_DIR, exist_ok=True)
 
     # Load eval set and EDCS data
-    with open('data/eval/africa_proconsularis_eval.jsonl') as f:
+    with open(EVAL_DIR / 'africa_proconsularis_eval.jsonl') as f:
         eval_recs = [json.loads(l) for l in f]
-    with open('data/EDCS_text_cleaned_2022-09-12.json') as f:
+    with open(EDCS_PATH) as f:
         edcs = {r['EDCS-ID']: r for r in json.load(f) if r.get('EDCS-ID')}
 
     # Sample from records that have brackets in inscription (where the difference matters)

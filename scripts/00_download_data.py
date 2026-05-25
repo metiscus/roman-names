@@ -1,6 +1,10 @@
 import requests
 import os
+import sys
 from tqdm import tqdm
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from config import EDCS_PATH, LIRE_PATH
 
 def download_file(url, dest_path):
     response = requests.get(url, stream=True)
@@ -37,16 +41,17 @@ def main():
             else:
                 print(f"{f['key']} already exists.")
 
-    # Record 2: LIRE (DOI 10.5281/zenodo.5776109)
+    # Record 2: LIRE v3.0 (DOI 10.5281/zenodo.8431452)
+    # To upgrade: update LIRE_PATH in scripts/config.py, then re-run this script.
     print("\nFetching LIRE file metadata...")
-    lire_files = get_zenodo_files('5776109')
+    lire_files = get_zenodo_files('8431452')
     for f in lire_files:
-        if f['key'].endswith('.parquet') or f['key'].endswith('.zip') or f['key'].endswith('.geojson'):
+        dest = LIRE_PATH.parent / f['key']
+        if f['key'].endswith('.geojson') and f['key'] == LIRE_PATH.name:
             url = f['links']['self']
-            dest = os.path.join('data', f['key'])
-            if not os.path.exists(dest):
+            if not dest.exists():
                 print(f"Downloading {f['key']}...")
-                download_file(url, dest)
+                download_file(url, str(dest))
             else:
                 print(f"{f['key']} already exists.")
 

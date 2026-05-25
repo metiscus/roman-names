@@ -17,6 +17,7 @@ import sys
 import os
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from config import EVAL_DIR, OUTPUT_DIR
 import importlib.util
 spec = importlib.util.spec_from_file_location("export_mod", os.path.join(os.path.dirname(__file__), "06_export_to_dataset.py"))
 export_mod = importlib.util.module_from_spec(spec)
@@ -50,8 +51,8 @@ def apply_praenomen_fix(persons):
 
 
 def main(province='africa_proconsularis'):
-    eval_path = f'data/eval/{province}_eval.jsonl'
-    corpus_path = f'data/output/{province}_ner_full.jsonl'
+    eval_path = EVAL_DIR / f'{province}_eval.jsonl'
+    corpus_path = OUTPUT_DIR / f'{province}_ner_full.jsonl'
 
     # Load corpus predictions keyed by ID
     corpus_preds = {}

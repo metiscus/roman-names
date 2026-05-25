@@ -1,9 +1,12 @@
 import pandas as pd
 import json
 import os
+import sys
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from config import EDCS_PATH
 
 def explore_egypt():
-    input_file = 'data/EDCS_text_cleaned_2022-09-12.json'
+    input_file = EDCS_PATH
     print(f"Loading {input_file}...")
     
     # Load the full dataset
