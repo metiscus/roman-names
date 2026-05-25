@@ -3,6 +3,8 @@ import json
 import re
 import time
 import argparse
+import threading
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from tqdm import tqdm
 from google import genai
 from pydantic import BaseModel, Field
@@ -10,14 +12,20 @@ from typing import List, Optional
 from dotenv import load_dotenv
 import sys
 
-# Ensure scripts can be imported
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from prompt_utils import get_system_prompt
+from config import EDCS_PATH, OUTPUT_DIR
 
 load_dotenv()
 
 DAMAGE_THRESHOLD = 0.30
-BATCH_SIZE = 10
+BATCH_SIZE = 30
+
+# Pricing (est) per 1M tokens
+PRICING = {
+    "gemini-2.5-flash": {"in": 0.30, "out": 2.50},
+    "gemini-2.5-flash-lite": {"in": 0.10, "out": 0.40}
+}
 
 GENDER_VALUES = {'male', 'female', 'unknown', 'homo', 'vir', 'mulier'}
 
@@ -53,7 +61,7 @@ def damage_ratio(text):
 
 def load_records(province):
     print(f"Loading EDCS data for {province}...")
-    with open('data/EDCS_text_cleaned_2022-09-12.json') as f:
+    with open(EDCS_PATH) as f:
         data = json.load(f)
 
     records = []
@@ -88,12 +96,18 @@ def main():
     parser.add_argument("--stop-after", type=int, default=None, metavar="N",
                         help="Stop after processing N new records (for supervised runs). "
                              "Re-run without this flag to continue from where it stopped.")
+    parser.add_argument("--model", type=str, default="gemini-2.5-flash-lite",
+                        help="Gemini model to use (default: gemini-2.5-flash-lite)")
+    parser.add_argument("--workers", type=int, default=10,
+                        help="Concurrent API workers (default: 10; Flash-Lite supports up to ~50)")
     args = parser.parse_args()
 
     province = args.province
     stop_after = args.stop_after
+    model = args.model
+    workers = args.workers
     safe_name = province.lower().replace(' ', '_')
-    output_path = f'data/output/{safe_name}_ner_full.jsonl'
+    output_path = OUTPUT_DIR / f'{safe_name}_ner_full.jsonl'
 
     api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:
@@ -101,7 +115,7 @@ def main():
         return
 
     client = genai.Client(api_key=api_key)
-    os.makedirs('data/output', exist_ok=True)
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
     all_records = load_records(province)
     processed_ids = load_processed_ids(output_path)
@@ -118,17 +132,20 @@ def main():
         return
 
     system_prompt = get_system_prompt(province)
+    batches = [remaining[i:i + BATCH_SIZE] for i in range(0, len(remaining), BATCH_SIZE)]
+    print(f"Workers: {workers} | Batches: {len(batches)} | Model: {model}")
 
-    errors = 0
-    new_count = 0
-    with open(output_path, 'a', encoding='utf-8') as out_f:
-        for i in tqdm(range(0, len(remaining), BATCH_SIZE), desc="Processing"):
-            batch = remaining[i:i + BATCH_SIZE]
-            batch_input = [{'id': r['id'], 'text': r['text']} for r in batch]
+    rates = PRICING.get(model, PRICING["gemini-2.5-flash-lite"])
+    write_lock = threading.Lock()
+    counters = {'new': 0, 'errors': 0, 'cost': 0.0}
 
+    def process_batch(batch):
+        batch_input = [{'id': r['id'], 'text': r['text']} for r in batch]
+        backoff = 5
+        for attempt in range(4):
             try:
                 response = client.models.generate_content(
-                    model='gemini-2.5-flash',
+                    model=model,
                     contents=f"Please process this batch of inscriptions: {json.dumps(batch_input, ensure_ascii=False)}",
                     config={
                         'system_instruction': system_prompt,
@@ -137,34 +154,48 @@ def main():
                         'thinking_config': {'thinking_budget': 0},
                     },
                 )
+                usage = response.usage_metadata
+                cost = (usage.prompt_token_count * rates["in"] / 1_000_000) + \
+                       (usage.candidates_token_count * rates["out"] / 1_000_000)
                 if response.parsed is None:
-                    errors += 1
-                    print(f"\n  Error on batch {i}: Parsing failed. Raw response:")
-                    print(response.text)
-                    continue
-
-                batch_data = response.parsed.model_dump()
-
-                for pred in batch_data['results']:
-                    out_f.write(json.dumps({
-                        'id': pred['id'],
-                        'persons': pred['persons'],
-                    }, ensure_ascii=False) + '\n')
-                    new_count += 1
-                out_f.flush()
-
+                    return None, cost, "parse_error"
+                return response.parsed.results, cost, None
             except Exception as e:
-                errors += 1
-                print(f"\n  Error on batch {i}: {e}")
-                if '429' in str(e) or 'quota' in str(e).lower():
-                    print("  Quota hit — stopping.")
-                    break
+                err_str = str(e)
+                if '429' in err_str or 'quota' in err_str.lower() or 'Resource' in err_str:
+                    time.sleep(backoff)
+                    backoff = min(backoff * 2, 60)
+                    continue
+                return None, 0.0, err_str
+        return None, 0.0, "max_retries"
+
+    with open(output_path, 'a', encoding='utf-8') as out_f:
+        with ThreadPoolExecutor(max_workers=workers) as executor:
+            futures = {executor.submit(process_batch, b): b for b in batches}
+            pbar = tqdm(total=len(batches), desc="Batches")
+            for future in as_completed(futures):
+                results, cost, error = future.result()
+                with write_lock:
+                    counters['cost'] += cost
+                    if error:
+                        counters['errors'] += 1
+                    elif results:
+                        for pred in results:
+                            out_f.write(json.dumps({
+                                'id': pred.id,
+                                'persons': [p.model_dump() for p in pred.persons],
+                            }, ensure_ascii=False) + '\n')
+                            counters['new'] += 1
+                        out_f.flush()
+                pbar.update(1)
+                pbar.set_postfix({'cost': f"${counters['cost']:.4f}", 'err': counters['errors']})
+            pbar.close()
 
     total_now = len(load_processed_ids(output_path))
-    print(f"\nThis run: {new_count} new records | Total in output: {total_now} / {len(all_records)} | Errors: {errors}")
-    if stop_after and new_count >= stop_after:
-        remaining_after = len(all_records) - total_now
-        print(f"Stopped at requested limit. {remaining_after} records remaining — re-run to continue.")
+    print(f"\nThis run: {counters['new']} new records | Total: {total_now} / {len(all_records)} | "
+          f"Errors: {counters['errors']} | Cost: ${counters['cost']:.4f}")
+    if stop_after and counters['new'] >= stop_after:
+        print(f"Stopped at requested limit. {len(all_records) - total_now} records remaining — re-run to continue.")
 
 if __name__ == "__main__":
     main()
