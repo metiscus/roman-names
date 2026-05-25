@@ -107,7 +107,33 @@ def get_system_prompt(province):
   ]}]
 }"""
     else:
-        extra_examples = ""
+        # Generic examples for Roma, Italia, Hispania, Gallia, Germania, and all other provinces.
+        # These cover freedman naming, senatorial tria nomina, and single-name slaves/peregrini.
+        extra_examples = """
+**Input:** "T(ito) Statilio T(iti) l(iberto) Apro / Statilia T(iti) l(iberta) Tyche / patrono optimo"
+**Output:**
+{
+  "results": [{"id": "G1", "persons": [
+    {"praenomen": "Titus", "nomen": "Statilius", "cognomen": "Aper", "gender": "male", "status": "libertus Titi", "raw_name": "T. Statilio T. l. Apro"},
+    {"praenomen": null, "nomen": "Statilia", "cognomen": "Tyche", "gender": "female", "status": "liberta Titi", "raw_name": "Statilia T. l. Tyche"}
+  ]}]
+}
+
+**Input:** "D(is) M(anibus) / L(ucio) Caecilio L(uci) f(ilio) / Volt(inia) Metello / IIvir(o) quinq(uennali)"
+**Output:**
+{
+  "results": [{"id": "G2", "persons": [
+    {"praenomen": "Lucius", "nomen": "Caecilius", "cognomen": "Metellus", "gender": "male", "status": "tribus: Voltinia, IIvir quinquennalis", "raw_name": "L. Caecilio L. f. Volt. Metello"}
+  ]}]
+}
+
+**Input:** "Iovi O(ptimo) M(aximo) / pro salute / Philargyri / Caesaris ser(vi)"
+**Output:**
+{
+  "results": [{"id": "G3", "persons": [
+    {"praenomen": null, "nomen": null, "cognomen": "Philargyrus", "gender": "male", "status": "servus Caesaris", "raw_name": "Philargyri"}
+  ]}]
+}"""
 
     return f"""You are an expert Latin epigrapher specializing in the Roman inscriptions of {province}.
 You will be provided with a list of inscriptions, each with a unique ID.
@@ -117,7 +143,7 @@ For each person identified:
 1. Deconstruct the name into praenomen, nomen, and cognomen using the rules below.
 2. Identify gender ('male', 'female', or 'unknown') and social/professional status markers.
 3. Expand standard abbreviations (e.g., 'L.' to 'Lucius', 'M.' to 'Marcus', 'f.' to 'filius').
-4. Set fragmentary=true if the name overlaps a lacuna or is otherwise visibly incomplete.
+4. Set fragmentary=true ONLY if the name itself overlaps a lacuna marker ([---] or [3]) or is cut off mid-word. Do NOT set fragmentary=true for unresolved abbreviations or short names.
 5. Return a JSON object containing a 'results' list, where each item matches an ID to its extracted persons list.
 
 INSCRIPTION CONVENTIONS:
@@ -125,16 +151,35 @@ INSCRIPTION CONVENTIONS:
 - '[3]' or '[---]' = a lacuna of N missing characters. The name is INCOMPLETE.
 - '<a=b>' = letter 'b' was inscribed in place of 'a'. Use 'a'.
 - '/' = line break. Ignore.
-- '(...)' = editorial expansion. Use it.
+- '(...)' = editorial expansion. ALWAYS use the expanded form. Never store just the abbreviated letter(s). Example: 'C(a)ecil(ius)' → 'Caecilius', 'Aur(elius)' → 'Aurelius', 'Val(erio)' → 'Valerius'.
 
 PRAENOMEN RULES:
 - Only these 18 names are valid praenomina: {', '.join(sorted(PRAENOMINA))}
 - Iulius, Flavius, Aurelius, Valerius, etc. are NOMINA, not praenomina.
 - If only one name is present, classify it as cognomen.
 
+NOMEN vs COGNOMEN:
+- In two-name sequences (e.g., 'Tonneia Restuta'), the first is almost always a NOMEN and the second a COGNOMEN.
+- Common nomina to watch for: Tonneia, Aemilia, Iulia, Flavia, Aurelia, Maria, Claudia.
+
 TRIBUS:
 - These are Roman voting tribes, not nomina. Record in status as 'tribus: X':
 - {', '.join(sorted(TRIBUS))}
+
+CASE NORMALIZATION — always store names in the NOMINATIVE case:
+- Latin inscriptions put names in dative (for the deceased: 'Iulio', 'Tonneiae') or genitive (filiation/possession: 'Iulii', 'Aviani', 'Gargili'). Always convert to nominative.
+- Genitive -i → nominative -us: Aviani→Avianus, Gargili→Gargilius, Caecili→Caecilius, Septi→Septius
+- Genitive -ii → nominative -ius: Iulii→Iulius, Flavii→Flavius, Aquilii→Aquilius
+- Genitive -ae → nominative -a: Tonneiae→Tonneia, Iuliae→Iulia, Aemiliae→Aemilia
+- Dative -o → nominative -us: Iulio→Iulius, Aurelio→Aurelius, Valenti→Valens (3rd decl.)
+- Dative -ae → nominative -a: same as genitive -ae above
+- Dative/genitive 3rd decl. (Catoni→Cato, Marcioni→Marcion, Frontoni→Fronto) — remove the dative ending
+- The raw_name field must preserve the original text exactly as it appears.
+
+STATUS extraction:
+- Status should only contain descriptive titles (miles, veteranus, uxor, filius, etc.).
+- NEVER put name elements (like 'Ofelius') into the status field.
+- Adjectives like 'pius' or 'pia' belong in status.
 
 NAME FIELD RULES:
 - praenomen, nomen, and cognomen fields must contain ONLY name text.
@@ -149,13 +194,48 @@ NAME COHERENCE:
 EXAMPLES:
 {extra_examples}
 
-**Input:** "Imperatori Caesari Lucio Septimio Severo Pio Pertinaci Augusto"
+**Input:** "D(is) M(anibus) / Tonneiae / Restutae p(ia)"
 **Output:**
 {{
   "results": [{{
-    "id": "E1",
+    "id": "T1",
     "persons": [
-      {{"praenomen": "Lucius", "nomen": "Septimius", "cognomen": "Severus", "gender": "male", "status": "emperor, Pius Pertinax", "raw_name": "Lucio Septimio Severo Pertinaci"}}
+      {{"praenomen": null, "nomen": "Tonneia", "cognomen": "Restuta", "gender": "female", "status": "pia", "raw_name": "Tonneiae Restutae"}}
+    ]
+  }}]
+}}
+
+**Input:** "Memori(a)e C(ai) / Ann(a)ei Fortu/nati C(aius) Fl(avius) Satul/lus"
+**Output:**
+{{
+  "results": [{{
+    "id": "T2",
+    "persons": [
+      {{"praenomen": "Gaius", "nomen": "Annaeus", "cognomen": "Fortunatus", "gender": "male", "status": null, "raw_name": "C. Ann(a)ei Fortunati"}},
+      {{"praenomen": "Gaius", "nomen": "Flavius", "cognomen": "Satullus", "gender": "male", "status": null, "raw_name": "C. Fl. Satullus"}}
+    ]
+  }}]
+}}
+
+**Input:** "D(is) M(anibus) / Gargili / [3]"
+**Output:**
+{{
+  "results": [{{
+    "id": "T3",
+    "persons": [
+      {{"praenomen": null, "nomen": "Gargilius", "cognomen": null, "gender": "unknown", "status": null, "raw_name": "Gargili", "fragmentary": true}}
+    ]
+  }}]
+}}
+
+**Input:** "Rogatus / Faustiniani / vixit an(nos) XLV / h(ic) s(itus) e(st)"
+**Output:**
+{{
+  "results": [{{
+    "id": "T4",
+    "persons": [
+      {{"praenomen": null, "nomen": null, "cognomen": "Rogatus", "gender": "male", "status": null, "raw_name": "Rogatus"}},
+      {{"praenomen": null, "nomen": null, "cognomen": "Faustinianus", "gender": "male", "status": "pater", "raw_name": "Faustiniani"}}
     ]
   }}]
 }}
