@@ -104,48 +104,64 @@ def main(province='africa_proconsularis'):
         matched_records += 1
         predictions = apply_praenomen_fix(corpus_preds[rec_id])
         pred_pairs = [(p, get_person_signature(p)) for p in predictions if isinstance(p, dict)]
-        pred_signatures = [sig for _, sig in pred_pairs]
 
-        for p_gt, gt_sig in gt_pairs:
-            if not gt_sig:
-                continue
-            found = any(names_match(gt_sig, ps) for ps in pred_signatures if ps)
-            if found:
-                tp += 1
-            elif is_damaged(p_gt):
-                fn_damaged += 1
-            else:
-                fn += 1
+        # Greedy one-to-one (bipartite) matching: each prediction claims at most
+        # one GT person, and each GT person is claimed at most once. Prevents a
+        # single shared-nomen prediction from scoring TP against every GT in a
+        # dense multi-person inscription (the old `any(names_match)` inflation).
+        matched_gt = set()
 
         for p_raw, pred_sig in pred_pairs:
             if not pred_sig:
                 continue
             if len(p_raw.get('raw_name', '')) <= 1:
                 continue
-            found = any(names_match(pred_sig, gs) for _, gs in gt_pairs if gs)
-            if not found:
-                # Old imperial detection (status keywords + inscription-level formulae)
-                if is_imperial(p_raw) or is_imperial_inscription(text):
-                    fp_imperial += 1
+
+            best_gt_idx = -1
+            for j, (p_gt, gt_sig) in enumerate(gt_pairs):
+                if j in matched_gt or not gt_sig:
                     continue
-                # New: deity / expanded-imperial / bare-epithet classifier
-                non_person = classify_non_person_fp(p_raw)
-                if non_person == 'imperial':
-                    fp_imperial += 1
-                elif non_person == 'deity':
-                    fp_deity += 1
-                elif non_person == 'place':
-                    fp_place += 1
-                elif non_person == 'epithet':
-                    fp_epithet += 1
-                else:
-                    fp_other += 1
-                    discoveries_other.append({
-                        "id": rec_id,
-                        "name": p_raw.get('raw_name', 'Unknown'),
-                        "expanded": " ".join(filter(None, [p_raw.get('praenomen'), p_raw.get('nomen'), p_raw.get('cognomen')])),
-                        "status": p_raw.get('status'),
-                    })
+                if names_match(pred_sig, gt_sig):
+                    best_gt_idx = j
+                    break
+
+            if best_gt_idx != -1:
+                tp += 1
+                matched_gt.add(best_gt_idx)
+                continue
+
+            # Unmatched prediction = false positive — bucket it.
+            # Old imperial detection (status keywords + inscription-level formulae)
+            if is_imperial(p_raw) or is_imperial_inscription(text):
+                fp_imperial += 1
+                continue
+            # New: deity / expanded-imperial / bare-epithet classifier
+            non_person = classify_non_person_fp(p_raw)
+            if non_person == 'imperial':
+                fp_imperial += 1
+            elif non_person == 'deity':
+                fp_deity += 1
+            elif non_person == 'place':
+                fp_place += 1
+            elif non_person == 'epithet':
+                fp_epithet += 1
+            else:
+                fp_other += 1
+                discoveries_other.append({
+                    "id": rec_id,
+                    "name": p_raw.get('raw_name', 'Unknown'),
+                    "expanded": " ".join(filter(None, [p_raw.get('praenomen'), p_raw.get('nomen'), p_raw.get('cognomen')])),
+                    "status": p_raw.get('status'),
+                })
+
+        # Recall: GT persons left unmatched are misses (damaged vs real).
+        for j, (p_gt, gt_sig) in enumerate(gt_pairs):
+            if j in matched_gt or not gt_sig:
+                continue
+            if is_damaged(p_gt):
+                fn_damaged += 1
+            else:
+                fn += 1
 
     total_fp = fp_imperial + fp_deity + fp_place + fp_epithet + fp_other
     # Recall(raw) treats all unanswered GT (damaged + damage-filtered + real miss) as misses.

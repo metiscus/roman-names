@@ -40,19 +40,45 @@ def is_imperial_inscription(text):
     return text.strip().lower().startswith(IMPERIAL_FORMULAE)
 
 def is_damaged(p):
-    raw = p.get('name', '')
-    return '[' in raw or '+' in raw or '*' in raw
+    """Person is significantly damaged. We only flag as damaged if 
+    crucial name parts (nomen/cognomen) are missing or bracketed.
+    """
+    raw = (p.get('name') or p.get('raw_name') or '').lower()
+    # If the name is just a fragment like [---] or [---]us, it's damaged.
+    if re.search(r'\[\-\-\-\]|\[\.\.\.\]', raw):
+        return True
+    # If more than 50% of the string is brackets/dots, it's damaged.
+    brackets = len(re.findall(r'[\[\]\(\)\.\-\+]', raw))
+    if len(raw) > 0 and brackets / len(raw) > 0.5:
+        return True
+    return False
 
 def names_match(sig_a, sig_b, threshold=0.75):
-    """Word-overlap match with 6-char prefix comparison to handle Latin case endings."""
+    """Stricter name matching with length guards and cognomen requirement."""
     words_a = sig_a.split()
     words_b = sig_b.split()
     if not words_a or not words_b:
         return False
+    
     # Use the shorter sig as the query to avoid penalising extra cognomina
     query, target = (words_a, words_b) if len(words_a) <= len(words_b) else (words_b, words_a)
-    matched = sum(1 for w in query if any(w[:6] == t[:6] for t in target))
-    return matched / len(query) >= threshold
+    
+    matches = 0
+    for w in query:
+        # Find best match for this word in target
+        best_match = False
+        for t in target:
+            # 6-char prefix match
+            if w[:6] == t[:6]:
+                # Length guard: prevents Victor (6) matching Victorinus (10)
+                # But allows Victor (6) matching Victore (7) or Victori (7)
+                if abs(len(w) - len(t)) <= 2:
+                    best_match = True
+                    break
+        if best_match:
+            matches += 1
+            
+    return matches / len(query) >= threshold
 
 def evaluate_ner(province):
     safe_name = province.lower().replace(' ', '_')
@@ -86,36 +112,47 @@ def evaluate_ner(province):
             gt_pairs = [(p, get_person_signature(p)) for p in ground_truth if isinstance(p, dict)]
 
         pred_pairs = [(p, get_person_signature(p)) for p in predictions if isinstance(p, dict)]
-        pred_signatures = [sig for _, sig in pred_pairs]
-
-        # Recall check
-        for p_gt, gt_sig in gt_pairs:
-            if not gt_sig:
-                continue
-            found = any(names_match(gt_sig, ps) for ps in pred_signatures if ps)
-            if found:
-                tp += 1
-            elif is_damaged(p_gt):
-                fn_damaged += 1
-            else:
-                fn += 1
-
-        # Precision check
-        for p_raw, pred_sig in pred_pairs:
+        
+        # Bipartite matching (greedy)
+        matched_gt = set()
+        matched_pred = set()
+        
+        for i, (p_pred, pred_sig) in enumerate(pred_pairs):
             if not pred_sig: continue
-            if len(p_raw.get('raw_name', '')) <= 1: continue
-            found = any(names_match(pred_sig, gs) for _, gs in gt_pairs if gs)
-            if not found:
-                if is_imperial(p_raw) or is_imperial_inscription(text):
+            if len(p_pred.get('raw_name', '')) <= 1: continue
+            
+            best_gt_idx = -1
+            for j, (p_gt, gt_sig) in enumerate(gt_pairs):
+                if j in matched_gt: continue
+                if names_match(pred_sig, gt_sig):
+                    best_gt_idx = j
+                    break
+            
+            if best_gt_idx != -1:
+                tp += 1
+                matched_gt.add(best_gt_idx)
+                matched_pred.add(i)
+            else:
+                # Precision check (it's a FP)
+                if is_imperial(p_pred) or is_imperial_inscription(text):
                     fp_imperial += 1
                 else:
                     fp_other += 1
                     discoveries_other.append({
                         "id": record['id'],
-                        "name": p_raw.get('raw_name', 'Unknown'),
-                        "expanded": " ".join(filter(None, [p_raw.get('praenomen'), p_raw.get('nomen'), p_raw.get('cognomen')])),
-                        "status": p_raw.get('status'),
+                        "name": p_pred.get('raw_name', 'Unknown'),
+                        "expanded": " ".join(filter(None, [p_pred.get('praenomen'), p_pred.get('nomen'), p_pred.get('cognomen')])),
+                        "status": p_pred.get('status'),
                     })
+
+        # Recall check (remaining GTs)
+        for j, (p_gt, gt_sig) in enumerate(gt_pairs):
+            if j not in matched_gt:
+                if not gt_sig: continue
+                if is_damaged(p_gt):
+                    fn_damaged += 1
+                else:
+                    fn += 1
 
     print_summary(province, 'LIRE GT', tp, fp_imperial, fp_other, fn, fn_damaged, discoveries_other)
 
@@ -190,33 +227,45 @@ def evaluate_r1b1(province):
 
         gt_pairs = [(p, get_person_signature(p)) for p in gt_people if isinstance(p, dict)]
         pred_pairs = [(p, get_person_signature(p)) for p in predictions if isinstance(p, dict)]
-        pred_signatures = [sig for _, sig in pred_pairs]
 
-        for p_gt, gt_sig in gt_pairs:
-            if not gt_sig:
-                continue
-            if any(names_match(gt_sig, ps) for ps in pred_signatures if ps):
+        # Bipartite matching (greedy)
+        matched_gt = set()
+        
+        for i, (p_pred, pred_sig) in enumerate(pred_pairs):
+            if not pred_sig: continue
+            if len(p_pred.get('raw_name', '')) <= 1: continue
+            
+            best_gt_idx = -1
+            for j, (p_gt, gt_sig) in enumerate(gt_pairs):
+                if j in matched_gt: continue
+                if names_match(pred_sig, gt_sig):
+                    best_gt_idx = j
+                    break
+            
+            if best_gt_idx != -1:
                 tp += 1
+                matched_gt.add(best_gt_idx)
             else:
-                fn += 1
-
-        for p_raw, pred_sig in pred_pairs:
-            if not pred_sig:
-                continue
-            if len(p_raw.get('raw_name', '')) <= 1:
-                continue
-            found = any(names_match(pred_sig, gs) for _, gs in gt_pairs if gs)
-            if not found:
-                if is_imperial(p_raw) or is_imperial_inscription(text):
+                # Precision check (it's a FP)
+                if is_imperial(p_pred) or is_imperial_inscription(text):
                     fp_imperial += 1
                 else:
                     fp_other += 1
                     discoveries_other.append({
                         "id": edcs_id,
-                        "name": p_raw.get('raw_name', 'Unknown'),
-                        "expanded": " ".join(filter(None, [p_raw.get('praenomen'), p_raw.get('nomen'), p_raw.get('cognomen')])),
-                        "status": p_raw.get('status'),
+                        "name": p_pred.get('raw_name', 'Unknown'),
+                        "expanded": " ".join(filter(None, [p_pred.get('praenomen'), p_pred.get('nomen'), p_pred.get('cognomen')])),
+                        "status": p_pred.get('status'),
                     })
+
+        # Recall check (remaining GTs)
+        for j, (p_gt, gt_sig) in enumerate(gt_pairs):
+            if j not in matched_gt:
+                if not gt_sig: continue
+                if is_damaged(p_gt):
+                    fn_damaged += 1
+                else:
+                    fn += 1
 
     print_summary(province, 'R1b1 GT', tp, fp_imperial, fp_other, fn, fn_damaged, discoveries_other)
 

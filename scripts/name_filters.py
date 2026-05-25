@@ -56,7 +56,7 @@ def _load_signatures(filename):
 DEITY_NAMES = _load_set('deities.txt')
 EMPEROR_SIGNATURES = _load_signatures('emperor_signatures.txt')
 IMPERIAL_EPITHETS = _load_set('imperial_epithets.txt')
-PLACE_NAMES = _load_set('african_places.txt')
+PLACE_NAMES = _load_set('place_names.txt')
 
 
 def _clean_tokens(person):
@@ -76,38 +76,75 @@ def _clean_tokens(person):
 
 
 def is_deity(person):
-    """Person record is actually a deity, deified abstraction, or personification."""
+    """Person record is actually a deity, deified abstraction, or personification.
+
+    Conservative: fires only when praenomen and nomen are both empty. Protects
+    real persons named after deities (e.g. Geminia Victoria, Sulpicius Silvanus).
+    """
+    if person.get('praenomen') or person.get('nomen'):
+        return False
     return bool(_clean_tokens(person) & DEITY_NAMES)
 
 
 def is_imperial_person(person):
     """Person matches a known emperor or imperial-family signature.
 
-    `[[name]]` damnatio memoriae brackets in raw_name are also an imperial-grade
-    signal. We also check the status field for 'imperator' or 'augustus' as
-    a secondary signal for single-name emperor mentions.
+    `[[name]]` damnatio memoriae brackets are an imperial-grade signal — but
+    ONLY for non-military persons. Damnatio brackets very often surround a
+    legion's imperial epithet ([[Antoninianae]], [[leg(ionis) III Aug(ustae)]])
+    rather than the person's own name, so an officer/soldier or imperial-cult
+    priest (Augustalis) carrying such brackets is NOT an emperor. Military and
+    priestly context therefore vetoes the bracket / status signals; only a
+    name-token EMPEROR_SIGNATURE match can flag such a person.
     """
-    raw = person.get('raw_name') or ''
-    if '[[' in raw and ']]' in raw:
-        return True
-
     tokens = _clean_tokens(person)
-    
-    # Check signatures (high confidence)
+
+    # Name-token signatures are the only fully safe signal — check first, before
+    # any veto, so a genuine emperor named alongside a legion is still caught.
     for sig in EMPEROR_SIGNATURES:
         if sig <= tokens:
             return True
-            
-    # Check status field for clear imperial titles (helps single-name mentions)
+
     status = (person.get('status') or '').lower()
-    if 'imperator' in status or 'emperor' in status or 'augustus' in status or 'augusta' in status:
+    raw = (person.get('raw_name') or '').lower()
+    context = status + ' ' + raw
+
+    # Military unit / imperial-cult priesthood: damnatio brackets and 'Augusta'
+    # in this context belong to the unit's epithet, not the person. Veto the
+    # remaining (non-signature) signals — protects real legates/centurions of
+    # Legio III Augusta and seviri Augustales.
+    if 'legio' in context or 'leg(' in context or 'augustalis' in context or 'augustali' in context:
+        return False
+
+    # Damnatio memoriae brackets around the name (non-military) → imperial.
+    if '[[' in raw and ']]' in raw:
+        return True
+
+    # Clear imperial titles in status (word boundaries avoid 'augustalis' etc.).
+    if re.search(r'\b(imperator|emperor|augustus|caesar)\b', status):
+        return True
+    if re.search(r'\baugusta\b', status):
         return True
 
     return False
 
 
+# Single-word epithets that are ALSO extremely common personal cognomina.
+# A bare one of these is far more often a real person (slave/freedman) than a
+# stranded imperial fragment, so it is NOT flagged on its own — only when it
+# appears in a multi-word epithet sequence ("Pio Felici") or beside a hard
+# imperial-only word.
+_COMMON_COGNOMEN_EPITHETS = {'felix', 'felici', 'maximus', 'pius', 'pio'}
+
+
 def is_bare_epithet(person):
-    """Single-name 'person' that's actually a bare imperial epithet (Pius, Felix...)."""
+    """Single-name 'person' that's actually a bare imperial epithet (Pius, Felix...).
+
+    Guard: a lone Felix / Maximus / Pius is overwhelmingly a real cognomen, so a
+    single-word epithet from that common-cognomen set does not fire. Multi-word
+    sequences ("Pio Felici", "Imperator Caesar") and hard imperial-only words
+    (Invictus, Augustus...) still do.
+    """
     if person.get('praenomen') or person.get('nomen'):
         return False
     cog = (person.get('cognomen') or '').strip().lower()
@@ -117,7 +154,11 @@ def is_bare_epithet(person):
     words = cleaned.split()
     if not words:
         return False
-    return all(w in IMPERIAL_EPITHETS for w in words)
+    if not all(w in IMPERIAL_EPITHETS for w in words):
+        return False
+    if len(words) == 1 and words[0] in _COMMON_COGNOMEN_EPITHETS:
+        return False
+    return True
 
 
 def is_place(person):
