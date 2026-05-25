@@ -29,7 +29,7 @@ load_dotenv()
 
 PROVINCES = [
     'africa_proconsularis', 'britannia', 'dacia', 'dalmatia',
-    'moesia_superior', 'noricum', 'pannonia_inferior', 'pannonia_superior'
+    'moesia_superior', 'noricum', 'numidia', 'pannonia_inferior', 'pannonia_superior'
 ]
 
 MIN_EDITION_LENGTH = 20   # minimum chars for text_edition to be worth translating
