@@ -319,6 +319,11 @@ Pipeline-side recommendations for the next NER run (Britannia or hypothetical Af
     - **Performance:** Adjusted F1 of **0.85** (Recall 0.88, Precision 0.83).
     - **Key Findings:** Excellent handling of Greek script names and extremely high-density military rosters (up to 49 individuals in one record).
     - **Scale:** 5,452 name attestations extracted and clustered.
+- **Numidia Run:**
+    - **Dataset:** Full corpus of 15,363 records processed.
+    - **Performance:** Adjusted F1 of **0.81** (Recall 0.83, Precision 0.79).
+    - **Key Findings:** Successful extraction of 23,382 name attestations, high-quality family roles and military titles.
+    - **Scale:** 19,753 clusters formed; 2,608 inscriptions translated.
 
 ### Full Britannia Corpus Run (complete)
 
