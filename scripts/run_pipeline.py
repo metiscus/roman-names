@@ -108,6 +108,8 @@ def main():
     ap.add_argument("--resume", action="store_true",
                     help="ner stage: append to existing output instead of a fresh "
                          "run (default: back up the old output and rerun from scratch)")
+    ap.add_argument("--exclude", default="",
+                    help="comma-separated slugs to skip (e.g. an already-done province)")
     ap.add_argument("--continue-on-error", action="store_true",
                     help="move to the next province on failure (default: stop)")
     ap.add_argument("--dry-run", action="store_true", help="print commands, run nothing")
@@ -120,13 +122,23 @@ def main():
     # Keep canonical dependency order regardless of how the user listed them.
     stages = [s for s in ALL_STAGES if s in stages]
 
+    known = {p[0] for p in PROVINCES}
     if args.province == "all":
-        provinces = PROVINCES
+        provinces = list(PROVINCES)
     else:
-        provinces = [p for p in PROVINCES if p[0] == args.province]
-        if not provinces:
-            ap.error(f"unknown province '{args.province}'; "
-                     f"known: {', '.join(p[0] for p in PROVINCES)}")
+        wanted = [s.strip() for s in args.province.split(",") if s.strip()]
+        unknown = [s for s in wanted if s not in known]
+        if unknown:
+            ap.error(f"unknown province(s): {unknown}; known: {', '.join(sorted(known))}")
+        provinces = [p for p in PROVINCES if p[0] in wanted]
+
+    excluded = {s.strip() for s in args.exclude.split(",") if s.strip()}
+    if excluded - known:
+        ap.error(f"unknown --exclude province(s): {sorted(excluded - known)}")
+    if excluded:
+        provinces = [p for p in provinces if p[0] not in excluded]
+    if not provinces:
+        ap.error("no provinces left to run after applying --province/--exclude")
 
     print("=" * 72)
     print("PIPELINE PLAN")

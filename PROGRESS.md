@@ -491,3 +491,63 @@ Cross-province analysis of all 61k processed records found:
 4. Full rerun all provinces with `--model gemini-2.5-flash-lite --workers 20`
 5. Re-evaluate all provinces against LIRE v3.0 ground truth for updated F1 numbers
 6. Re-run export, cluster, and webapp build for each province
+
+---
+
+## Week 6: Quality Hardening — Filters, Eval, Prompt (May 2026)
+
+### Status: Complete (code); full multi-province rerun kicked off
+
+**Goal:** Act on an end-to-end review of output quality. The review found that the headline F1 was inflated by the evaluation harness and that the non-person filters were discarding real people — both independent of model quality.
+
+### Filter over-capture fixes (`scripts/name_filters.py`, `scripts/lookup/emperor_signatures.txt`)
+
+The deity / imperial / epithet classifiers were flagging common Roman personal names as non-persons and dropping them from the dataset:
+- **`is_deity`**: added a bare-cognomen guard — fires only when praenomen and nomen are both empty. Real people named Victoria, Silvanus, Concordia (e.g. *Marcus Cilicius Silvanus*, *Iulia Concordia*) are no longer mislabeled deities.
+- **`is_imperial_person`**: reordered so military/priestly context (`legio`, `Augustalis`) vetoes the `[[damnatio]]` and `Augusta` signals. Previously every officer of *Legio III Augusta* (incl. the legate *Q. Anicius Faustus*) and every *sevir Augustalis* was flagged as an emperor; only name-token emperor signatures flag now.
+- **`is_bare_epithet`**: a lone `Felix`/`Maximus`/`Pius` (common cognomina) no longer fires; multi-word sequences (`Pio Felici`, `Imperator Caesar`) still do.
+- **`emperor_signatures.txt`**: dropped single-token common cognomina (valens, probus, carus, decius, licinius, crispus).
+
+Africa deliverable flags: is_deity 944→775, is_imperial 1390→1227, is_bare_epithet 332→89.
+
+### Evaluation de-inflation (`scripts/05_evaluate_ner.py`, `scripts/05b_eval_from_corpus.py`)
+
+The production eval (05b) over-counted recall:
+- **One-to-one (greedy bipartite) matching** replaces `any(names_match)` — a single shared-nomen prediction can no longer score a TP against every GT person in a dense record.
+- **Length guard** in `names_match` (`Victor` no longer matches `Victorinus`).
+- **Stricter `is_damaged`**: only writes a GT name off as unrecoverable when it is genuinely lacuna-dominated (`[---]` or >50% bracket chars), not on any single bracket — so adjusted recall reflects real misses.
+
+**Honest Africa numbers (complete run, all fixes):**
+
+| Metric | Old (inflated) | Now |
+|---|---|---|
+| Recall (adj) | 0.85 | 0.72 |
+| Precision (adj) | 0.71 | 0.69 |
+| F1 (adj) | 0.77 | 0.70 |
+
+De-inflation, not a model regression. Precision is a lower bound (genuine non-LIRE attestations count as FPs), and the eval set is still LIRE v1.2 until the rerun rebuilds it from v3.0.
+
+### Prompt hardening + deterministic nomen post-process (`scripts/prompt_utils.py`, `scripts/06_export_to_dataset.py`)
+
+Spot-check of the in-flight Africa run found ~250–400 oblique-case names left undeclined and ~4.6k fragmentary flags on undamaged names.
+- **Nominalization**: added a nomen self-check (a nomen ending in -o/-i is a copied dative/genitive), explicit 2nd-decl -o cognomen conversion (`Rufo→Rufus`) with a narrow Cato/Fronto carve-out, and a worked dative tria-nomina example. Result: nomen-oblique 0.48%→0.19%, cognomen-genitive 1.28%→0.66%.
+- **Fragmentary**: scoped strictly to a bracket appearing in `raw_name`. Result: fragmentary rate 38%→31%; no-bracket flags 18.5%→8.6% of persons.
+- **`fix_nomen_case`** (export + eval): deterministic mop-up of the unambiguous residue — dative -o→-us, genitive -ii→-ius. Single -i genitives left alone (ambiguous -us/-ius). Africa: 39 fixed, 33 ambiguous left (0.09%).
+
+### Run reliability (`scripts/06_run_full_corpus.py`)
+
+- Batch size 30→15 + explicit `max_output_tokens` cap — cuts output-truncation parse errors that drop a whole batch at once.
+- Retry now covers transient 5xx/timeout/connection + parse_error, not just 429.
+- End-of-run error breakdown by type, so failures are diagnosable.
+
+### Regression suite (`scripts/run_regression.py`, `scripts/regression_tests.jsonl`)
+
+Expanded 30→34 cases (dative nominalization R31/R32, fragmentary over/under-flag R33/R34). Hardened two flaky assertions: R11 placement-agnostic via a new `name_contains` primitive (the praenomen/nomen split is export-normalized); R15 dropped unknowable Celtic-name gender. Passes 34/34 — with residual Flash-Lite nondeterminism on borderline cases.
+
+### Orchestration (`scripts/run_pipeline.py`)
+
+New per-province orchestrator runs the full chain `eval_set → ner → export → eval → cluster → webapp`, handling the EDCS-name vs slug split each script expects. NER defaults to a fresh run (backs up existing output, since `06_run` resumes by ID); `--resume` appends, `--exclude` skips named provinces, `--continue-on-error` keeps going past a failure.
+
+### Full rerun (kicked off)
+
+All provinces re-run on `gemini-2.5-flash-lite` with the hardened prompt and corrected pipeline. Africa NER was already complete on the fixed prompt, so only its downstream (eval-set rebuild on v3.0, export, eval, cluster, webapp) is regenerated; the other provinces get the full chain via `run_pipeline.py --exclude africa_proconsularis`. All headline F1 numbers will be regenerated under the corrected eval and are expected to settle lower than the previously-reported (inflated) values.
