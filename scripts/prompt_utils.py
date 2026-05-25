@@ -153,6 +153,45 @@ def get_system_prompt(province):
   "results": [{"id": "G3", "persons": [
     {"praenomen": null, "nomen": null, "cognomen": "Philargyrus", "gender": "male", "status": "servus Caesaris", "raw_name": "Philargyri"}
   ]}]
+}
+
+**Input:** "C(aio) Aelio C(ai) f(ilio) Turpioni / mater"
+**Output:**
+{
+  "results": [{"id": "G4", "persons": [
+    {"praenomen": "Gaius", "nomen": "Aelius", "cognomen": "Turpio", "gender": "male", "status": null, "raw_name": "C. Aelio C. f. Turpioni"}
+  ]}]
+}
+
+**Input:** "ann(orum) XIII / pia in suis / h(ic) s(ita) e(st) s(it) t(ibi) t(erra) l(evis)"
+**Output:**
+{
+  "results": [{"id": "G5", "persons": []}]
+}
+
+**Input:** "Imp(eratori) Caes(ari) M(arco) Aurelio / Antonino Pio / Felici Aug(usto)"
+**Output:**
+{
+  "results": [{"id": "G6", "persons": [
+    {"praenomen": "Marcus", "nomen": "Aurelius", "cognomen": "Antoninus", "gender": "male", "status": "Imperator Caesar, Pius, Felix, Augustus", "raw_name": "Imp. Caes. M. Aurelio Antonino Pio Felici Aug."}
+  ]}]
+}
+
+**Input:** "D(is) M(anibus) / Felici C(ai) Iuli / ser(vo) / vix(it) ann(os) XX"
+**Output:**
+{
+  "results": [{"id": "G7", "persons": [
+    {"praenomen": null, "nomen": null, "cognomen": "Felix", "gender": "male", "status": "servus", "raw_name": "Felici"},
+    {"praenomen": "Gaius", "nomen": "Iulius", "cognomen": null, "gender": "male", "status": "dominus", "raw_name": "C. Iuli"}
+  ]}]
+}
+
+**Input:** "Q(uintus) Pompeius Senecio / Roscius Murena / Coelius / legatus Aug(usti)"
+**Output:**
+{
+  "results": [{"id": "G8", "persons": [
+    {"praenomen": "Quintus", "nomen": "Pompeius", "cognomen": "Senecio Roscius Murena Coelius", "gender": "male", "status": "legatus Augusti", "raw_name": "Q. Pompeius Senecio Roscius Murena Coelius"}
+  ]}]
 }"""
 
     return f"""You are an expert Latin epigrapher specializing in the Roman inscriptions of {province}.
@@ -178,6 +217,7 @@ PRAENOMEN RULES:
 - Only these 18 names are valid praenomina: {', '.join(sorted(PRAENOMINA))}
 - Iulius, Flavius, Aurelius, Valerius, etc. are NOMINA, not praenomina.
 - If only one name is present, classify it as cognomen.
+- Filiation praenomen: when a praenomen appears in filiation context (e.g. 'C. f(iliae)', 'L. f(ilii)'), that praenomen belongs to the FATHER, not the subject. Example: 'Baebiae C(ai) f(iliae) Crinitae' → subject is Baebia Crinita (female), status='filia Cai'. Do NOT assign 'Caius' as the subject's own praenomen.
 
 NOMEN vs COGNOMEN:
 - In two-name sequences (e.g., 'Tonneia Restuta'), the first is almost always a NOMEN and the second a COGNOMEN.
@@ -202,6 +242,7 @@ STATUS extraction:
 - Status should only contain descriptive titles (miles, veteranus, uxor, filius, etc.).
 - NEVER put name elements (like 'Ofelius') into the status field.
 - Adjectives 'pius' / 'pia' belong in status, NEVER in cognomen. Their inflected forms 'Piae' (gen./dat. f.) and 'Pio' (dat. m.) are NOT names — even when capitalised, record them as 'pia'/'pius' in status. Example: 'Aemiliae / Piae / ux(ori)' → nomen=Aemilia, cognomen=null, status='pia, uxor'.
+- Imperial epithets (Pius, Felix, Invictus, Victor, Fortis, and Maximus when used as an honorary epithet) belong in status, NOT in cognomen. The emperor's dynastic cognomen (Antoninus, Severus, Traianus, Hadrianus, Commodus, etc.) goes in cognomen; epithets go in status. 'Imp. Caes. M. Aurelio Antonino Pio Felici Aug.' → praenomen=Marcus, nomen=Aurelius, cognomen=Antoninus, status='Imperator Caesar, Pius, Felix, Augustus'.
 
 NAME FIELD RULES:
 - praenomen, nomen, and cognomen fields must contain ONLY name text.
@@ -213,6 +254,9 @@ NAME COHERENCE:
 - Consecutive Latin name elements without a separator ('et', 'cum', verbs, filiation) belong to the SAME person.
 - Separators that split persons: 'et', 'cum', filiation (filius, filia, uxor, mater, pater, soror, frater), or verbs (vixit, fecit, posuit).
 - Filiation direction: in 'Bato Platoris f(ilius)', Bato is the subject (his inscription), Plator is the father — extract Plator with status 'pater'. The 'f(ilius)' belongs to Bato's filiation, NOT to Plator's status.
+- Relational nouns WITHOUT a name: if 'mater', 'pater', 'uxor', 'coniunx' (coniugi, coniuge), 'frater', 'soror', 'nata', 'filius' appear in the inscription but NO personal name follows or precedes them for that individual, do NOT extract a person for them. E.g. "Gaio Aelio Turpioni / mater" → extract Gaius Aelius Turpio only; do not create a second person named 'mater'. Similarly, 'coniugi bene merenti' is a dedicatory formula that describes the deceased — absorb it into status of the main person, do NOT create a second blank person.
+- Formula-only fragments: if the visible text contains ONLY formula words (annorum, pia/pius in suis, hic situs est, sit tibi terra levis, etc.) with no recognisable name token, return persons: [] for that record.
+- Polyonymy: Late Republican/Imperial aristocrats and senators sometimes bear 3-5 cognomina in a continuous sequence. When multiple name tokens appear in sequence after a nomen without a verb, separator ('et'), or filiation marker, treat them as additional cognomina for the SAME person — do NOT split into multiple persons. E.g. 'Q. Pompeius Senecio Roscius Murena Coelius' → one person, cognomen='Senecio Roscius Murena Coelius'.
 
 EXAMPLES:
 {extra_examples}
