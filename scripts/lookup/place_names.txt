@@ -1,6 +1,6 @@
-# African (and a few non-African) town/place names that the model is known
-# to misextract as personal names. Conservative initial seed; extend as
-# additional FPs are flagged in triage.
+# Province place/ethnic names that the model is known to misextract as personal
+# names. Conservative initial seed; extend as additional FPs are flagged in triage.
+# Organised by province. Previously named african_places.txt.
 #
 # is_place() fires only when cognomen alone matches one of these and there
 # is no praenomen or nomen — protects against false-flagging persons whose
@@ -105,3 +105,35 @@ remesiana
 pincum
 tricornium
 
+# Baetica places — ethnic adjectives confirmed or highly likely to be misextracted
+# Only nominative/dative singular forms needed; is_place() normalises to lowercase.
+# Persons with a praenomen or nomen are never filtered, so these are safe to add.
+
+# Confirmed FPs from Baetica triage (2026-05)
+turubrigensis
+turubrigensi
+lacimurcensis
+lacimurgensis
+ilipensis
+
+# Major Baetica cities (cognomen-only extractions from these are almost certainly geographic)
+italicensis
+hispalensis
+cordubensis
+gaditanus
+gaditana
+astigitanus
+astigitana
+ilipulitanus
+ilipulitana
+malacitanus
+malacitana
+osquensis
+singiliensis
+salpensanus
+muniguensis
+
+# Hispania citerior / Lusitania places (for future runs)
+emeritensis
+caesaraugustanus
+tarraconensis

@@ -54,6 +54,13 @@ hercules
 herculi
 aesculapius
 aesculapio
+isis
+isidi
+isidis
+serapis
+sarapis
+mithras
+mithra
 
 # African and syncretic (Saturnus = Baal-Hammon in Africa, Caelestis = Tanit)
 caelestis

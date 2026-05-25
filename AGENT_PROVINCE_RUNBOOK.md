@@ -78,7 +78,7 @@ These are nomina. The model is misclassifying positional anchoring. The export s
 
 **2. Deity or place names extracted as persons**
 Bad: extracting `Mars`, `Jupiter`, `Fortuna`, `Salona`, `Narona` as persons.
-Check `scripts/lookup/deities.txt` and `scripts/lookup/african_places.txt`. If the province has common local deity or place names not in those files, add them.
+Check `scripts/lookup/deities.txt` and `scripts/lookup/place_names.txt`. If the province has common local deity or place names not in those files, add them.
 
 **3. Unit/legion names extracted as persons**
 Bad: extracting `Augusta` (from `Legio II Augusta`) or `Claudia` (from `Ala Claudia`) as a female person.
@@ -127,7 +127,7 @@ python3 scripts/06_run_full_corpus.py --province "{{PROVINCE_NAME}}" --stop-afte
 ### Add to lookup files
 
 - New deity names: `scripts/lookup/deities.txt`
-- New place names (if they appear as false-positive persons): `scripts/lookup/african_places.txt` (this is misnamed — it's used for all provinces)
+- New place names (if they appear as false-positive persons): `scripts/lookup/place_names.txt`
 
 One entry per line. Lowercase. Check existing entries for format.
 
