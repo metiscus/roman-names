@@ -179,7 +179,7 @@ CASE NORMALIZATION — always store names in the NOMINATIVE case:
 STATUS extraction:
 - Status should only contain descriptive titles (miles, veteranus, uxor, filius, etc.).
 - NEVER put name elements (like 'Ofelius') into the status field.
-- Adjectives like 'pius' or 'pia' belong in status.
+- Adjectives 'pius' / 'pia' belong in status, NEVER in cognomen. Their inflected forms 'Piae' (gen./dat. f.) and 'Pio' (dat. m.) are NOT names — even when capitalised, record them as 'pia'/'pius' in status. Example: 'Aemiliae / Piae / ux(ori)' → nomen=Aemilia, cognomen=null, status='pia, uxor'.
 
 NAME FIELD RULES:
 - praenomen, nomen, and cognomen fields must contain ONLY name text.
@@ -236,6 +236,17 @@ EXAMPLES:
     "persons": [
       {{"praenomen": null, "nomen": null, "cognomen": "Rogatus", "gender": "male", "status": null, "raw_name": "Rogatus"}},
       {{"praenomen": null, "nomen": null, "cognomen": "Faustinianus", "gender": "male", "status": "pater", "raw_name": "Faustiniani"}}
+    ]
+  }}]
+}}
+
+**Input:** "D(is) M(anibus) s(acrum) / Aemiliae / Piae / ux(ori)"
+**Output:**
+{{
+  "results": [{{
+    "id": "T5",
+    "persons": [
+      {{"praenomen": null, "nomen": "Aemilia", "cognomen": null, "gender": "female", "status": "pia, uxor", "raw_name": "Aemiliae Piae"}}
     ]
   }}]
 }}
