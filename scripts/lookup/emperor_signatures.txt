@@ -44,7 +44,7 @@ pupienus
 balbinus
 gordianus
 philippus,arabs
-decius
+# decius removed (common cognomen)
 hostilianus
 trebonianus,gallus
 gallus,vibius
@@ -56,22 +56,22 @@ claudius,gothicus
 quintillus
 aurelianus
 florianus
-probus
-carus
+# probus removed (common cognomen)
+# carus removed (common cognomen)
 numerianus
 
 # Tetrarchy / Constantinian
 constantius,chlorus
 galerius
 constantinus
-licinius
+# licinius removed (common nomen)
 maxentius
-crispus
+# crispus removed (common cognomen)
 
 # Later (often attested in late-antique African inscriptions)
 iulianus,apostata
 valentinianus
-valens
+# valens removed (common cognomen)
 theodosius
 honorius
 arcadius
