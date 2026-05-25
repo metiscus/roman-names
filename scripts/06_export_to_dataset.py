@@ -6,6 +6,7 @@ import os
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from name_filters import is_deity, is_imperial_person, is_bare_epithet, is_place
+from config import EDCS_PATH, LIRE_PATH, OUTPUT_DIR
 
 _LOOKUP_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'lookup')
 
@@ -46,7 +47,7 @@ def fix_praenomen(praenomen, nomen, cognomen):
 
 def create_final_dataset(province_slug='africa_proconsularis', province_name='Africa proconsularis'):
     # 1. Load the big NER results (JSONL format)
-    input_ner_path = f'data/output/{province_slug}_ner_full.jsonl'
+    input_ner_path = OUTPUT_DIR / f'{province_slug}_ner_full.jsonl'
     output_parquet = f'data/roman_names_{province_slug}.parquet'
     output_csv = f'data/roman_names_{province_slug}.csv'
 
@@ -63,8 +64,7 @@ def create_final_dataset(province_slug='africa_proconsularis', province_name='Af
 
     # 2. Load metadata from LIRE (preferred — has coordinates) and EDCS (fallback — covers all)
     print("Loading LIRE metadata for join...")
-    lire_path = 'data/LIRE_v1-2.geojson'
-    with open(lire_path, 'r', encoding='utf-8') as f:
+    with open(LIRE_PATH, 'r', encoding='utf-8') as f:
         lire_data = json.load(f)
 
     meta_map = {}
@@ -83,8 +83,7 @@ def create_final_dataset(province_slug='africa_proconsularis', province_name='Af
             }
 
     print("Loading EDCS metadata for fallback join (place + text for non-LIRE records)...")
-    edcs_path = 'data/EDCS_text_cleaned_2022-09-12.json'
-    with open(edcs_path, 'r', encoding='utf-8') as f:
+    with open(EDCS_PATH, 'r', encoding='utf-8') as f:
         edcs_data = json.load(f)
 
     empty_meta = {'findspot': None, 'latitude': None, 'longitude': None,

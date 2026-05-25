@@ -24,6 +24,7 @@ import sys
 import importlib.util
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from config import EDCS_PATH, EVAL_DIR, OUTPUT_DIR
 
 # Reuse export + eval modules
 spec = importlib.util.spec_from_file_location("export_mod", os.path.join(os.path.dirname(__file__), "06_export_to_dataset.py"))
@@ -69,9 +70,9 @@ def compute_evidence_score(person):
 
 
 def main(province='africa_proconsularis'):
-    eval_path = f'data/eval/{province}_eval.jsonl'
-    corpus_path = f'data/output/{province}_ner_full.jsonl'
-    edcs_path = 'data/EDCS_text_cleaned_2022-09-12.json'
+    eval_path = EVAL_DIR / f'{province}_eval.jsonl'
+    corpus_path = OUTPUT_DIR / f'{province}_ner_full.jsonl'
+    edcs_path = EDCS_PATH
     output_path = f'data/triage_candidates_{province}.csv'
 
     print(f"Loading EDCS for raw-inscription join...")

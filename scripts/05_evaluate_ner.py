@@ -1,7 +1,11 @@
 import json
 import os
 import re
+import sys
 import argparse
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from config import EDCS_PATH, OUTPUT_DIR, R1B1_GT_PATH
 
 # Standard Latin praenomen abbreviations used in epigraphic databases (LIRE, EDCS)
 PRAENOMEN_EXPANSIONS = {
@@ -148,17 +152,17 @@ def print_summary(province, label, tp, fp_imperial, fp_other, fn, fn_damaged, di
 def evaluate_r1b1(province):
     """Evaluate full corpus NER output against Romans 1by1 ground truth."""
     safe_name = province.lower().replace(' ', '_')
-    full_path = f'data/output/{safe_name}_ner_full.jsonl'
+    full_path = OUTPUT_DIR / f'{safe_name}_ner_full.jsonl'
 
     if not os.path.exists(full_path):
         print(f"Error: {full_path} not found. Run the full corpus script first.")
         return
 
-    r1b1_gt = json.load(open('data/r1b1_gt.json'))
+    r1b1_gt = json.load(open(R1B1_GT_PATH))
 
     print("Loading EDCS text lookup...")
     edcs_text = {}
-    for rec in json.load(open('data/EDCS_text_cleaned_2022-09-12.json')):
+    for rec in json.load(open(EDCS_PATH)):
         edcs_text[rec['EDCS-ID']] = (
             rec.get('clean_text_interpretive_word') or rec.get('inscription', '')
         )

@@ -11,16 +11,18 @@ Usage:
     python3 scripts/build_r1b1_gt.py --skip-download # reuse cached files
 
 Output:
-    data/r1b1_gt.json   — {EDCS-ID: [{"praenomen":..,"nomen":..,"cognomen":..}, ...]}
+    R1B1_GT_PATH (see scripts/config.py) — {EDCS-ID: [{"praenomen":..,"nomen":..,"cognomen":..}, ...]}
 """
 
-import os, re, json, time, argparse
+import os, re, json, time, argparse, sys
 from collections import defaultdict
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from config import LIRE_PATH, R1B1_GT_PATH
 
 BASE_URL = "http://romans1by1.com"
 CACHE_DIR = "data/r1b1_cache"
-OUT_PATH   = "data/r1b1_gt.json"
-LIRE_PATH  = "data/LIRE_v1-2.geojson"
+OUT_PATH   = str(R1B1_GT_PATH)
 
 PROVINCE_ABBREVS = {
     'Moesia Inferior':              'MI',

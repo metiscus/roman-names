@@ -17,6 +17,7 @@ import argparse
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from config import EDCS_PATH, LIRE_PATH, OUTPUT_DIR
 
 DAMAGE_THRESHOLD = 0.30
 
@@ -25,7 +26,7 @@ def damage_ratio(text):
     return (len(text) - len(stripped)) / len(text) if text else 1.0
 
 def load_corpus_output(province_slug):
-    path = f'data/output/{province_slug}_ner_full.jsonl'
+    path = OUTPUT_DIR / f'{province_slug}_ner_full.jsonl'
     if not os.path.exists(path):
         print(f"No corpus output found at {path}. Run 06_run_full_corpus.py first.")
         sys.exit(1)
@@ -37,7 +38,7 @@ def load_corpus_output(province_slug):
     return records
 
 def load_source_texts(province_name):
-    with open('data/EDCS_text_cleaned_2022-09-12.json') as f:
+    with open(EDCS_PATH) as f:
         data = json.load(f)
     return {r['EDCS-ID']: r.get('inscription') or r.get('clean_text_interpretive_word', '')
             for r in data if r.get('province') == province_name}
@@ -45,7 +46,7 @@ def load_source_texts(province_name):
 def load_lire_gt(province_name):
     """Return dict of EDCS-ID → people list for records with ground truth."""
     gt = {}
-    with open('data/LIRE_v1-2.geojson') as f:
+    with open(LIRE_PATH) as f:
         lire = json.load(f)
     for feat in lire['features']:
         p = feat['properties']

@@ -1,7 +1,7 @@
 """
 Build a compact LIRE enrichment lookup keyed by EDCS-ID.
 
-Reads data/LIRE_v1-2.geojson and writes data/lire_enrichment.json with
+Reads LIRE_PATH (from config.py) and writes data/lire_enrichment.json with
 fields useful for enriching webapp popups: interpretive text, publication
 reference, and external database links/photo URL.
 
@@ -13,9 +13,9 @@ import re
 import sys
 from pathlib import Path
 
-
-LIRE_PATH = Path("data/LIRE_v1-2.geojson")
-OUTPUT_PATH = Path("data/lire_enrichment.json")
+sys.path.insert(0, str(Path(__file__).parent))
+from config import LIRE_PATH, LIRE_ENRICHMENT_PATH
+OUTPUT_PATH = LIRE_ENRICHMENT_PATH
 
 
 def derive_photo_url(photo_field: str) -> str:

@@ -1,11 +1,15 @@
 import json
 import random
 import os
+import sys
 import argparse
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from config import LIRE_PATH, EVAL_DIR
+
 def generate_validation_set(province):
-    input_file = 'data/LIRE_v1-2.geojson'
-    output_dir = 'data/eval'
+    input_file = LIRE_PATH
+    output_dir = EVAL_DIR
     os.makedirs(output_dir, exist_ok=True)
     
     # Standardize filename format
