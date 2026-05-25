@@ -12,6 +12,24 @@ The pipeline has been run on Africa Proconsularis, Britannia, Numidia, Dalmatia,
 
 Data file paths are centralised in `scripts/config.py` — do not hardcode paths elsewhere.
 
+### Fast path: the orchestrator
+
+For a normal end-to-end run, prefer `scripts/run_pipeline.py`, which chains
+`eval_set → ner → export → eval → cluster → webapp` for one province or all,
+handling the EDCS-name vs slug argument split each script expects:
+
+```bash
+python3 scripts/run_pipeline.py --province "<slug>"        # one province, full chain
+python3 scripts/run_pipeline.py                            # all provinces
+python3 scripts/run_pipeline.py --stages export,eval,cluster,webapp   # regen only (no API cost)
+python3 scripts/run_pipeline.py --exclude africa_proconsularis        # all but one
+```
+
+NER defaults to a **fresh** run (it backs up the existing `_ner_full.jsonl`,
+because `06_run` resumes by ID and would otherwise no-op on old output);
+`--resume` appends. The supervised step-by-step below is for first-time runs on
+a new province or when debugging a systematic error pattern.
+
 ---
 
 ## Environment
