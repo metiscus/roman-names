@@ -34,25 +34,13 @@ import time
 from datetime import datetime
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from config import PROVINCES  # single source of truth: (slug, EDCS name, has_eval)
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPTS = REPO_ROOT / "scripts"
 OUTPUT_DIR = REPO_ROOT / "data" / "output"
 PY = sys.executable
-
-# slug, EDCS province-name (exact string in the EDCS 'province' field), has LIRE eval set.
-# baetica and moesia_inferior have corpus output but are not in the maintained set and
-# lack eval GT — add a row here (has_eval=False) if you want them in the loop.
-PROVINCES = [
-    ("africa_proconsularis", "Africa proconsularis", True),
-    ("britannia",            "Britannia",            True),
-    ("dacia",                "Dacia",                True),
-    ("dalmatia",             "Dalmatia",             True),
-    ("noricum",              "Noricum",              True),
-    ("numidia",              "Numidia",              True),
-    ("pannonia_inferior",    "Pannonia inferior",    True),
-    ("pannonia_superior",    "Pannonia superior",    True),
-    ("moesia_superior",      "Moesia superior",      False),
-]
 
 ALL_STAGES = ["eval_set", "ner", "export", "eval", "cluster", "webapp"]
 EVAL_ONLY_STAGES = {"eval_set", "eval"}  # skipped for provinces without a LIRE eval set
