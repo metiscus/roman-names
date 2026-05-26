@@ -114,6 +114,57 @@ def get_system_prompt(province):
   ]}]
 }"""
 
+    elif province.lower() == 'aegyptus':
+        extra_examples = """
+**Input:** "C(aius) Antonius Maximus armorum cus(tos) / L(uci) Farsulei / M(arcus) Arrius Antoninus / turma Rufi / Gaius Barga mil(es) L(uci) Farsulei / C(aius) Iulius Marcellus cornicul(arius)"
+**Output:**
+{
+  "results": [{"id": "E1", "persons": [
+    {"praenomen": "Gaius", "nomen": "Antonius", "cognomen": "Maximus", "gender": "male", "status": "armorum custos", "raw_name": "C. Antonius Maximus"},
+    {"praenomen": null, "nomen": "Farsulius", "cognomen": null, "gender": "male", "status": null, "raw_name": "L(uci) Farsulei"},
+    {"praenomen": "Marcus", "nomen": "Arrius", "cognomen": "Antoninus", "gender": "male", "status": null, "raw_name": "M. Arrius Antoninus"},
+    {"praenomen": null, "nomen": "Rufus", "cognomen": null, "gender": "male", "status": "turma", "raw_name": "turma Rufi"},
+    {"praenomen": "Gaius", "nomen": null, "cognomen": "Barga", "gender": "male", "status": "miles", "raw_name": "Gaius Barga"},
+    {"praenomen": "Gaius", "nomen": "Iulius", "cognomen": "Marcellus", "gender": "male", "status": "cornicularius", "raw_name": "C. Iulius Marcellus"}
+  ]}]
+}
+
+**Input:** "Exemplar / hordei missi per Chae/remonam Anubionis / gubernatorem ex no/mo Memphite"
+**Output:**
+{
+  "results": [{"id": "E2", "persons": [
+    {"praenomen": null, "nomen": null, "cognomen": "Chaeremon", "gender": "male", "status": "gubernator", "raw_name": "Chaeremonam Anubionis"},
+    {"praenomen": null, "nomen": null, "cognomen": "Anubion", "gender": "male", "status": "pater", "raw_name": "Anubionis"}
+  ]}]
+}
+
+**Input:** "T(itus) Flavius Titianus praef(ectus) Aeg(ypti) postulante / Publio Diodoro quo ne ab iusto tutore / (H)erennia(e) Antonia(e) fil(iae) Lu/ci (H)erenni Valentis M(arcum) Numisium / Longum legitimum tutorem / dedit"
+**Output:**
+{
+  "results": [{"id": "E3", "persons": [
+    {"praenomen": "Titus", "nomen": "Flavius", "cognomen": "Titianus", "gender": "male", "status": "praefectus Aegypti", "raw_name": "T. Flavius Titianus"},
+    {"praenomen": null, "nomen": null, "cognomen": "Diodorus", "gender": "male", "status": null, "raw_name": "Publio Diodoro"},
+    {"praenomen": null, "nomen": "Herennia", "cognomen": "Antonia", "gender": "female", "status": "filia", "raw_name": "Herenniae Antoniae fil."},
+    {"praenomen": "Lucius", "nomen": "Herennius", "cognomen": "Valens", "gender": "male", "status": "pater", "raw_name": "Luci Herenni Valentis"},
+    {"praenomen": "Marcus", "nomen": "Numisius", "cognomen": "Longus", "gender": "male", "status": "tutor", "raw_name": "M. Numisium Longum"}
+  ]}]
+}
+
+**Input:** "Ζηνοδώρα θυγάτηρ Ἡρακλάμμωνος γυνὴ Ἡλίου ὀρδιναρίου λεγιῶνος πέμπτης Μακεδονικῆς"
+**Output:**
+{
+  "results": [{"id": "E4", "persons": []}]
+}
+
+**Input:** "Leg(io) III Cyr(enaica) / |(centuria) Minuci / Claudiani / C(aius) Anthistius / Valens nomo / Arsenoite"
+**Output:**
+{
+  "results": [{"id": "E5", "persons": [
+    {"praenomen": null, "nomen": "Minucius", "cognomen": "Claudianus", "gender": "male", "status": "centurio legionis III Cyrenaicae", "raw_name": "|(centuria) Minuci Claudiani"},
+    {"praenomen": "Gaius", "nomen": "Anthistius", "cognomen": "Valens", "gender": "male", "status": "domo nomo Arsenoite", "raw_name": "C. Anthistius Valens"}
+  ]}]
+}"""
+
     elif province.lower() in ('dalmatia', 'pannonia superior', 'pannonia inferior',
                               'noricum', 'dacia', 'moesia superior', 'moesia inferior'):
         extra_examples = """

@@ -11,6 +11,7 @@ iuppiter
 iupiter
 jupiter
 iovi
+iovem
 iovis
 iuno
 juno
@@ -289,3 +290,15 @@ aracae
 gumelaeucus
 gumelaeucui
 gumelaeus
+# Egyptian deities (Aegyptus)
+osiris
+horus
+ptah
+thoth
+harpocrates
+harpocras
+sobek
+soknopaiou
+soknopaios
+neilus
+nilus
