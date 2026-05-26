@@ -99,15 +99,24 @@ def is_imperial_person(person):
     """
     tokens = _clean_tokens(person)
 
-    # Name-token signatures are the only fully safe signal — check first, before
-    # any veto, so a genuine emperor named alongside a legion is still caught.
+    # Full multi-token emperor names (e.g. {marcus, aurelius, antoninus}) are
+    # reliable on their own — check before any veto so a genuine emperor named
+    # alongside a legion is still caught.
     for sig in EMPEROR_SIGNATURES:
-        if sig <= tokens:
+        if len(sig) > 1 and sig <= tokens:
             return True
 
     status = (person.get('status') or '').lower()
     raw = (person.get('raw_name') or '').lower()
     context = status + ' ' + raw
+    raw_clean = re.sub(r'[()\[\]]', '', raw)
+
+    # A name span that OPENS with imperial titulature ('Imp(erator) Caesar …') is
+    # the emperor himself — keep even when a legion is named later (e.g. one he
+    # founded or restored). A private notable's cursus references emperors only
+    # AFTER his own name, so this leading-anchor test does not catch him.
+    if re.match(r'\[*\s*(imp\b|imp\.|imperator\w*|caesar\w*)', raw_clean):
+        return True
 
     # Military unit / imperial-cult priesthood: damnatio brackets and 'Augusta'
     # in this context belong to the unit's epithet, not the person. Veto the
@@ -125,6 +134,21 @@ def is_imperial_person(person):
         return True
     if re.search(r'\baugusta\b', status):
         return True
+
+    # A single bare emperor-cognomen (Valerianus, Macrinus, Commodus, ...) is far
+    # more often an ordinary private cognomen than the emperor. Flag such a match
+    # only when the bearer is *not* a plain private citizen — i.e. their own name
+    # span carries imperial titulature (Imp(erator)/Caesar, or Augustus/-o/-a as
+    # the honoree), or they lack a complete private name. A full private name with
+    # none of these is a citizen who merely shares a name with an emperor.
+    # Genitive 'Augusti/Augustorum/Augg' is deliberately excluded: it names a
+    # different (often deified) emperor referenced in a cursus, not the bearer.
+    if any(len(sig) == 1 and sig <= tokens for sig in EMPEROR_SIGNATURES):
+        titulature = re.search(
+            r'\b(imp|imperator\w*|caesar\w*|augustus|augusto|augusta|auguste|augustae)\b',
+            raw_clean)
+        if titulature or not (person.get('nomen') and person.get('cognomen')):
+            return True
 
     return False
 
