@@ -218,3 +218,42 @@ concordia
 concordiae
 victoria
 victoriae
+
+# Lusitanian / Iberian indigenous deities (confirmed from EDCS triage 2026-05)
+# Bandus — war deity, multiple epithets (Vorteacius, Arbaricus, Longobricus, etc.)
+bandus
+bandi
+bando
+bandei
+vorteacius
+vorteaecio
+arbaricus
+longobricus
+longobricus
+# Ataecina — chthonic/underworld deity, major cult at Mérida (Emerita Augusta)
+ataecina
+ataecinae
+# Endovellicus — oracular healing deity, cult near Terena
+endovellicus
+endovellici
+endovellico
+# Nabia — water/hunting deity
+nabia
+nabiae
+# Arentius / Arentia — pair of deities
+arentius
+arentia
+arentio
+arentiae
+# Quangeius — healing deity
+quangeius
+quangeio
+# Trebaruna — warrior goddess
+trebaruna
+trebarunae
+# Bormanicus — thermal deity
+bormanicus
+bormanico
+# Bellona — Roman goddess of war (common in Lusitanian votive dedications)
+bellona
+bellonae

@@ -62,6 +62,58 @@ def get_system_prompt(province):
     {"praenomen": null, "nomen": "Aemilia", "cognomen": "Victoria Fipiorina", "gender": "female", "status": "pia", "raw_name": "Aemilia Victoria Fipiorina"}
   ]}]
 }"""
+    elif province.lower() in ('lusitania', 'baetica', 'hispania citerior'):
+        extra_examples = """
+**Input:** "Sailgius / Tangini f(ilius) / h(ic) s(itus) e(st) s(it) t(ibi) t(erra) l(evis) / Meiduenus / Andami f(ilius) / d(e) s(uo) f(aciendum) c(uravit)"
+**Output:**
+{
+  "results": [{"id": "L1", "persons": [
+    {"praenomen": null, "nomen": null, "cognomen": "Sailgius", "gender": "male", "status": null, "raw_name": "Sailgius"},
+    {"praenomen": null, "nomen": null, "cognomen": "Tanginus", "gender": "male", "status": "pater", "raw_name": "Tangini f(ilius)"},
+    {"praenomen": null, "nomen": null, "cognomen": "Meiduenus", "gender": "male", "status": null, "raw_name": "Meiduenus"},
+    {"praenomen": null, "nomen": null, "cognomen": "Andamis", "gender": "male", "status": "pater", "raw_name": "Andami f(ilius)"}
+  ]}]
+}
+
+**Input:** "Bandi Vorteaecio / v(otum) s(olvit) l(ibens) m(erito)"
+**Output:**
+{
+  "results": [{"id": "L2", "persons": []}]
+}
+
+**Input:** "Ataecinae / Turibrig(ensi) sac(rum) / Severa Cantabri / f(ilia) ex voto"
+**Output:**
+{
+  "results": [{"id": "L3", "persons": [
+    {"praenomen": null, "nomen": null, "cognomen": "Severa", "gender": "female", "status": "filia Cantabri", "raw_name": "Severa Cantabri f."}
+  ]}]
+}
+
+**Input:** "Endovellico / sacrum / Rufus / Rufini fil(ius) / v(otum) s(olvit)"
+**Output:**
+{
+  "results": [{"id": "L4", "persons": [
+    {"praenomen": null, "nomen": null, "cognomen": "Rufus", "gender": "male", "status": "filius Rufini", "raw_name": "Rufus Rufini fil."}
+  ]}]
+}
+
+**Input:** "Avitus Ton/gi f(ilius) an(norum) LX / h(ic) s(itus) e(st) / s(it) t(ibi) t(erra) l(evis)"
+**Output:**
+{
+  "results": [{"id": "L5", "persons": [
+    {"praenomen": null, "nomen": null, "cognomen": "Avitus", "gender": "male", "status": null, "raw_name": "Avitus"},
+    {"praenomen": null, "nomen": null, "cognomen": "Tongus", "gender": "male", "status": "pater", "raw_name": "Ton/gi f(ilius)"}
+  ]}]
+}
+
+**Input:** "P(ublius) Norba/nus Ser(gia) / Flaccinus / aed(ilis) an(norum) / XXX h(ic) s(itus) e(st)"
+**Output:**
+{
+  "results": [{"id": "L6", "persons": [
+    {"praenomen": "Publius", "nomen": "Norbanus", "cognomen": "Flaccinus", "gender": "male", "status": "tribus: Sergia, aedilis", "raw_name": "P. Norbanus Ser. Flaccinus"}
+  ]}]
+}"""
+
     elif province.lower() in ('dalmatia', 'pannonia superior', 'pannonia inferior',
                               'noricum', 'dacia', 'moesia superior', 'moesia inferior'):
         extra_examples = """
