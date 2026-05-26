@@ -147,6 +147,19 @@ ianae
 nymphis
 nymphae
 
+# Mauretania Tingitana and Syrian/Eastern deities (found in auxiliary contexts)
+macurtam
+iucuntam
+aulisva
+manaphus
+manapho
+theandrios
+theandrio
+draco
+draconem
+pantheus
+pantheo
+
 # Noricum/Celtic deities
 veica
 veicae
@@ -257,3 +270,22 @@ bormanico
 # Bellona — Roman goddess of war (common in Lusitanian votive dedications)
 bellona
 bellonae
+# Tutela — Roman protective goddess (common in Hispania)
+tutela
+tutelae
+# Veritas — goddess/personification of Truth (appears on Sertorianus coins/tesserae)
+veritas
+veritatis
+# Hispano-Celtic deities confirmed in Hispania citerior final spot check
+# Herotracos / Herotoragos — local Hispano-Celtic deity
+herotracos
+herotrago
+herotoracos
+herotoragus
+# Araca — local deity (deus Magnus Araca); Magnus alone is too common to block
+araca
+aracae
+# Gumelaeucus / Gumelaeus — Celtic Lares (Lares Gumelaeucui)
+gumelaeucus
+gumelaeucui
+gumelaeus

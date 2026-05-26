@@ -134,6 +134,14 @@ salpensanus
 muniguensis
 
 # Hispania citerior / Lusitania places (confirmed + likely)
+salaria
+salariensis
+caesaraugusta
+tarraco
+tarraconensis
+barcino
+barcinonensis
+caesaracusta
 emeritensis
 caesaraugustanus
 tarraconensis
