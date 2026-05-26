@@ -49,6 +49,7 @@ PROVINCES = [
     ("baetica",              "Baetica",               True),
     ("lusitania",            "Lusitania",             True),
     ("hispania_citerior",    "Hispania citerior",     True),
+    ("mauretania_tingitana", "Mauretania Tingitana",  True),
 ]
 
 PROVINCE_SLUGS = [slug for slug, _name, _has_eval in PROVINCES]

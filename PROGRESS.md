@@ -610,3 +610,62 @@ All provinces re-run on `gemini-2.5-flash-lite` with the hardened prompt and cor
 - Province selector: `<option value="lusitania">Lusitania</option>`
 - PROVINCES config: `lusitania: { label: 'Lusitania', center: [39.5, -7.5], zoom: 7 }`
 - Data files: `inscriptions_lusitania.geojson` (4,966 features), `clusters_lusitania.json`, `enrichment_lusitania.json`
+
+---
+
+## Week 8: Hispania Citerior Run (May 2026)
+
+### Status: Complete
+
+**Goal:** Run full NER pipeline for Hispania Citerior, the largest Iberian province.
+
+### Accomplishments
+
+**Full Corpus Run:**
+- 15,829 EDCS records processed (after 30%-lacuna damage filter) — 23,161 total EDCS records
+- **18,114 name attestations extracted**
+- 227 `is_deity`, 513 `is_imperial`, 25 `is_bare_epithet`, 8 `is_place`, 4,650 `fragmentary`
+- 79 praenomen reclassifications (off-whitelist → nomen)
+- 24 nomen nominalizations (oblique → nominative)
+- 82.2% of inscriptions mappable (9,145 / 11,127 features with coordinates)
+- 16,400 clusters; 898 multi-member; largest cluster size 19 (`Lucius Licinius Secundus`, high confidence — likely the Barcino freedman known from Trajan/Hadrian-era inscriptions)
+- **3,106 English translations** (123 errors from transient 503s — all retried, checkpointed)
+
+**Evaluation Results:**
+
+| Metric | Value |
+|--------|-------|
+| F1 (adjusted) | **0.76** |
+| Recall (adj, excl. damage) | 0.74 |
+| Precision (adj, excl. non-persons) | 0.78 |
+| Eval records scored | 412 / 500 (88 damage-filtered) |
+| GT people scored | ~934 |
+| Candidate discoveries | 140 |
+
+F1 0.76 is above the 0.72 acceptable threshold and consistent with Lusitania (0.64) and Africa (0.70 honest). The province has very sparse LIRE v3.0 coverage (0 GT records in both the first-100 and final-100 spot checks) — the eval set draws from 2,086 LIRE records that have `people` data, a small fraction of 23k total.
+
+**Lookup File Additions:**
+
+*deities.txt:*
+- `tutela`, `tutelae` — Roman protective goddess
+- `veritas`, `veritatis` — personification of Truth (Sertorianus coins/tesserae)
+- `herotracos`, `herotoragus` (and forms) — Hispano-Celtic deity
+- `araca`, `aracae` — local Hispano-Celtic deity (deus Magnus Araca)
+- `gumelaeucus`, `gumelaeucui`, `gumelaeus` — Celtic Lares
+
+*place_names.txt:*
+- `salaria`, `salariensis` — Roman town in Hispania
+- `tarraco`, `tarraconensis`, `barcino`, `barcinonensis` — major Hispania Citerior cities
+- `caesaraugusta`, `caesaracusta` — Zaragoza
+
+**Prompt:** No changes needed; the existing Iberian branch (shared with Lusitania/Baetica) handled Celtiberian names, filiation, and votive patterns correctly.
+
+**Known remaining FPs (not systematic):**
+- `Invictus` from bare epithets — `is_bare_epithet` catches most; some single-token cases slip through
+- Line-break name truncation (~2%): `Hila/res → Hila`, `Satur/ninus → Satur` — residual model weakness
+- Formula fragments (`pia in suis`, `marito pientissimo`) occasionally contaminate raw_name field — minor
+
+### Webapp
+- Province selector: `<option value="hispania_citerior">Hispania citerior</option>`
+- PROVINCES config: `hispania_citerior: { label: 'Hispania citerior', center: [41.5, -1.0], zoom: 7 }`
+- Data files: `inscriptions_hispania_citerior.geojson` (11,127 features), `clusters_hispania_citerior.json`, `enrichment_hispania_citerior.json`
