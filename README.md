@@ -31,16 +31,21 @@ The pipeline uses **Gemini 2.5 Flash-Lite** (thinking disabled, batch size 15, u
 
 ## Evaluation Results
 
-Numbers are reported under the **corrected evaluation** (one-to-one matching + honest damage accounting; see methodology notes). Earlier figures were inflated by one-to-many matching and over-generous damage exclusion.
+Numbers are reported under the **corrected evaluation** (one-to-one matching + honest damage accounting; see methodology notes) against **LIRE v3.0** ground truth. Earlier figures (F1 up to 0.90) were inflated by one-to-many matching and over-generous damage exclusion.
 
 | Province | Recall (adj) | Precision (adj) | F1 (adj) | Discoveries |
 |----------|--------------|-----------------|----------|-------------|
-| Africa Proconsularis | 0.72 | 0.69 | **0.70** | 166 |
-| Britannia | _re-measuring_ | _re-measuring_ | _re-measuring_ | — |
-| Pannonia inferior | _re-measuring_ | _re-measuring_ | _re-measuring_ | — |
-| Dacia | _re-measuring_ | _re-measuring_ | _re-measuring_ | — |
+| Africa Proconsularis | 0.73 | 0.75 | **0.74** | 133 |
+| Britannia | 0.70 | 0.83 | **0.76** | 72 |
+| Dacia | 0.75 | 0.79 | **0.77** | 125 |
+| Dalmatia | 0.75 | 0.74 | **0.75** | 184 |
+| Noricum | 0.75 | 0.82 | **0.78** | 204 |
+| Numidia | 0.82 | 0.85 | **0.84** | 81 |
+| Pannonia inferior | 0.73 | 0.79 | **0.76** | 133 |
+| Pannonia superior | 0.73 | 0.78 | **0.75** | 161 |
+| Moesia superior | 0.75 | 0.82 | **0.79** | 155 |
 
-> Britannia / Pannonia / Dacia were last measured under the pre-correction eval (F1 0.86 / 0.90 / 0.85) and are being regenerated with the corrected pipeline; expect them to settle lower. Precision is a **lower bound** — genuine attestations absent from LIRE are counted as false positives.
+> Precision is a **lower bound** — genuine attestations absent from LIRE ground truth are counted as false positives ("discoveries"). Baetica and Moesia inferior are pending their full corpus run.
 
 **Key finding:** the majority of false negatives are inscriptions where the ground-truth name is partially or fully in lacunae (`[---]`). The model cannot recover these from the raw text — an inherent limit of the text-based approach, not a model failure.
 
