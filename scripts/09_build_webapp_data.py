@@ -209,6 +209,21 @@ def build_webapp_data(province='africa_proconsularis'):
 
     clusters_json = {str(k): list(v) for k, v in clusters_map.items()}
 
+    # Preserve LLM-generated translation/summary from any prior enrichment file.
+    # These are produced by a separate (paid) downstream step, not by this script,
+    # so a plain rebuild must NOT silently drop them.
+    if ENRICHMENT_OUTPUT.exists():
+        with open(ENRICHMENT_OUTPUT, "r", encoding="utf-8") as f:
+            prior = json.load(f)
+        carried = 0
+        for source_id, prev in prior.items():
+            for field in ("translation", "summary"):
+                if prev.get(field):
+                    enrichment_map.setdefault(source_id, {})[field] = prev[field]
+                    if field == "translation":
+                        carried += 1
+        print(f"Preserved {carried} existing translations from {ENRICHMENT_OUTPUT.name}")
+
     WEBAPP_DATA_DIR.mkdir(parents=True, exist_ok=True)
     
     print(f"Writing {len(features)} features to {GEOJSON_OUTPUT}...")
