@@ -490,7 +490,7 @@
 
             // Latin text toggles
             if (p.raw_text) html += `<br><span class="btn-link" onclick="const d=this.nextElementSibling;const s=d.style.display==='block';d.style.display=s?'none':'block';this.textContent=s?'Show raw text':'Hide raw text'">Show raw text</span><div class="raw-text-area">${escHtml(p.raw_text)}</div>`;
-            if (enrich.text_edition) html += `<br><span class="btn-link" onclick="const d=this.nextElementSibling;const s=d.style.display==='block';d.style.display=s?'none':'block';this.textContent=s?'Show interpreted text':'Hide interpreted text'">Show interpreted text</span><div class="text-edition-area" style="display:none">${escHtml(enrich.text_edition)}</div>`;
+            if (enrich.text_edition) html += `<br><span class="btn-link" onclick="const d=this.nextElementSibling;const s=d.style.display==='block';d.style.display=s?'none':'block';this.textContent=s?'Show interpreted text':'Hide interpreted text'">Show interpreted text</span><div class="text-edition-area" style="display:none">${escHtml(enrich.text_edition).replace(/\\n/g,'<br>').replace(/\n/g,'<br>')}</div>`;
 
             html += `</div></div>`;
             return html;

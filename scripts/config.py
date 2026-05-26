@@ -47,6 +47,8 @@ PROVINCES = [
     ("moesia_superior",      "Moesia superior",       True),
     ("moesia_inferior",      "Moesia inferior",       True),
     ("baetica",              "Baetica",               True),
+    ("lusitania",            "Lusitania",             True),
+    ("hispania_citerior",    "Hispania citerior",     True),
 ]
 
 PROVINCE_SLUGS = [slug for slug, _name, _has_eval in PROVINCES]

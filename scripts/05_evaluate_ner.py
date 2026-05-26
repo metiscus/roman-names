@@ -9,7 +9,7 @@ from config import EDCS_PATH, OUTPUT_DIR, R1B1_GT_PATH
 
 # Standard Latin praenomen abbreviations used in epigraphic databases (LIRE, EDCS)
 PRAENOMEN_EXPANSIONS = {
-    'a.': 'aulus', 'ap.': 'appius', 'c.': 'gaius', 'cn.': 'gnaeus',
+    'a.': 'aulus', 'ap.': 'appius', 'c.': 'gaius', 'caius': 'gaius', 'cn.': 'gnaeus',
     'd.': 'decimus', 'k.': 'kaeso', 'l.': 'lucius', 'm.': 'marcus',
     "m'.": 'manius', 'mam.': 'mamercus', 'n.': 'numerius', 'p.': 'publius',
     'q.': 'quintus', 'sex.': 'sextus', 'ser.': 'servius', 'sp.': 'spurius',

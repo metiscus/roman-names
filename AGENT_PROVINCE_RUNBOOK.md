@@ -8,6 +8,8 @@ This document gives complete instructions for an AI agent to run the NER pipelin
 
 This pipeline extracts personal names from Latin inscriptions using **Gemini 2.5 Flash-Lite** with structured output. The source corpus is EDCS (Epigraphik-Datenbank Clauss-Slaby). The output is one row per name attestation in Parquet format, plus GeoJSON and cluster files for a web map.
 
+> **CRITICAL PERFORMANCE NOTE:** The raw EDCS JSON file (`data/EDCS_text_cleaned_*.json`) is very large (400MB+). **NEVER** use `grep` or `read_file` on this file in the CLI. It will overwhelm the context and is extremely slow. If you need to explore or verify data in this file, write a small Python script that uses `ijson` or standard `json` with a streaming approach, or simply trust the `scripts/run_pipeline.py` which handles filtering efficiently.
+
 The pipeline has been run on Africa Proconsularis, Britannia, Numidia, Dalmatia, Pannonia Superior/Inferior, Noricum, Dacia, Moesia Superior/Inferior. The methodology is proven but the prompt may need minor tuning for province-specific naming patterns.
 
 Data file paths are centralised in `scripts/config.py` — do not hardcode paths elsewhere.
@@ -49,18 +51,6 @@ The `.env` file contains `GEMINI_API_KEY`. It is present and working. Do not pri
 Run the NER pipeline for: **`{{PROVINCE_NAME}}`** (e.g. `Dalmatia`)
 
 Province slug (lowercase, underscores): **`{{PROVINCE_SLUG}}`** (e.g. `dalmatia`)
-
----
-
-## Step 0: Regression Baseline
-
-Before starting a new province run, verify the prompt is healthy:
-
-```bash
-python3 scripts/run_regression.py --model gemini-2.5-flash-lite
-```
-
-All 20 tests should pass. If any fail, fix `scripts/prompt_utils.py` before proceeding — the issue will affect every record in the run.
 
 ---
 
