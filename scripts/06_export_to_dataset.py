@@ -145,7 +145,9 @@ def create_final_dataset(province_slug='africa_proconsularis', province_name='Af
             def clean(v):
                 if isinstance(v, str) and v.strip().lower() == 'null':
                     return None
-                return v
+                if isinstance(v, str):
+                    v = v.replace('\n', ' ').replace('/', ' ').strip()
+                return v or None
             praenomen = clean(person.get('praenomen'))
             nomen = clean(person.get('nomen'))
             cognomen = clean(person.get('cognomen'))
@@ -159,9 +161,14 @@ def create_final_dataset(province_slug='africa_proconsularis', province_name='Af
                 nomen_fixes += 1
             nomen = new_nomen
 
+            def clean_display(v):
+                if not isinstance(v, str):
+                    return v
+                return v.replace('\n', ' ').replace('/', ' ').strip() or None
+            raw_name = clean_display(person.get('raw_name'))
             classifier_input = {
                 'praenomen': praenomen, 'nomen': nomen, 'cognomen': cognomen,
-                'raw_name': person.get('raw_name', ''),
+                'raw_name': raw_name or '',
             }
             row = {
                 'attestation_id': attestation_id,
@@ -172,7 +179,7 @@ def create_final_dataset(province_slug='africa_proconsularis', province_name='Af
                 'cognomen': cognomen,
                 'gender': clean(person.get('gender')),
                 'status': clean(person.get('status')),
-                'raw_name': person.get('raw_name'),
+                'raw_name': raw_name,
                 'fragmentary': person.get('fragmentary', False),
                 'is_deity': is_deity(classifier_input),
                 'is_imperial': is_imperial_person(classifier_input),
