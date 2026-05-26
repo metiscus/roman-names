@@ -133,7 +133,23 @@ singiliensis
 salpensanus
 muniguensis
 
-# Hispania citerior / Lusitania places (for future runs)
+# Hispania citerior / Lusitania places (confirmed + likely)
 emeritensis
 caesaraugustanus
 tarraconensis
+olisipensis
+scallabitanus
+scallabitana
+eborensis
+# Major Lusitania cities (cognomen-only forms almost certainly geographic)
+emerita
+olisipo
+scallabis
+ebora
+pax
+norba
+caesarobriga
+capara
+conimbriga
+lacobriga
+mirobriga
