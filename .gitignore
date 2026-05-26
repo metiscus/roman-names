@@ -18,6 +18,8 @@ data/output/*
 !data/output/lusitania_ner_full.jsonl
 !data/output/hispania_citerior_ner_full.jsonl
 !data/output/mauretania_tingitana_ner_full.jsonl
+!data/output/mauretania_caesariensis_ner_full.jsonl
+!data/output/creta_et_cyrenaica_ner_full.jsonl
 temp/
 
 # Python
