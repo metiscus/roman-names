@@ -12,6 +12,8 @@ data/output/*
 !data/output/pannonia_inferior_ner_full.jsonl
 !data/output/dacia_ner_full.jsonl
 !data/output/moesia_superior_ner_full.jsonl
+!data/output/moesia_inferior_ner_full.jsonl
+!data/output/baetica_ner_full.jsonl
 !data/output/numidia_ner_full.jsonl
 temp/
 
