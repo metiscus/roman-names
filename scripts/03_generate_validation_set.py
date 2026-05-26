@@ -3,9 +3,36 @@ import random
 import os
 import sys
 import argparse
+import ast
+import re
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from config import LIRE_PATH, EVAL_DIR
+
+
+def parse_people(value):
+    """Return a list of person dicts from a LIRE `people` field.
+
+    v1.2 stored a real list. v3.0 stores a *stringified* numpy/pandas repr of
+    the list (single quotes, None, dicts separated by newlines with no commas) —
+    or an empty list `[]` when there are no people. Without this, the eval-set
+    builder reads zero people from v3.0 for every province.
+    """
+    if isinstance(value, list):
+        return value
+    if isinstance(value, str):
+        s = value.strip()
+        if not s or s == '[]':
+            return []
+        # numpy dropped the commas between dict elements — put them back.
+        s = re.sub(r'\}\s*\n\s*\{', '}, {', s)
+        try:
+            parsed = ast.literal_eval(s)
+            return parsed if isinstance(parsed, list) else []
+        except (ValueError, SyntaxError):
+            return []
+    return []
+
 
 def generate_validation_set(province):
     input_file = LIRE_PATH
@@ -27,20 +54,22 @@ def generate_validation_set(province):
     pool = []
     for feat in features:
         props = feat['properties']
-        people_data = props.get('people')
-        
-        # Strictly require a valid list of people to ensure dense ground truth
-        if props.get('province') == province and isinstance(people_data, list) and len(people_data) > 0:
+        if props.get('province') != province:
+            continue
+        people_data = parse_people(props.get('people'))
+
+        # Strictly require people to ensure dense ground truth
+        if len(people_data) > 0:
             # Determine best text field
             text = props.get('clean_text_interpretive_word_EDCS') or \
                    props.get('clean_text_interpretive_word') or \
                    props.get('inscription')
-            
+
             if text and len(text.strip()) > 0:
                 pool.append({
                     'id': props.get('EDCS-ID') or props.get('EDH-ID'),
                     'text': text.strip(),
-                    'ground_truth_people': props['people']
+                    'ground_truth_people': people_data
                 })
     
     print(f"Filtered pool size ({province} with people): {len(pool)}")

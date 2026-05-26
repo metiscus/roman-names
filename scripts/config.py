@@ -44,9 +44,9 @@ PROVINCES = [
     ("numidia",              "Numidia",               True),
     ("pannonia_inferior",    "Pannonia inferior",     True),
     ("pannonia_superior",    "Pannonia superior",     True),
-    ("moesia_superior",      "Moesia superior",       False),
-    ("moesia_inferior",      "Moesia inferior",       False),
-    ("baetica",              "Baetica",               False),
+    ("moesia_superior",      "Moesia superior",       True),
+    ("moesia_inferior",      "Moesia inferior",       True),
+    ("baetica",              "Baetica",               True),
 ]
 
 PROVINCE_SLUGS = [slug for slug, _name, _has_eval in PROVINCES]
