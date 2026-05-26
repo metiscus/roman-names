@@ -1,5 +1,5 @@
 """
-Translate inscription text using Gemini 2.5 Flash.
+Translate inscription text using Gemini 2.5 Flash-Lite.
 
 Reads per-province enrichment JSON files, finds records with `text_edition`
 but no `translation` yet, calls the API in batches, and writes results back
@@ -32,6 +32,7 @@ PROVINCES = [
     'moesia_superior', 'noricum', 'numidia', 'pannonia_inferior', 'pannonia_superior'
 ]
 
+MODEL = 'gemini-2.5-flash-lite'  # matches the NER pipeline; override with --model
 MIN_EDITION_LENGTH = 20   # minimum chars for text_edition to be worth translating
 MIN_RAW_LENGTH = 15       # minimum chars for raw_text fallback
 BATCH_SIZE = 10
@@ -102,7 +103,7 @@ def translate_batch(client, batch: list[tuple[str, str]]) -> list[dict]:
     items = [{'id': edcs_id, 'text': text} for edcs_id, text in batch]
     prompt = BATCH_PROMPT.format(items_json=json.dumps(items, ensure_ascii=False))
     resp = client.models.generate_content(
-        model='gemini-2.5-flash',
+        model=MODEL,
         contents=prompt,
         config=genai.types.GenerateContentConfig(
             response_mime_type='application/json',
@@ -133,9 +134,10 @@ def process_province(province: str, client, args, batch_size: int = BATCH_SIZE) 
         return 0, 0
 
     if args.limit:
+        full_count = len(candidates)
         candidates = candidates[:args.limit]
-        if len(candidates) < (total_with_text - already_done):
-            print(f"  (limited to {len(candidates)} by --limit)")
+        if len(candidates) < full_count:
+            print(f"  (limited to {len(candidates)} of {full_count} by --limit)")
 
     if args.dry_run:
         n_batches = (len(candidates) + BATCH_SIZE - 1) // BATCH_SIZE
@@ -208,9 +210,12 @@ def process_province(province: str, client, args, batch_size: int = BATCH_SIZE) 
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Translate inscription text with Gemini 2.5 Flash')
+    global MODEL
+    parser = argparse.ArgumentParser(description='Translate inscription text with Gemini 2.5 Flash-Lite')
     parser.add_argument('--province', default='all',
                         help=f'Province slug or "all". Choices: {", ".join(PROVINCES)}')
+    parser.add_argument('--model', default=MODEL,
+                        help=f'Gemini model (default: {MODEL})')
     parser.add_argument('--limit', type=int, default=0,
                         help='Max records to translate per province (0 = no limit)')
     parser.add_argument('--dry-run', action='store_true',
@@ -220,6 +225,7 @@ def main():
     parser.add_argument('--batch-size', type=int, default=BATCH_SIZE,
                         help=f'Inscriptions per API call (default: {BATCH_SIZE})')
     args = parser.parse_args()
+    MODEL = args.model
 
     if not Path('webapp/data').exists():
         os.chdir(Path(__file__).parent.parent)
