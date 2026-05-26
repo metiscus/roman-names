@@ -669,3 +669,55 @@ F1 0.76 is above the 0.72 acceptable threshold and consistent with Lusitania (0.
 - Province selector: `<option value="hispania_citerior">Hispania citerior</option>`
 - PROVINCES config: `hispania_citerior: { label: 'Hispania citerior', center: [41.5, -1.0], zoom: 7 }`
 - Data files: `inscriptions_hispania_citerior.geojson` (11,127 features), `clusters_hispania_citerior.json`, `enrichment_hispania_citerior.json`
+
+---
+
+## Week 9: Mauretania Caesariensis Run (May 2026)
+
+### Status: Complete
+
+**Goal:** Run full NER pipeline for Mauretania Caesariensis, the larger of the two Mauretanian provinces.
+
+### Accomplishments
+
+**Full Corpus Run:**
+- 4,797 EDCS records processed (after 30%-lacuna damage filter) — 5,544 total EDCS records
+- **6,845 name attestations extracted** (4,242 inscriptions with at least one person; 11.6% empty rate)
+- 78 `is_deity`, 366 `is_imperial`, 6 `is_bare_epithet`, 4 `is_place`, 1,687 `fragmentary`
+- 45 praenomen reclassifications (off-whitelist → nomen)
+- 11 nomen nominalizations (oblique → nominative)
+- 90.1% of inscriptions mappable (3,823 / 4,242 features with coordinates)
+- 6,076 unique clusters
+- **575 English translations** (33 errors from transient 503, all retried and resolved)
+
+**Evaluation Results:**
+
+| Metric | Value |
+|--------|-------|
+| F1 (adjusted) | **0.85** |
+| Recall (adj, excl. damage) | 0.82 |
+| Precision (adj, excl. non-persons) | 0.89 |
+| Eval records scored | 179 LIRE GT records (small pool) |
+| True Positives | 183 |
+| Candidate Discoveries | 22 |
+
+F1 0.85 is well above the 0.72 acceptable threshold, consistent with other North African provinces.
+
+**Lookup File Additions (`place_names.txt`):**
+- `iactorensis` — community adjective for settlement Iactor (castellani Iactorenses)
+- `citofactenses` — community name for castellani Citofactenses
+- `caesariensis`, `sitifensis`, `sitifensium` — provincial/ethnic adjectives
+- `tingitanus`, `tingitana` — ethnic adjectives for Mauretania Tingitana
+- `caesarea`, `caesaream`, `volubilis` — major provincial cities
+
+**Prompt:** No changes needed; the generic prompt branch handled North African naming patterns (Roman tria nomina, Berber single-name cognomina) correctly.
+
+**Known remaining FPs (not systematic):**
+- Libyan/Neo-Punic script fragments that survived the damage filter (all-caps strings like `MA DDA`, `M D SV / SVMARI`) — rare edge cases, no filter mechanism
+- Formula word `aviae` (dative "to the grandmother") extracted as a female name — one occurrence in spot-check
+- Title-phrase extraction where no personal name is visible (e.g., `[praefect]o / [ala]e Thracum...`) — one occurrence, isolated
+
+### Webapp
+- Province selector: `<option value="mauretania_caesariensis">Mauretania Caesariensis</option>`
+- PROVINCES config: `mauretania_caesariensis: { label: 'Mauretania Caesariensis', center: [36.5, 2.5], zoom: 7 }`
+- Data files: `inscriptions_mauretania_caesariensis.geojson` (4,242 features), `clusters_mauretania_caesariensis.json`, `enrichment_mauretania_caesariensis.json`

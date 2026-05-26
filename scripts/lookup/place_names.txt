@@ -161,3 +161,15 @@ capara
 conimbriga
 lacobriga
 mirobriga
+
+# Mauretania Caesariensis places — confirmed FPs from gut-check (2026-05)
+iactorensis    # community adjective for settlement Iactor; often "castellani Iactorenses"
+citofactenses  # community name for castellani Citofactenses
+caesariensis   # provincial adjective; rarely a personal name
+sitifensis     # ethnic adjective for Sitifis (Sétif)
+sitifensium    # genitive form
+tingitanus     # ethnic adjective for Mauretania Tingitana
+tingitana      # fem. form
+caesarea       # capital city of Mauretania Caesariensis
+volubilis      # major city in Mauretania
+caesaream      # accusative of Caesarea
