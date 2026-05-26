@@ -16,6 +16,8 @@ data/output/*
 !data/output/baetica_ner_full.jsonl
 !data/output/numidia_ner_full.jsonl
 !data/output/lusitania_ner_full.jsonl
+!data/output/hispania_citerior_ner_full.jsonl
+!data/output/mauretania_tingitana_ner_full.jsonl
 temp/
 
 # Python
