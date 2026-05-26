@@ -25,12 +25,10 @@ from dotenv import load_dotenv
 from google import genai
 from google.genai import errors as genai_errors
 
-load_dotenv()
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from config import PROVINCE_SLUGS as PROVINCES  # single source of truth (scripts/config.py)
 
-PROVINCES = [
-    'africa_proconsularis', 'britannia', 'dacia', 'dalmatia',
-    'moesia_superior', 'noricum', 'numidia', 'pannonia_inferior', 'pannonia_superior'
-]
+load_dotenv()
 
 MODEL = 'gemini-2.5-flash-lite'  # matches the NER pipeline; override with --model
 MIN_EDITION_LENGTH = 20   # minimum chars for text_edition to be worth translating
