@@ -25,11 +25,16 @@ def safe_int(val, default=0):
         return default
 
 def clean_name_component(val):
-    """Strip epigraphic noise like [3] or [---] from display names."""
+    """Strip epigraphic noise like [3], (?), or [---] from display names."""
     if not isinstance(val, str) or not val:
         return ''
-    # Remove anything inside brackets, including the brackets
-    return re.sub(r'\[.*?\]', '', val).strip()
+    # Remove noise characters: brackets, parentheses, digits, ?, +, *
+    # We do NOT use name_filters._clean_tokens here because we want to preserve 
+    # the case and the alpha characters, just stripping the symbols.
+    cleaned = re.sub(r'[\[\]\(\)0-9\?\+\*]', '', val)
+    # Also remove triple dashes [---] or (---) which might be left as ---
+    cleaned = cleaned.replace('---', '')
+    return cleaned.strip()
 
 def get_marker_gender(genders):
     unique_genders = set(genders)
