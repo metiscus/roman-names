@@ -43,13 +43,13 @@ LLM-based NER is now capable enough to attack this problem at scale, but no publ
 1. **EDCS dataset (SDAM 2022 extract)**
    - Source: Zenodo, DOI 10.5281/zenodo.7072337
    - Format: JSON, ~465 MB, 537k records
-   - License: CC BY-SA
+   - License: CC BY 4.0
    - Filter to: `province == "Aegyptus"` (and related provinces: Aegyptus Herculia, Aegyptus Iovia, Thebais, Arcadia, etc.)
    - Key fields: `EDCS-ID`, `inscription`, `province`, `place`, `dating from`, `dating to`, `inscr_type`
 
 2. **LIRE dataset** (optional enrichment)
-   - Source: Zenodo, DOI 10.5281/zenodo.5776109
-   - Format: GeoJSON/Parquet, 136k records
+   - Source: Zenodo, DOI 10.5281/zenodo.8431452
+   - Format: GeoJSON/Parquet, 182k records
    - Provides coordinates and merged EDH metadata for records that overlap
 
 3. **Trismegistos People (validation ground truth)**
@@ -293,7 +293,7 @@ None. All Phase 1 data (EDCS, LIRE, TM APIs) is openly accessible. You can begin
 ## 7. Publication Plan
 
 ### Primary Output
-- **Dataset**: structured name attestation index for target province, deposited on Zenodo (CC BY-SA 4.0)
+- **Dataset**: structured name attestation index for target province, deposited on Zenodo (CC BY 4.0)
 - **Code**: GitHub repository with full pipeline (prompts, scripts, evaluation code)
 
 ### Optional Paper
@@ -338,7 +338,7 @@ None. All Phase 1 data (EDCS, LIRE, TM APIs) is openly accessible. You can begin
 ## 10. Quick-Start Checklist
 
 - [ ] Download EDCS 2022 JSON from Zenodo (DOI 10.5281/zenodo.7072337)
-- [ ] Download LIRE parquet from Zenodo (DOI 10.5281/zenodo.5776109)
+- [ ] Download LIRE parquet from Zenodo (DOI 10.5281/zenodo.8431452)
 - [ ] Set up Python environment with required packages
 - [ ] Filter EDCS to Egyptian provinces; count records and inspect inscription text samples
 - [ ] Test TM TexRelations API with 10 EDCS IDs to verify cross-reference availability
