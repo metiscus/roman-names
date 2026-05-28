@@ -87,7 +87,7 @@ def damage_ratio(text):
 
 def load_records(province):
     print(f"Loading EDCS data for {province}...")
-    with open(EDCS_PATH) as f:
+    with open(EDCS_PATH, encoding='utf-8') as f:
         data = json.load(f)
 
     records = []

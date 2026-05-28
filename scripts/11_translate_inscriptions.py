@@ -48,6 +48,21 @@ Inscriptions:
 {items_json}"""
 
 
+# Pricing (est) per 1M tokens
+PRICING = {
+    "gemini-2.5-flash": {"in": 0.30, "out": 2.50},
+    "gemini-2.5-flash-lite": {"in": 0.10, "out": 0.40}
+}
+
+# Substrings marking a transient, worth-retrying API failure.
+RETRYABLE = ('429', 'quota', 'resource', 'rate', '500', '502', '503', '504',
+             'unavailable', 'deadline', 'timeout', 'timed out', 'internal',
+             'connection', 'reset', 'temporarily', 'overloaded')
+
+def _is_retryable(err_str):
+    s = (err_str or '').lower()
+    return any(m in s for m in RETRYABLE)
+
 def load_enrichment(path: Path) -> dict:
     if not path.exists():
         return {}
@@ -96,8 +111,8 @@ def find_candidates(enrichment: dict, raw_lookup: dict, force: bool) -> list[tup
     return out
 
 
-def translate_batch(client, batch: list[tuple[str, str]]) -> list[dict]:
-    """Translate a batch of (edcs_id, text) pairs. Returns list of {id, translation, summary}."""
+def translate_batch(client, batch: list[tuple[str, str]]) -> tuple[list[dict], float]:
+    """Translate a batch of (edcs_id, text) pairs. Returns (list of results, cost)."""
     items = [{'id': edcs_id, 'text': text} for edcs_id, text in batch]
     prompt = BATCH_PROMPT.format(items_json=json.dumps(items, ensure_ascii=False))
     resp = client.models.generate_content(
@@ -108,16 +123,22 @@ def translate_batch(client, batch: list[tuple[str, str]]) -> list[dict]:
             thinking_config=genai.types.ThinkingConfig(thinking_budget=0),
         ),
     )
-    return json.loads(resp.text.strip())
+    
+    usage = resp.usage_metadata
+    rates = PRICING.get(MODEL, PRICING["gemini-2.5-flash-lite"])
+    cost = (usage.prompt_token_count / 1_000_000 * rates["in"]) + \
+           (usage.candidates_token_count / 1_000_000 * rates["out"])
+    
+    return json.loads(resp.text.strip()), cost
 
 
-def process_province(province: str, client, args, batch_size: int = BATCH_SIZE) -> tuple[int, int]:
-    """Returns (translated, errors)."""
+def process_province(province: str, client, args, batch_size: int = BATCH_SIZE) -> tuple[int, int, float]:
+    """Returns (translated, errors, cost)."""
     path = Path(f'webapp/data/enrichment_{province}.json')
     enrichment = load_enrichment(path)
     if not enrichment:
         print(f"  [{province}] No enrichment file found — skipping.")
-        return 0, 0
+        return 0, 0, 0.0
 
     raw_lookup = load_raw_text_lookup(province)
     candidates = find_candidates(enrichment, raw_lookup, args.force)
@@ -129,7 +150,7 @@ def process_province(province: str, client, args, batch_size: int = BATCH_SIZE) 
     print(f"  {len(candidates):,} to translate")
 
     if not candidates:
-        return 0, 0
+        return 0, 0, 0.0
 
     if args.limit:
         full_count = len(candidates)
@@ -140,14 +161,11 @@ def process_province(province: str, client, args, batch_size: int = BATCH_SIZE) 
     if args.dry_run:
         n_batches = (len(candidates) + BATCH_SIZE - 1) // BATCH_SIZE
         print(f"  DRY RUN — would translate {len(candidates)} records in {n_batches} batches of {BATCH_SIZE}")
-        for edcs_id, text in candidates[:5]:
-            print(f"    {edcs_id}: {text[:80]}…")
-        if len(candidates) > 5:
-            print(f"    … and {len(candidates) - 5} more")
-        return 0, 0
+        return 0, 0, 0.0
 
     translated = 0
     errors = 0
+    total_cost = 0.0
     checkpoint_due = 0
     total = len(candidates)
 
@@ -156,12 +174,13 @@ def process_province(province: str, client, args, batch_size: int = BATCH_SIZE) 
         batch = candidates[batch_start:batch_start + batch_size]
         batch_num = batch_start // batch_size + 1
         total_batches = (total + batch_size - 1) // batch_size
-        print(f"  Batch {batch_num}/{total_batches} ({batch_start+1}–{min(batch_start+BATCH_SIZE, total)}/{total})… ", end='', flush=True)
+        print(f"  Batch {batch_num}/{total_batches}… ", end='', flush=True)
 
         retry = 0
         while True:
             try:
-                results = translate_batch(client, batch)
+                results, cost = translate_batch(client, batch)
+                total_cost += cost
                 # Index results by id in case order shifts
                 by_id = {r['id']: r for r in results if isinstance(r, dict)}
                 batch_ok = 0
@@ -175,12 +194,13 @@ def process_province(province: str, client, args, batch_size: int = BATCH_SIZE) 
                         batch_ok += 1
                     else:
                         errors += 1
-                print(f"OK ({batch_ok}/{len(batch)})")
+                print(f"OK ({batch_ok}/{len(batch)}) [cost: ${cost:.4f}]")
                 break
-            except genai_errors.APIError as e:
-                if '429' in str(e) or 'quota' in str(e).lower() or 'rate' in str(e).lower():
+            except Exception as e:
+                err_str = str(e)
+                if _is_retryable(err_str):
                     wait = 30 * (2 ** retry)
-                    print(f"rate-limited, waiting {wait}s…", end='', flush=True)
+                    print(f"retryable error, waiting {wait}s…", end='', flush=True)
                     time.sleep(wait)
                     retry += 1
                     if retry > 4:
@@ -188,13 +208,9 @@ def process_province(province: str, client, args, batch_size: int = BATCH_SIZE) 
                         errors += len(batch)
                         break
                 else:
-                    print(f"API error: {e}")
+                    print(f"error: {e}")
                     errors += len(batch)
                     break
-            except Exception as e:
-                print(f"error: {e}")
-                errors += len(batch)
-                break
 
         if checkpoint_due >= CHECKPOINT_EVERY:
             save_enrichment(path, enrichment)
@@ -203,8 +219,8 @@ def process_province(province: str, client, args, batch_size: int = BATCH_SIZE) 
 
     # Final save
     save_enrichment(path, enrichment)
-    print(f"  Saved {path} — {translated} translated, {errors} errors")
-    return translated, errors
+    print(f"  Saved {path} — {translated} translated, {errors} errors, cost: ${total_cost:.4f}")
+    return translated, errors, total_cost
 
 
 def main():
@@ -244,12 +260,14 @@ def main():
 
     total_translated = 0
     total_errors = 0
+    total_cost = 0.0
     for prov in provinces:
-        t, e = process_province(prov, client, args, args.batch_size)
+        t, e, c = process_province(prov, client, args, args.batch_size)
         total_translated += t
         total_errors += e
+        total_cost += c
 
-    print(f'\nDone. Total translated: {total_translated}, errors: {total_errors}')
+    print(f'\nDone. Total translated: {total_translated}, errors: {total_errors}, total cost: ${total_cost:.4f}')
 
 
 if __name__ == '__main__':
