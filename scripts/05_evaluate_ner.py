@@ -81,7 +81,7 @@ def names_match(sig_a, sig_b, threshold=0.75):
     return matches / len(query) >= threshold
 
 def evaluate_ner(province):
-    safe_name = province.lower().replace(' ', '_')
+    safe_name = re.sub(r'[()]', '', province).lower().replace(' ', '_')
     input_path = f'data/eval/{safe_name}_ner_results_batched.json'
     
     try:
@@ -188,7 +188,7 @@ def print_summary(province, label, tp, fp_imperial, fp_other, fn, fn_damaged, di
 
 def evaluate_r1b1(province):
     """Evaluate full corpus NER output against Romans 1by1 ground truth."""
-    safe_name = province.lower().replace(' ', '_')
+    safe_name = re.sub(r'[()]', '', province).lower().replace(' ', '_')
     full_path = OUTPUT_DIR / f'{safe_name}_ner_full.jsonl'
 
     if not os.path.exists(full_path):

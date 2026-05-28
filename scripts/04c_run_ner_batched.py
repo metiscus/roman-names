@@ -49,7 +49,7 @@ def run_ner_eval_batched(province):
     client = genai.Client(api_key=api_key)
     system_prompt = get_system_prompt(province)
 
-    safe_name = province.lower().replace(' ', '_')
+    safe_name = re.sub(r'[()]', '', province).lower().replace(' ', '_')
     eval_path = f'data/eval/{safe_name}_eval.jsonl'
     results_path = f'data/eval/{safe_name}_ner_results_batched.json'
 

@@ -132,7 +132,7 @@ def main():
     stop_after = args.stop_after
     model = args.model
     workers = args.workers
-    safe_name = province.lower().replace(' ', '_')
+    safe_name = re.sub(r'[()]', '', province).lower().replace(' ', '_')
     output_path = OUTPUT_DIR / f'{safe_name}_ner_full.jsonl'
 
     api_key = os.getenv("GEMINI_API_KEY")
