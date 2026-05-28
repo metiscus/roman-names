@@ -300,6 +300,11 @@
                         <label class="filter-option"><input type="checkbox" id="f-hide-deity"> Deities</label>
                     </div>
 
+                    <div class="filter-group">
+                        <h3>Show Only</h3>
+                        <label class="filter-option"><input type="checkbox" id="f-has-translation"> Has Translation</label>
+                    </div>
+
                     <div style="font-size: 0.8rem; color: #888; border-top: 1px solid #eee; padding-top: 15px;">
                         Data: <a href="https://db.edcs.eu/" target="_blank" style="color:#888">EDCS</a> &amp; <a href="https://doi.org/10.5281/zenodo.5776109" target="_blank" style="color:#888">LIRE</a>. Tiles: <a href="https://dh.gu.se/dare/" target="_blank" style="color:#888">DARE</a>.<br>
                         Click a marker to explore its contents in the sidebar.<br><br>
@@ -541,6 +546,7 @@
             const confs = Array.from(document.querySelectorAll('.f-conf:checked')).map(c => c.value);
             const hideImp = document.getElementById('f-hide-imp').checked;
             const hideDeity = document.getElementById('f-hide-deity').checked;
+            const onlyTranslated = document.getElementById('f-has-translation').checked;
 
             const isGeoFiltered = !!activeGeoIds || !!activeClusterId;
             const isSearchFiltered = !!search;
@@ -564,6 +570,10 @@
                 if (activeClusterId && (!clustersLookup[activeClusterId] || !clustersLookup[activeClusterId].includes(f.properties.edcs_id))) return false;
                 if (activeGeoIds && !activeGeoIds.includes(f.properties.edcs_id)) return false;
                 if (!genders.includes(f.properties.marker_gender)) return false;
+                if (onlyTranslated) {
+                    const enrich = enrichmentData[f.properties.edcs_id];
+                    if (!enrich || !enrich.translation) return false;
+                }
 
                 const match = f.properties.persons.filter(p => {
                     if (search && !(`${p.praenomen} ${p.nomen} ${p.cognomen} ${p.raw_name}`.toLowerCase().includes(search))) return false;

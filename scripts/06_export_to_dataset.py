@@ -155,6 +155,9 @@ def create_final_dataset(province_slug='africa_proconsularis', province_name='Af
             if fixed_praenomen != praenomen:
                 praenomen_fixes += 1
             praenomen = fixed_praenomen
+            # Skip extractions where all name fields are null (too fragmentary)
+            if not praenomen and not nomen and not cognomen:
+                continue
             # Deterministic mop-up of oblique-case nomina the model left undeclined.
             new_nomen = fix_nomen_case(nomen)
             if new_nomen != nomen:
