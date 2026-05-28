@@ -100,5 +100,11 @@ See [`webapp/README.md`](webapp/README.md) for data details and instructions to 
 ## Methodology
 Full research plan: [roman_ner_research_plan.md](roman_ner_research_plan.md).
 
-## License
-Code: MIT License. Data: CC BY-SA 4.0 (EDCS, LIRE source databases).
+## License and Attribution
+
+Code is licensed under the MIT License. See [`LICENSE`](LICENSE).
+
+Derived data artifacts are released under CC BY 4.0, matching the Zenodo
+license metadata for the EDCS 2022 and LIRE v3.0 source datasets used here.
+See [`DATA_LICENSE.md`](DATA_LICENSE.md) and [`ATTRIBUTION.md`](ATTRIBUTION.md)
+for source citations, reuse terms, and attribution guidance.

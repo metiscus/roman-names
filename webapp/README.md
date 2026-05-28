@@ -30,9 +30,9 @@ A static map visualization of Roman personal name attestations extracted from La
 | Pannonia superior | 4,127 | — | — |
 | Moesia superior | 1,151 | — | — |
 
-NER extracted using Gemini 2.5 Flash with structured output. Validated against [LIRE](https://doi.org/10.5281/zenodo.5776109) ground truth. Source: [EDCS 2022](https://db.edcs.eu/).
+NER extracted using Gemini 2.5 Flash with structured output. Validated against [LIRE v3.0](https://doi.org/10.5281/zenodo.8431452) ground truth. Source: [EDCS 2022](https://doi.org/10.5281/zenodo.7072337).
 
-Popup enrichment data (interpretive text, publication refs, external links) sourced from [LIRE v1.2](https://doi.org/10.5281/zenodo.5776109). English translations generated with Gemini 2.5 Flash via `scripts/11_translate_inscriptions.py`.
+Popup enrichment data (interpretive text, publication refs, external links) sourced from [LIRE v3.0](https://doi.org/10.5281/zenodo.8431452). English translations generated with Gemini 2.5 Flash via `scripts/11_translate_inscriptions.py`.
 
 ## Local Development
 
@@ -117,8 +117,8 @@ Designed for **GitHub Pages**. Enable Pages in repo Settings → Pages → Sourc
 
 ## Data Sources
 
-- **[EDCS](https://db.edcs.eu/):** Epigraphik-Datenbank Clauss-Slaby — inscription texts and metadata.
-- **[LIRE v1.2](https://doi.org/10.5281/zenodo.5776109):** Latin Inscriptions of the Roman Empire — geographic coordinates, interpretive text, publication references, and cross-database IDs used for popup enrichment and NER validation.
+- **[EDCS 2022](https://doi.org/10.5281/zenodo.7072337):** Epigraphik-Datenbank Clauss-Slaby — inscription texts and metadata.
+- **[LIRE v3.0](https://doi.org/10.5281/zenodo.8431452):** Latin Inscriptions of the Roman Empire — geographic coordinates, interpretive text, publication references, and cross-database IDs used for popup enrichment and NER validation.
 - **[CIL ACE](https://cil.bbaw.de/):** Corpus Inscriptionum Latinarum — inscription pages with photos.
 - **[EDH](https://edh.ub.uni-heidelberg.de/):** Epigraphic Database Heidelberg.
 - **[Trismegistos](https://www.trismegistos.org/):** Cross-database text identifier registry.
@@ -127,7 +127,10 @@ Designed for **GitHub Pages**. Enable Pages in repo Settings → Pages → Sourc
 
 ## License
 
-Data: CC BY-SA. Code: MIT.
+Code is licensed under the MIT License. Derived data artifacts are released
+under CC BY 4.0. See [`../LICENSE`](../LICENSE),
+[`../DATA_LICENSE.md`](../DATA_LICENSE.md), and
+[`../ATTRIBUTION.md`](../ATTRIBUTION.md).
 
 ## Feedback
 

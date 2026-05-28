@@ -9,7 +9,7 @@ Execute the initial steps (Week 1) of the Roman NER research plan: acquire the f
 - Scripts Directory: `scripts/` (to be created)
 - Targets: 
   - EDCS Dataset (DOI 10.5281/zenodo.7072337)
-  - LIRE Dataset (DOI 10.5281/zenodo.5776109)
+  - LIRE Dataset (DOI 10.5281/zenodo.8431452)
 
 ## Implementation Steps
 
