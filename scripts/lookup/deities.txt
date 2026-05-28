@@ -422,3 +422,29 @@ soknopaiou
 soknopaios
 neilus
 nilus
+hathor
+nephthys
+sekhmet
+khnum
+khnumos
+bes
+
+# Asclepion healing deities — Greek forms (Aegyptus and elsewhere)
+# Latin aesculapius/asklepios already above; add normalized and variant forms
+asclepius
+asclepi
+hygeia
+hygeias
+hygeiai
+hygieias
+hygieiai
+machaon
+machaonis
+podalirius
+podaleirios
+iaso
+iasos
+aceso
+akeso
+panakeia
+panacea

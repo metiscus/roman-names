@@ -227,3 +227,12 @@ arsenoite      # nome of Arsinoe
 arsinoe        # city in Fayum
 oxyrhynchus    # major city
 hermopolis     # city
+# Egyptian cities extracted as persons in Cornelius Gallus inscription (EDCS-29900167)
+coptos
+copti          # genitive
+ceramices      # Ceramicus district
+diospolis      # major city (Thebes = Diospolis Magna; also Diospolis Parva)
+boreseos       # Egyptian city/district
+ophieu         # Ophieon / Ophieum district
+berenice       # Red Sea port city
+berenices      # genitive
