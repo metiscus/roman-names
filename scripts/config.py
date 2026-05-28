@@ -55,6 +55,12 @@ PROVINCES = [
     ("aegyptus",                "Aegyptus",                False),
     ("corsica",                 "Corsica",                 True),
     ("sardinia",                "Sardinia",                True),
+    ("sicilia",                 "Sicilia",                 True),
+    ("gallia_narbonensis",     "Gallia Narbonensis",      True),
+    ("belgica",                "Belgica",                 True),
+    ("aquitanica",             "Aquitani(c)a",            True),
+    ("germania_superior",      "Germania superior",       True),
+    ("germania_inferior",      "Germania inferior",       True),
 ]
 
 PROVINCE_SLUGS = [slug for slug, _name, _has_eval in PROVINCES]

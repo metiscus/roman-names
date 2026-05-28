@@ -56,7 +56,15 @@ Province slug (lowercase, underscores): **`{{PROVINCE_SLUG}}`** (e.g. `dalmatia`
 
 ## Step 1: Gut-Check Run — First 100 Records
 
-Run the first 100 records only:
+First, generate the LIRE evaluation set (needed for `--with-gt` in spot-checks):
+
+```bash
+python3 scripts/03_generate_validation_set.py --province "{{PROVINCE_NAME}}"
+```
+
+Note the pool size it reports. Some provinces (e.g. Gallia Narbonensis: ~83) have small LIRE pools. This is fine for scoring but means `--with-gt` may show 0 GT hits in a small sample if IDs don't overlap — not a bug, just low density.
+
+Then run the first 100 records:
 
 ```bash
 python3 scripts/06_run_full_corpus.py --province "{{PROVINCE_NAME}}" --stop-after 100 --model gemini-2.5-flash-lite
@@ -188,12 +196,7 @@ Run each step in order. Each is fast (seconds to a few minutes).
 
 ### 4a. Evaluation (measures quality against LIRE ground truth)
 
-First generate the evaluation set:
-```bash
-python3 scripts/03_generate_validation_set.py --province "{{PROVINCE_NAME}}"
-```
-
-Then score against the full corpus output:
+Score against the full corpus output (eval set was already generated in Step 1):
 ```bash
 python3 scripts/05b_eval_from_corpus.py --province {{PROVINCE_SLUG}}
 ```

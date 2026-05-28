@@ -173,6 +173,48 @@ tingitana      # fem. form
 caesarea       # capital city of Mauretania Caesariensis
 volubilis      # major city in Mauretania
 caesaream      # accusative of Caesarea
+# Sicilia places and ethnic adjectives
+acragas
+acragantos
+agrigentum
+agrigentinus
+syracusae
+syracusanus
+syracusana
+leontini
+leontinus
+leontina
+panormus
+panormi
+tauromenium
+tauromenitanus
+messana
+messanensis
+catana
+catanensis
+catinensis
+segesta
+segestanus
+selinus
+selinuntius
+himera
+gela
+gelensis
+geloios
+geloi
+camarina
+lilybaeum
+thermae
+centuripae
+centuripinus
+halaesa
+haluntium
+enna
+ennensis
+tyndaris
+soluntum
+soluntinus
+
 # Aegyptus cities and ethnic adjectives
 alexandria     # capital of Egypt
 alexandriae    # genitive
