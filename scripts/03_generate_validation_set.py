@@ -40,7 +40,7 @@ def generate_validation_set(province):
     os.makedirs(output_dir, exist_ok=True)
     
     # Standardize filename format
-    safe_name = province.lower().replace(' ', '_')
+    safe_name = re.sub(r'[()]', '', province).lower().replace(' ', '_')
     dev_path = os.path.join(output_dir, f'{safe_name}_dev.jsonl')
     eval_path = os.path.join(output_dir, f'{safe_name}_eval.jsonl')
 
