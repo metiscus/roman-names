@@ -247,6 +247,149 @@ def get_system_prompt(province):
   "results": [{"id": "C5", "persons": []}]
 }"""
 
+    elif province.lower() == 'sicilia':
+        extra_examples = """
+**SICILIA-SPECIFIC RULES:**
+1. Sicilia has a large Greek-language corpus. Apply the same NER rules to Greek inscriptions: extract personal names, decline to nominative, assign gender.
+2. DEITY DEDICATIONS: Greek votive formulas like "νίκη Διός" (victory of Zeus), "τᾶι Ἀθαναίαι" (to Athena), "Ἡρακλέ(ο)ς" (of Heracles), "Διὸς Σωτῆρος" (of Zeus Soter) are dedications to gods — return persons: []. νίκη in a dedication context means "victory" (a concept or deity), NOT a personal name.
+3. MAGICAL / GNOSTIC TEXTS: Texts containing sequences like "αβρασαξ", "ιαω", "Σολομῶνος" (Seal of Solomon), "Adonai", "Sadanael", angel/demon names, or long strings of vowels/consonants without word breaks are magical amulets or curse tablets — return persons: []. A text mixing Hebrew divine names (Adonai, Sion) with Greek or mixed-script tokens is ALWAYS a magical amulet.
+4. ETHNIC ADJECTIVES: Words like "Τύριος" (Tyrian), "Συρακόσιον" (Syracusan), "Γελόιον" (of Gela) describe origin, not a separate person. Record in the status field of the preceding person, do NOT create a separate person entry.
+5. MONTH NAMES are not persons: Πανάμου (Panamos), Ἀγριανίου (Agrianios), Ἀπελλαίου (Apellaios), Καρνείου (Karneios) etc. are Sicilian-Doric month names.
+6. COMMON GREEK WORDS are not names: σκύλα (spoils), νήπιος/νήπια (infant), ψωλός/ψωλαί (obscene term), ὕδωρ (water), ξαδριον, πιστά (faithful), ὀγκία (ounce — a weight unit), δαμοσία (public — an adjective, not a name).
+7. Two-name sequences: "L(ucius) Gabinio(s)" = praenomen Lucius + nomen Gabinius, NO cognomen. Do not duplicate the nomen as cognomen.
+
+**Input:** "νίκη / Διός"
+**Output:**
+{
+  "results": [{"id": "SI1", "persons": []}]
+}
+
+**Input:** "τᾶι Ἀθαναίαι σκύλα ἀπὸ τῶν πολεμίων"
+**Output:**
+{
+  "results": [{"id": "SI2", "persons": []}]
+}
+
+**Input:** "Σφραγίς Σολομῶνος // Επηνα / συμαηα / ο σαλαμ/αξα"
+**Output:**
+{
+  "results": [{"id": "SI3", "persons": []}]
+}
+
+**Input:** "Ἀπολλοφάν/ης / Τύριος"
+**Output:**
+{
+  "results": [{"id": "SI4", "persons": [
+    {"praenomen": null, "nomen": null, "cognomen": "Apollophanes", "gender": "male", "status": "Tyrios", "raw_name": "Ἀπολλοφάν/ης Τύριος"}
+  ]}]
+}
+
+**Input:** "ἐπὶ Παυ/σανία / Πανάμου"
+**Output:**
+{
+  "results": [{"id": "SI5", "persons": [
+    {"praenomen": null, "nomen": null, "cognomen": "Pausanias", "gender": "male", "status": null, "raw_name": "Παυ/σανία"}
+  ]}]
+}
+
+**Input:** "D(is) M(anibus) s(acrum) / Cassia Galene / vixit ann(os) XXXX / C(aius) Iulius Macedo / uxori piissimae / fecit"
+**Output:**
+{
+  "results": [{"id": "SI6", "persons": [
+    {"praenomen": null, "nomen": "Cassia", "cognomen": "Galene", "gender": "female", "status": "uxor piissima", "raw_name": "Cassia Galene"},
+    {"praenomen": "Gaius", "nomen": "Iulius", "cognomen": "Macedo", "gender": "male", "status": null, "raw_name": "C. Iulius Macedo"}
+  ]}]
+}
+
+**Input:** "L(ucius) Gabinio(s)"
+**Output:**
+{
+  "results": [{"id": "SI7", "persons": [
+    {"praenomen": "Lucius", "nomen": "Gabinius", "cognomen": null, "gender": "male", "status": null, "raw_name": "L. Gabinio(s)"}
+  ]}]
+}
+
+**Input:** "Ν<ή=Ι>πι{ι}α // C"
+**Output:**
+{
+  "results": [{"id": "SI8", "persons": []}]
+}
+
+**Input:** "A Adonai Ω / Sadanael / Sion / Bonoi T(h)eon / Cαρνω"
+**Output:**
+{
+  "results": [{"id": "SI9", "persons": []}]
+}
+
+**Input:** "Δ(αμοσία) ὀ//γκία"
+**Output:**
+{
+  "results": [{"id": "SI10", "persons": []}]
+}
+
+**Input:** "νίκη / Ἀθηνίωνος"
+**Output:**
+{
+  "results": [{"id": "SI11", "persons": [
+    {"praenomen": null, "nomen": null, "cognomen": "Athenion", "gender": "male", "status": null, "raw_name": "Ἀθηνίωνος"}
+  ]}]
+}"""
+
+    elif province.lower() in ('gallia narbonensis', 'belgica', 'aquitani(c)a',
+                              'germania superior', 'germania inferior'):
+        extra_examples = """
+**GAUL/GERMANIA RULES:**
+1. CELTIC SINGLE NAMES: Many Gallic and Germanic peregrini bear a single personal name with no praenomen or nomen. Treat these as **cognomen only** (praenomen=null, nomen=null).
+2. CELTIC FILIATION: "Atto Camuli f(ilius)" — Atto is the main person (cognomen only), Camulus is the father (status "pater", cognomen only). Do NOT put Camulus in Atto's nomen field.
+3. POST-CITIZENSHIP NAMING: After 212 AD many Gauls adopted Roman nomina (Iulius, Aurelius, Claudius most common) while keeping a Celtic cognomen. "Iulius Masuetus" = nomen Iulius, cognomen Masuetus.
+4. GALLIC/GERMANIC DEITIES: Epona, Nantosuelta, Rosmerta, Sequana, Sucellus, Maponos, Taranis, Lenus, Intarabus, Ritona, Nehalennia, Matres/Matronae, Vagdavercustis, Hludana, Hercules Magusanus and similar indigenous divine names are deities, NOT persons.
+5. MILITARY UNITS: Rhine legions (Legio I Minervia, VIII Augusta, XXII Primigenia, XXX Ulpia Victrix, I Adiutrix, etc.) and auxiliary unit names (ala, cohors) must NOT be extracted as persons.
+
+**Input:** "Atepomaro / Atti f(ilio) / v(otum) s(olvit) / l(ibens) m(erito)"
+**Output:**
+{
+  "results": [{"id": "GA1", "persons": [
+    {"praenomen": null, "nomen": null, "cognomen": "Atepomarus", "gender": "male", "status": null, "raw_name": "Atepomaro"},
+    {"praenomen": null, "nomen": null, "cognomen": "Attus", "gender": "male", "status": "pater", "raw_name": "Atti f(ilio)"}
+  ]}]
+}
+
+**Input:** "D(is) M(anibus) / Iulio Masueto / mil(iti) leg(ionis) VIII / Aug(ustae) / Iulia Bricca / uxor fecit"
+**Output:**
+{
+  "results": [{"id": "GA2", "persons": [
+    {"praenomen": null, "nomen": "Iulius", "cognomen": "Masuetus", "gender": "male", "status": "miles legionis VIII Augustae", "raw_name": "Iulio Masueto"},
+    {"praenomen": null, "nomen": "Iulia", "cognomen": "Bricca", "gender": "female", "status": "uxor", "raw_name": "Iulia Bricca"}
+  ]}]
+}
+
+**Input:** "Eponae Aug(ustae) sac(rum) / v(otum) s(olvit) l(ibens) m(erito)"
+**Output:**
+{
+  "results": [{"id": "GA3", "persons": []}]
+}
+
+**Input:** "Matribus / Treveris / et Italicis / sacrum"
+**Output:**
+{
+  "results": [{"id": "GA4", "persons": []}]
+}
+
+**Input:** "Leg(io) XXII Pr(imigenia) p(ia) f(idelis) / Imp(eratori) Caes(ari) / [pro salute]"
+**Output:**
+{
+  "results": [{"id": "GA5", "persons": []}]
+}
+
+**Input:** "D(is) M(anibus) / Aurelia / Litaviccae / ann(orum) XXV / coniugi piissimae / M(arcus) Aur(elius) Acceptus"
+**Output:**
+{
+  "results": [{"id": "GA6", "persons": [
+    {"praenomen": null, "nomen": "Aurelia", "cognomen": "Litavicca", "gender": "female", "status": "pia, coniunx", "raw_name": "Aurelia Litaviccae"},
+    {"praenomen": "Marcus", "nomen": "Aurelius", "cognomen": "Acceptus", "gender": "male", "status": null, "raw_name": "M. Aur. Acceptus"}
+  ]}]
+}"""
+
     elif province.lower() in ('dalmatia', 'pannonia superior', 'pannonia inferior',
                               'noricum', 'dacia', 'moesia superior', 'moesia inferior'):
         extra_examples = """
