@@ -339,10 +339,10 @@
             sicilia:                 { label: 'Sicilia',                  center: [37.5, 14.0],  zoom: 7 },
             sardinia:                { label: 'Sardinia',                 center: [39.8, 9.0],   zoom: 8 },
             gallia_narbonensis:      { label: 'Gallia Narbonensis',       center: [43.8, 5.0],   zoom: 7 },
-            belgica:                 { label: 'Belgica',                  center: [49.5, 5.5],   zoom: 7 },
+            // belgica:                 { label: 'Belgica',                  center: [49.5, 5.5],   zoom: 7 },
             aquitanica:              { label: 'Aquitanica',               center: [44.5, 1.0],   zoom: 7 },
-            germania_superior:       { label: 'Germania superior',        center: [48.5, 8.0],   zoom: 7 },
-            germania_inferior:       { label: 'Germania inferior',        center: [51.5, 6.5],   zoom: 7 },
+            // germania_superior:       { label: 'Germania superior',        center: [48.5, 8.0],   zoom: 7 },
+            // germania_inferior:       { label: 'Germania inferior',        center: [51.5, 6.5],   zoom: 7 },
         };
 
         let currentProvince = 'all';
@@ -409,8 +409,8 @@
                 if (currentProvince === 'all') {
                     const provKeys = Object.keys(PROVINCES).filter(k => k !== 'all');
                     const results = await Promise.all(provKeys.map(p => Promise.all([
-                        fetch(`data/inscriptions_${p}.geojson`).then(r => r.json()),
-                        fetch(`data/clusters_${p}.json`).then(r => r.json()),
+                        fetch(`data/inscriptions_${p}.geojson`).then(r => r.ok ? r.json() : {type:'FeatureCollection',features:[]}),
+                        fetch(`data/clusters_${p}.json`).then(r => r.ok ? r.json() : {}),
                     ])));
                     const mergedFeatures = [];
                     const mergedClusters = {};
