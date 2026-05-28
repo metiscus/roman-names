@@ -116,6 +116,13 @@ def get_system_prompt(province):
 
     elif province.lower() == 'aegyptus':
         extra_examples = """
+**AEGYPTUS-SPECIFIC RULES:**
+1. BILINGUAL CORPUS: Aegyptus contains Latin, Greek, and mixed inscriptions. Apply standard NER rules to both scripts: extract personal names, decline to nominative, assign gender.
+2. HEALING DEITY DEDICATIONS: Inscriptions dedicated to Ἀσκληπιός/Asclepius, Ὑγίεια/Hygeia, Apollo/Apollon, and their children (Machaon, Podalirios, Iaso, Akeso, Aigle, Panakeia) are votive offerings to gods. Return persons: [] for these deity names unless a human dedicant is explicitly named.
+3. SALUTATION WORDS ARE NOT NAMES: Words like "karissime", "dulcissime", "vivas", "feliciter", "salutem", "vale" are epistolary formulas, not personal names. Do NOT extract them as persons.
+4. LEGAL/STATUS TERMS ARE NOT NAMES: Terms like "manumissus" (freed slave), "heredem" (heir), "tutorem" (guardian) are roles, not personal names. They may appear as status in a named person's entry, but not as the name itself.
+5. EGYPTIAN GEOGRAPHIC NAMES: City and nome names like Coptos, Ceramices, Diospolis, Berenice, Ophieon, Boreseos, Triacontaschoenus are places — do not extract them as persons even when they appear in military conquest lists.
+
 **Input:** "C(aius) Antonius Maximus armorum cus(tos) / L(uci) Farsulei / M(arcus) Arrius Antoninus / turma Rufi / Gaius Barga mil(es) L(uci) Farsulei / C(aius) Iulius Marcellus cornicul(arius)"
 **Output:**
 {
@@ -162,6 +169,24 @@ def get_system_prompt(province):
   "results": [{"id": "E5", "persons": [
     {"praenomen": null, "nomen": "Minucius", "cognomen": "Claudianus", "gender": "male", "status": "centurio legionis III Cyrenaicae", "raw_name": "|(centuria) Minuci Claudiani"},
     {"praenomen": "Gaius", "nomen": "Anthistius", "cognomen": "Valens", "gender": "male", "status": "domo nomo Arsenoite", "raw_name": "C. Anthistius Valens"}
+  ]}]
+}
+
+**Input:** "ὑπὲρ Αὐτοκράτορος Καίσαρος Νέρουα Τραιανοῦ Σεβαστοῦ Γερμανικοῦ / Ἀσκληπιῶι καὶ Ὑγιείαι τὸν ναὸν καὶ τὸ τέμενος ἐπεσκεύασεν / ἡ πόλις / ἐπὶ Πομπηΐου Πλάντα ἡγεμόνος"
+**Output:**
+{
+  "results": [{"id": "E6", "persons": [
+    {"praenomen": null, "nomen": "Pompeius", "cognomen": "Planta", "gender": "male", "status": "hegemon", "raw_name": "Πομπηΐου Πλάντα ἡγεμόνος"}
+  ]}]
+}
+
+**Input:** "Antistius Flaccus Calinio suo salutem / a Raima te frater saluto / karissime uale"
+**Output:**
+{
+  "results": [{"id": "E7", "persons": [
+    {"praenomen": null, "nomen": "Antistius", "cognomen": "Flaccus", "gender": "male", "status": null, "raw_name": "Antistius Flaccus"},
+    {"praenomen": null, "nomen": null, "cognomen": "Raimas", "gender": "male", "status": "frater", "raw_name": "Raima"},
+    {"praenomen": null, "nomen": null, "cognomen": "Calinius", "gender": "male", "status": null, "raw_name": "Calinio suo"}
   ]}]
 }"""
 
