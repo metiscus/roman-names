@@ -53,6 +53,8 @@ PROVINCES = [
     ("mauretania_caesariensis", "Mauretania Caesariensis", True),
     ("creta_et_cyrenaica",      "Creta et Cyrenaica",      True),
     ("aegyptus",                "Aegyptus",                False),
+    ("corsica",                 "Corsica",                 True),
+    ("sardinia",                "Sardinia",                True),
 ]
 
 PROVINCE_SLUGS = [slug for slug, _name, _has_eval in PROVINCES]

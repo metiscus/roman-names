@@ -165,6 +165,88 @@ def get_system_prompt(province):
   ]}]
 }"""
 
+    elif province.lower() == 'sardinia':
+        extra_examples = """
+**SARDINIA-SPECIFIC RULES:**
+1. SURGICAL raw_name: The raw_name field MUST NOT contain formulaic words like "qui", "vixit", "annis", "plus", "minus", "requievit", "in pace", "fecit", "posuit", or dates. It should ONLY contain the name tokens and necessary filiation (e.g., "L. f.").
+2. NO FALSE FRAGMENTS: Do not extract "names" from fragmentary formulas like "]EMB[" or "a]nnis". If the only recognizable word is a common formula or date, return persons: [].
+
+**Input:** "Augusti Caesaris germanicum // L(ucius) Val(erius) Ruf(us)"
+**Output:**
+{
+  "results": [{"id": "S1", "persons": [
+    {"praenomen": "Lucius", "nomen": "Valerius", "cognomen": "Rufus", "gender": "male", "status": null, "raw_name": "L. Val. Ruf."}
+  ]}]
+}
+
+**Input:** "Hic iacet / bon(a)e memo/ri(a)e Iannar/ius qui <v=B>ixit / plus minus / annos LXV re/quie<v=B>it / in pace"
+**Output:**
+{
+  "results": [{"id": "S2", "persons": [
+    {"praenomen": null, "nomen": null, "cognomen": "Iannarius", "gender": "male", "status": "bonae memoriae", "raw_name": "Iannar/ius"}
+  ]}]
+}
+
+**Input:** "D(is) M(anibus) / Crescenti filio / bene merenti / qui vixit annis / XXXII ... pater eius / et mater fec(erunt)"
+**Output:**
+{
+  "results": [{"id": "S4", "persons": [
+    {"praenomen": null, "nomen": null, "cognomen": "Crescens", "gender": "male", "status": "filius bene merenti", "raw_name": "Crescenti"}
+  ]}]
+}
+
+**Input:** "[Bon(a)e] m<e=I>mori(a)e Felix qui / [vixit] plus minus annos / [3 D]ecembres reque<v=B>it"
+**Output:**
+{
+  "results": [{"id": "S5", "persons": [
+    {"praenomen": null, "nomen": null, "cognomen": "Felix", "gender": "male", "status": "bonae memoriae", "raw_name": "Felix"}
+  ]}]
+}"""
+
+    elif province.lower() == 'corsica':
+        extra_examples = """
+**Input:** "C(aio) Caesari / Augusti f(ilio)"
+**Output:**
+{
+  "results": [{"id": "C1", "persons": [
+    {"praenomen": "Gaius", "nomen": null, "cognomen": "Caesar", "gender": "male", "status": "Augusti filius", "raw_name": "C. Caesari"}
+  ]}]
+}
+
+**Input:** "Imp(erator) Caesar Vespasianus Augustus / magistratibus et senatoribus / Vanacinorum salutem dicit / Otacilium Sagittam amicum et procu/ratorem meum..."
+**Output:**
+{
+  "results": [{"id": "C2", "persons": [
+    {"praenomen": null, "nomen": null, "cognomen": "Vespasianus", "gender": "male", "status": "Imperator Caesar Augustus", "raw_name": "Imp. Caesar Vespasianus Augustus"},
+    {"praenomen": null, "nomen": "Otacilius", "cognomen": "Sagitta", "gender": "male", "status": "amicus et procurator", "raw_name": "Otacilium Sagittam"}
+  ]}]
+}
+
+**Input:** "[F]av[or] Cn(aei) Domiti s(ervus) f(ecit)"
+**Output:**
+{
+  "results": [{"id": "C3", "persons": [
+    {"praenomen": null, "nomen": null, "cognomen": "Favor", "gender": "male", "status": "servus Gnaei Domitii", "raw_name": "[F]av[or]"},
+    {"praenomen": "Gnaeus", "nomen": "Domitius", "cognomen": null, "gender": "male", "status": "dominus", "raw_name": "Cn(aei) Domiti"}
+  ]}]
+}
+
+**Input:** "A(ulo) Petr[3] VIviro] / August[ali 3] / Scutaria [3] / Scutari [3] / viro suo"
+**Output:**
+{
+  "results": [{"id": "C4", "persons": [
+    {"praenomen": "Aulus", "nomen": "Petronius", "cognomen": null, "gender": "male", "status": "VIvir Augustalis", "raw_name": "A(ulo) Petr[3]", "fragmentary": true},
+    {"praenomen": null, "nomen": null, "cognomen": "Scutaria", "gender": "female", "status": null, "raw_name": "Scutaria", "fragmentary": true},
+    {"praenomen": null, "nomen": null, "cognomen": "Scutarius", "gender": "male", "status": "vir", "raw_name": "Scutari", "fragmentary": true}
+  ]}]
+}
+
+**Input:** "] prin[cipali] / col(oniae) Aler[ia] / XV civitates / Sibroar[iae(?)] / patrono"
+**Output:**
+{
+  "results": [{"id": "C5", "persons": []}]
+}"""
+
     elif province.lower() in ('dalmatia', 'pannonia superior', 'pannonia inferior',
                               'noricum', 'dacia', 'moesia superior', 'moesia inferior'):
         extra_examples = """

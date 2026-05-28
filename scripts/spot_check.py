@@ -31,14 +31,14 @@ def load_corpus_output(province_slug):
         print(f"No corpus output found at {path}. Run 06_run_full_corpus.py first.")
         sys.exit(1)
     records = []
-    with open(path) as f:
+    with open(path, encoding='utf-8') as f:
         for line in f:
             if line.strip():
                 records.append(json.loads(line))
     return records
 
 def load_source_texts(province_name):
-    with open(EDCS_PATH) as f:
+    with open(EDCS_PATH, encoding='utf-8') as f:
         data = json.load(f)
     return {r['EDCS-ID']: r.get('inscription') or r.get('clean_text_interpretive_word', '')
             for r in data if r.get('province') == province_name}
@@ -46,7 +46,7 @@ def load_source_texts(province_name):
 def load_lire_gt(province_name):
     """Return dict of EDCS-ID → people list for records with ground truth."""
     gt = {}
-    with open(LIRE_PATH) as f:
+    with open(LIRE_PATH, encoding='utf-8') as f:
         lire = json.load(f)
     for feat in lire['features']:
         p = feat['properties']
