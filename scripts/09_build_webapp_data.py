@@ -123,7 +123,7 @@ def build_webapp_data(province='africa_proconsularis'):
             mappable_count += 1
             geometry = {
                 "type": "Point",
-                "coordinates": [float(lon), float(lat)]
+                "coordinates": [round(float(lon), 2), round(float(lat), 2)]
             }
             # Determine if this is an "individually placed" find
             key = (round(lat, 6), round(lon, 6))
@@ -135,34 +135,56 @@ def build_webapp_data(province='africa_proconsularis'):
         persons = []
         genders = []
         for _, row in group.iterrows():
-            # Build basic person object with cleaned components
+            praenomen = clean_name_component(row['praenomen'])
+            nomen = clean_name_component(row['nomen'])
+            cognomen = clean_name_component(row['cognomen'])
+            status = row['status']
+            cluster_id = int(row['cluster_id']) if not pd.isna(row['cluster_id']) else None
+            cluster_size = int(row['cluster_size']) if not pd.isna(row['cluster_size']) else 0
+            cluster_conf = row['cluster_confidence']
+
+            # Build person with all fields for classifier
             person = {
-                "praenomen": clean_name_component(row['praenomen']),
-                "nomen": clean_name_component(row['nomen']),
-                "cognomen": clean_name_component(row['cognomen']),
-                "gender": row['gender'],
-                "status": row['status'],
+                "praenomen": praenomen, "nomen": nomen, "cognomen": cognomen,
+                "gender": row['gender'], "status": status,
                 "raw_name": row['raw_name'],
-                "fragmentary": bool(row['fragmentary']),
-                "cluster_id": int(row['cluster_id']) if not pd.isna(row['cluster_id']) else None,
-                "cluster_size": int(row['cluster_size']) if not pd.isna(row['cluster_size']) else 0,
-                "cluster_confidence": row['cluster_confidence']
+                "cluster_id": cluster_id, "cluster_size": cluster_size,
+                "cluster_confidence": cluster_conf,
             }
-            
+
             # Dynamically re-apply non-person classifiers
             fp_type = name_filters.classify_non_person_fp(person)
-            person["is_imperial"] = (fp_type == "imperial")
-            person["is_deity"] = (fp_type == "deity")
-            
-            persons.append(person)
+            is_imperial = (fp_type == "imperial")
+            is_deity = (fp_type == "deity")
+
+            # Build compact person: omit empty/default fields to reduce JSON size
+            compact = {"nomen": nomen, "gender": row['gender'], "raw_name": row['raw_name']}
+            if praenomen:
+                compact["praenomen"] = praenomen
+            if cognomen:
+                compact["cognomen"] = cognomen
+            if status:
+                compact["status"] = status
+            if is_imperial:
+                compact["is_imperial"] = True
+            if is_deity:
+                compact["is_deity"] = True
+            # Only include cluster link for multi-member clusters
+            if cluster_id is not None and cluster_size > 1:
+                compact["cluster_id"] = cluster_id
+                compact["cluster_size"] = cluster_size
+            # Only include confidence when not the default "high"
+            if cluster_conf and cluster_conf != "high":
+                compact["cluster_confidence"] = cluster_conf
+
+            persons.append(compact)
             genders.append(row['gender'])
             
             # Update clusters map
-            cid = person['cluster_id']
-            if cid is not None:
-                if cid not in clusters_map:
-                    clusters_map[cid] = set()
-                clusters_map[cid].add(source_id)
+            if cluster_id is not None:
+                if cluster_id not in clusters_map:
+                    clusters_map[cluster_id] = set()
+                clusters_map[cluster_id].add(source_id)
 
         feature = {
             "type": "Feature",
@@ -229,11 +251,11 @@ def build_webapp_data(province='africa_proconsularis'):
     print(f"Writing {len(features)} features to {GEOJSON_OUTPUT}...")
     geojson = {"type": "FeatureCollection", "features": features}
     with open(GEOJSON_OUTPUT, "w", encoding="utf-8") as f:
-        json.dump(geojson, f, ensure_ascii=False)
+        json.dump(geojson, f, ensure_ascii=False, separators=(",", ":"))
 
     print(f"Writing cluster lookup to {CLUSTERS_OUTPUT}...")
     with open(CLUSTERS_OUTPUT, "w", encoding="utf-8") as f:
-        json.dump(clusters_json, f, ensure_ascii=False)
+        json.dump(clusters_json, f, ensure_ascii=False, separators=(",", ":"))
 
     print(f"Writing enrichment data to {ENRICHMENT_OUTPUT}...")
     with open(ENRICHMENT_OUTPUT, "w", encoding="utf-8") as f:
