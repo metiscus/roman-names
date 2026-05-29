@@ -8,6 +8,8 @@ This document gives complete instructions for an AI agent to run the NER pipelin
 
 This pipeline extracts personal names from Latin inscriptions using **Gemini 2.5 Flash-Lite** with structured output. The source corpus is EDCS (Epigraphik-Datenbank Clauss-Slaby). The output is one row per name attestation in Parquet format, plus GeoJSON and cluster files for a web map.
 
+> **MODEL SELECTION:** The default model is `gemini-2.5-flash-lite` (cheapest). However, provinces with complex prompt branches (many rules + examples, prompt >25K chars) may perform significantly better with `gemini-flash-lite-latest` (Gemini 3.5 Flash Lite). This model costs ~1.4x more ($0.25/$1.50 per M tokens vs $0.10/$0.40) but handles nuanced Latin morphology and multi-rule prompts much more reliably. **If error rates plateau above 15% despite prompt iteration, try switching models before adding more rules.** Pass `--model gemini-flash-lite-latest` to the NER runner. See the Apulia et Calabria entry in "Known Province-Specific Patterns" for a case study.
+
 > **CRITICAL PERFORMANCE NOTE:** The raw EDCS JSON file (`data/EDCS_text_cleaned_*.json`) is very large (400MB+). **NEVER** use `grep` or `read_file` on this file in the CLI. It will overwhelm the context and is extremely slow. If you need to explore or verify data in this file, write a small Python script that uses `ijson` or standard `json` with a streaming approach, or simply trust the `scripts/run_pipeline.py` which handles filtering efficiently.
 
 The pipeline has been run on Africa Proconsularis, Britannia, Numidia, Dalmatia, Pannonia Superior/Inferior, Noricum, Dacia, Moesia Superior/Inferior. The methodology is proven but the prompt may need minor tuning for province-specific naming patterns.
@@ -242,14 +244,14 @@ This writes:
 - `webapp/data/clusters_{{PROVINCE_SLUG}}.json`
 - `webapp/data/enrichment_{{PROVINCE_SLUG}}.json`
 
-### 4f. Add English translations (optional but recommended)
+### 4f. Add English translations (recommended)
 
 ```bash
-python3 scripts/11_translate_inscriptions.py --province {{PROVINCE_SLUG}} --dry-run
-python3 scripts/11_translate_inscriptions.py --province {{PROVINCE_SLUG}}
+python3 scripts/11_translate_inscriptions.py --province {{PROVINCE_SLUG}} --include-raw --dry-run
+python3 scripts/11_translate_inscriptions.py --province {{PROVINCE_SLUG}} --include-raw
 ```
 
-The dry run shows how many records will be translated and estimated batches. The full run costs a few cents per province. Translations are written directly into `webapp/data/enrichment_{{PROVINCE_SLUG}}.json` and displayed in popup cards. The script is interruptible — re-run without `--force` to resume.
+The dry run shows how many records will be translated and estimated batches. The full run costs a few cents per province. The `--include-raw` flag translates non-LIRE inscriptions using EDCS raw text (epigraphic notation with parenthesised expansions), which typically brings translation coverage from ~50% to ~99%. Without this flag, only inscriptions with LIRE `text_edition` are translated. Translations are written directly into `webapp/data/enrichment_{{PROVINCE_SLUG}}.json` and displayed in popup cards. The script is interruptible — re-run without `--force` to resume.
 
 ### 4g. Add province to the webapp selector
 
@@ -318,6 +320,14 @@ Summarise:
 - Dacian names: single cognomen (Decebalus, Decebal, Scorilo, Comosicus are legendary; ordinary Dacians: Diurpaneus, Buri, etc.).
 - Strong Greek influence in some areas (Greek names in Latin script).
 - Many veterans from auxiliary units settled here.
+
+### Apulia et Calabria / Regio II
+- **Model requirement:** This province uses `gemini-flash-lite-latest` (3.5 Flash Lite), not the default `gemini-2.5-flash-lite`. The complex 34K-char prompt (23 rules, 34 examples) caused a regression to ~24% error rate on flash-lite, but only ~8-10% on flash-lite-latest. **Always pass `--model gemini-flash-lite-latest`.**
+- Title vs. cognomen ambiguity (Rule 19): words like "Sacerdos," "Augur," "Flamen" can be either titles or cognomina. When they appear in the cognomen slot of a standard name pattern (e.g. "Romanius Sacerdos"), treat as cognomen.
+- Person-split errors (Rule 23): adjacent nomen + cognomen in the same oblique case without "et" are one person, not two (e.g. "Insontio Secundino" = one person Insontius Secundinus).
+- Greek-influenced names common in coastal cities (Tarentum, Brundisium): Thallus, Aphrodisia, Glyconis, Zosima.
+- Syncretic deity names: Pallas/Palladi, Pomona, Lyaeus/Lyaeo, Deus/Deo Aeternus — added to `deities.txt`.
+- Regional prompt branch in `prompt_utils.py` matches on `'apulia et calabria'`, `'apulia_et_calabria'`, or `'apulia et calabria / regio ii'`.
 
 ---
 
