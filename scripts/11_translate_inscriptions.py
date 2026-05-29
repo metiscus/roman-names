@@ -123,10 +123,13 @@ def load_raw_text_lookup(province: str) -> dict[str, str]:
     }
 
 
-def find_candidates(enrichment: dict, raw_lookup: dict, force: bool) -> list[tuple[str, str]]:
+def find_candidates(enrichment: dict, raw_lookup: dict, force: bool,
+                    include_raw: bool = False) -> list[tuple[str, str]]:
     """Return (edcs_id, text) pairs that need translation.
 
     Prefers text_edition; falls back to raw_text for records without one.
+    When include_raw is True, also picks up records from the GeoJSON that
+    have no enrichment entry at all (non-LIRE inscriptions).
     """
     out = []
     for edcs_id, rec in enrichment.items():
@@ -141,6 +144,16 @@ def find_candidates(enrichment: dict, raw_lookup: dict, force: bool) -> list[tup
                 out.append((edcs_id, raw))
         elif edition and len(edition) >= MIN_RAW_LENGTH:
             out.append((edcs_id, edition))
+
+    if include_raw:
+        for edcs_id, raw in raw_lookup.items():
+            if edcs_id in enrichment:
+                continue
+            if len(raw) >= MIN_RAW_LENGTH:
+                # Create stub enrichment entry so translation can be stored
+                enrichment[edcs_id] = {}
+                out.append((edcs_id, raw))
+
     return out
 
 
@@ -197,7 +210,7 @@ def translate_batch(client, model: str, batch: list[tuple[str, str]]):
 
 def process_province(province: str, client, model: str, workers: int,
                      batch_size: int, stop_after: int, force: bool,
-                     dry_run: bool) -> tuple[int, int, float, Counter]:
+                     dry_run: bool, include_raw: bool = False) -> tuple[int, int, float, Counter]:
     """Returns (translated, errors, cost, err_types)."""
     path = Path(f'webapp/data/enrichment_{province}.json')
     enrichment = load_enrichment(path)
@@ -208,7 +221,7 @@ def process_province(province: str, client, model: str, workers: int,
         return 0, 0, 0.0, err_types
 
     raw_lookup = load_raw_text_lookup(province)
-    candidates = find_candidates(enrichment, raw_lookup, force)
+    candidates = find_candidates(enrichment, raw_lookup, force, include_raw)
     already_done = sum(1 for r in enrichment.values() if r.get('translation'))
 
     print(f"\n[{province}]")
@@ -293,6 +306,8 @@ def main():
                         help='Show what would be translated without calling the API')
     parser.add_argument('--force', action='store_true',
                         help='Re-translate records that already have a translation')
+    parser.add_argument('--include-raw', action='store_true',
+                        help='Also translate non-LIRE inscriptions using EDCS raw text')
     parser.add_argument('--batch-size', type=int, default=BATCH_SIZE,
                         help=f'Inscriptions per API call (default: {BATCH_SIZE})')
     parser.add_argument('--workers', type=int, default=10,
@@ -325,6 +340,7 @@ def main():
         t, e, c, et = process_province(
             prov, client, args.model, args.workers,
             args.batch_size, args.stop_after, args.force, args.dry_run,
+            args.include_raw,
         )
         total_translated += t
         total_errors += e
