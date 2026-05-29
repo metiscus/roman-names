@@ -524,6 +524,314 @@ def get_system_prompt(province):
   "results": [{"id": "LC14", "persons": []}]
 }"""
 
+    elif province.lower() in ('apulia et calabria / regio ii', 'apulia_et_calabria', 'apulia et calabria'):
+        extra_examples = """
+**APULIA ET CALABRIA / REGIO II RULES:**
+1. DEITY DATIVES IN VOTIVE INSCRIPTIONS: When an inscription dedicates an object or vow to a deity — keywords: "votum solvit", "v(otum) s(olvit)", "sacrum", "donum dedit", "posuit", "dedicavit" — the deity's name in the dative is NOT a person. Deity datives to skip: Silvano, Herculi, Marti, Mercurio, Apollini, Dianae, Fortunae, Iunoni, Neptuno, Minervae, Veneri, Baccho, Libero, Cereri, Genio. Extract only the human dedicant(s). Example: "Silvano sacrum / Primus fecit" → extract Primus only; Silvanus is a deity. Also: "Genio Tib(erii) Caes(aris)" is a dedication to the Genius of Tiberius Caesar — NOT a person. However: a bare genitive like "Apolloni" (without "sacrum" / "v.s.l.m." / votive context) IS likely a personal name (Apollonius) on a stamp or label — extract it.
+2. POETIC / LITERARY / MYTHOLOGICAL INSCRIPTIONS: Some inscriptions are literary quotations, metrical verse, or mythological allusions — e.g. "hic Ceres hic Pallas sumus hic Pomona Lyoeus". When deity names (Ceres, Pallas, Pomona, Lyaeus/Bacchus, Mars, Venus, Fortuna, Diana etc.) appear in a poetic/mythological context, they are NOT personal names — return persons: []. Also: epitaphs with purely formulaic text ("inter flores iacet", "o spes fallaces", "vae tibi viator luge") and no personal names → return persons: [].
+3. ARCHAIC DATIVE/GENITIVE IN -AI: In early Latin inscriptions "Fortunai", "Dianai", "Herai" are archaic dative/genitive forms of deity names (Fortuna, Diana, Hera). Do NOT extract these as persons. Similarly "pocolo(m)" / "poculom" / "poculum" = cup/vessel — not a name.
+4. RELATIONSHIP WORDS AS PHANTOM PERSONS: "pater", "mater", "filius", "filia", "frater", "soror", "coniunx" are Latin kinship words. Do NOT extract them as personal names when they appear alone or without a preceding/following name. If the person's name is missing (lacuna or unnamed), return [] for that person — never substitute the kinship word as the name. Example: "] / pater [3]" → do NOT extract "pater" as a person.
+5. MINIMUM FRAGMENT & NO HALLUCINATION: STRICTLY NO HALLUCINATION. Never invent letters to "complete" a damaged name. If the text says "]rrius", do NOT output "Perrus". If it says "[3]tus", do NOT guess "Fructus". If the remaining visible token is 4 letters or fewer, do not extract it (return persons: []). If >4 letters, transcribe exactly what is there (e.g. raw_name="]rrius", fragmentary=true). Exception: a known standalone name of 4 letters (like "Dion", "Aper") may be extracted if you are confident.
+6. INSTITUTIONAL FORMULAE (not persons): "Senatus populusque Romanus" / "SPQR", "IOM" (= Iovi Optimo Maximo), "DM" / "Dis Manibus", "fullones" (= fullers' guild), "ordo", "res publica", "decuriones" are institutional, NOT persons.
+7. GREEK-SCRIPT INSCRIPTIONS: If the text is predominantly or entirely in Greek script (α β γ δ ε ζ η θ etc.) or Greek alphabetical sequences, return persons: []. Do not transliterate. Exception: if a single clear Greek name appears in an otherwise Latin context, extract it.
+8. STAMP / OFFICINA FORMULAE: "O(fficina) X" or "Ex offic(ina) X" means workshop of X — extract X as the person (status "ex officina"). Do not extract "officina" itself as a name.
+9. CHRISTIAN FORMULAE: "viva in Deo", "in pace", "(H)alleluia", "Χριστὲ βοήθ[ι]" are religious formulae, not names. Extract the person's name if present, but not the formula words.
+10. ADJECTIVE-DERIVED TOKENS ARE NOT SEPARATE PERSONS: "Luciniana" (from "lucus Lucinianus" = grove of Lucinia/Diana Lucina) is an adjective, NOT a separate person. Similarly "Nemorensi" (from "Diana Nemorensis") is a cult epithet. Do not extract adjectival cult/place epithets as persons.
+11. DUPLICATE PERSON AVOIDANCE: If the same person is mentioned twice in the inscription (once in dative as the honorand and once in formulaic context like "de sua pecunia fecit"), extract them ONCE only. Example: "Sextiliae P. l. Datae uxori ... Data d.s.p.f." — "Data" is the same person as "Sextilia Data"; do NOT create a separate entry for the formula mention.
+12. FILIATION vs NOMEN: "Antigonae Anni f(iliae) Flavianae" = Antigona, daughter of Annius, cognomen Flaviana. "Anni" is the father's nomen in genitive (filiation), NOT part of Antigona's name. Extract: Antigona Flaviana (filia Annii). Do NOT create "Anniana" by merging filiation into the name.
+13. LIBERTUS/LIBERTA ABBREVIATION PATTERN: "C(ai) l(iberto/a)" or "M(arci) l(iberto/a)" or "L(uci) l(iberto/a)" etc. means "freedman/freedwoman of Caius/Marcus/Lucius". The letter before "l." is the PATRON'S praenomen in genitive — it is NOT a nomen. The person's nomen is the PRECEDING gentilicium. Example: "Lisidiae C(ai) l(ibertae) Primae" → nomen=Lisidia, cognomen=Prima, status=liberta Cai. "Labia C(ai) [f(ilia)] Firma" → nomen=Labia, cognomen=Firma, filia Cai. NEVER extract "Cai" or "Marci" as the nomen — always look for the gentilicium before the abbreviation.
+14. EMPEROR EPITHETS vs COGNOMINA: When an emperor is described with epithets like "Aeternus", "Invictus", "Pius Felix", "Magnus", "Restitutor orbis" — these are TITLES, not cognomina or praenomina. Extract the emperor's actual name. Example: "Cl(audio) Iuliano Aug(usto) Aeterno" → nomen=Claudius, cognomen=Iulianus. "Magno et Invicto Gallieno Augusto" → cognomen=Gallienus; "Magnus" and "Invictus" go in status. Do NOT use an epithet alone as the cognomen or as the praenomen.
+15. MULTI-PERSON INSCRIPTIONS — SEPARATE ENTRIES: When an inscription lists multiple people sequentially (e.g. "Pismatiae Rufinae filiae / Herenniae Ti. f. Bassae uxori / M. Gavio Basso aedili"), each person on a separate line or separated by a syntactic break is a SEPARATE person. Do not merge them into one entry. Example: "Herenniae Ti(beri) f(iliae) Bassae uxori" = Herennia Bassa (uxor), separate from Pismatia Rufina. Also: "Tiberii Iulii Concordius Lupulus et Marcianus filii" = 3 sons sharing the father's nomen Iulius: Tib. Iulius Concordius, Tib. Iulius Lupulus, and Tib. Iulius Marcianus.
+16. NOMEN MUST NOT BE DROPPED: When a person has a clear nomen (gentilicium) followed by a cognomen, always include the nomen. "Iunia / Capreola" on two lines = nomen Iunia, cognomen Capreola. Do NOT drop the nomen and extract only the cognomen.
+17. DEITY + ADJECTIVE EPITHET: "Silvano Corneliano" = Silvanus with the cult epithet Cornelianus. "Iovi Tutatori" = Jupiter the Protector. "Deo Aeterno" = the Eternal God (syncretic deity). These are deity dedications — do NOT extract the epithet (Cornelianus, Tutator, Aeternus) as a person.
+18. POETIC / VERSE INSCRIPTIONS — EXPANDED: If the text contains verse meter, literary allusions, mythological figures invoked rhetorically (Tonans = Jupiter, Parnassus, Iuppiter), or formulaic invocations ("persolvite vota", "defende caput"), it is literary/poetic — do NOT extract deity names or abstract nouns as persons. Return persons: [] unless a real human dedicant is clearly named.
+19. CIVIC AND PRIESTLY TITLES ARE NOT NAMES — BUT CAN BE COGNOMINA: Words like "Augustalis", "sevir", "decurio", "sacerdos", "aedilis", "consul", "praefectus" are usually titles → put them in the status field. HOWEVER, when such a word occupies the cognomen slot in a standard Roman name pattern (praenomen + nomen + "title-word"), it IS a cognomen. Example: "[R]omanius M. f. Cam. Sacerdos" — "Sacerdos" is the cognomen of Romanius (nomen=Romanius, cognomen=Sacerdos), NOT a title. Compare: "[3]ius Celadus Augustalis d.d." — here "Augustalis" is a title (Celadus is the cognomen, Augustalis is his civic office).
+20. LITERAL TRANSCRIPTION / NO AUTOCORRECT: Do not 'correct' or garble unusual names. "Anicio Aucenio Basso" must be extracted exactly (declined to nominative: "Anicius Aucenius Bassus"). Do not change "Aucenius" into "Baccus".
+21. SYNTAX AND GENDER CUES: Latin case endings dictate gender and roles. In "Tullianae Marcellae Pudens coniugi b. m. fecit", "Tullianae Marcellae" is Dative Feminine (the wife receiving the monument). "Pudens" is Nominative Masculine (the husband dedicating it). Assign gender correctly based on case endings and context verbs.
+22. DESCRIPTIVE LINEAGES ARE NOT SEPARATE PERSONS: Phrases like "Orfiti consulis filiae" (to the daughter of the consul Orfitus) or "Servi Corneli Scipionis soror" are descriptive. Do not extract "Orfiti consulis filiae" as a standalone person named "Orfitus".
+23. ADJACENT NOMEN + COGNOMEN IN DATIVE/GENITIVE = ONE PERSON: When two words in the same oblique case appear together without "et" or a line break separating them, they are usually nomen + cognomen of ONE person, not two people. Example: "Insontio Secundino" = one person (nomen=Insontius, cognomen=Secundinus in dative). Compare: "Faustus et Quintus" = two people (joined by "et"). Also: "N. Maedius |(mulieris) l. Nicephor" = one person (praenomen=Numerius, nomen=Maedius, cognomen=Nicephor — the libertus notation belongs to this single person).
+
+**Input:** "hic ceres hic pallas sumus hic pomona lyoeus"
+**Output:**
+{
+  "results": [{"id": "AC1", "persons": []}]
+}
+
+**Input:** "i o m / et / genio tib caes / fullones"
+**Output:**
+{
+  "results": [{"id": "AC2", "persons": []}]
+}
+
+**Input:** "Fortunai pocolo(m)"
+**Output:**
+{
+  "results": [{"id": "AC3", "persons": []}]
+}
+
+**Input:** "D(is) M(anibus) / Eusebetis / Albanus / fil(io) kar(issimo) f(ecit)"
+**Output:**
+{
+  "results": [{"id": "AC4", "persons": [
+    {"praenomen": null, "nomen": null, "cognomen": "Eusebetis", "gender": "female", "status": null, "raw_name": "Eusebetis", "fragmentary": false},
+    {"praenomen": null, "nomen": null, "cognomen": "Albanus", "gender": "male", "status": "pater", "raw_name": "Albanus", "fragmentary": false}
+  ]}]
+}
+
+**Input:** "] / bene [meren]/ti fili(a)e / defunct[ae an]/norum V"
+**Output:**
+{
+  "results": [{"id": "AC5", "persons": []}]
+}
+
+**Input:** "D(is) M(anibus) s(acrum) / Raiae Successae / L(ucius) Raius Maximus / sorori / et Ennia Flaminina / et Umettia Severa / matri / b(ene) m(erenti) p(osuerunt)"
+**Output:**
+{
+  "results": [{"id": "AC6", "persons": [
+    {"praenomen": null, "nomen": "Raia", "cognomen": "Successa", "gender": "female", "status": "soror", "raw_name": "Raiae Successae", "fragmentary": false},
+    {"praenomen": "Lucius", "nomen": "Raius", "cognomen": "Maximus", "gender": "male", "status": null, "raw_name": "L. Raius Maximus", "fragmentary": false},
+    {"praenomen": null, "nomen": "Ennia", "cognomen": "Flaminina", "gender": "female", "status": null, "raw_name": "Ennia Flaminina", "fragmentary": false},
+    {"praenomen": null, "nomen": "Umettia", "cognomen": "Severa", "gender": "female", "status": "mater", "raw_name": "Umettia Severa", "fragmentary": false}
+  ]}]
+}
+
+**Input:** "Sinatri viva in d(e)o"
+**Output:**
+{
+  "results": [{"id": "AC7", "persons": [
+    {"praenomen": null, "nomen": null, "cognomen": "Sinatra", "gender": "female", "status": "viva in deo", "raw_name": "Sinatri", "fragmentary": false}
+  ]}]
+}
+
+**Input:** "CX[3] // ANIA"
+**Output:**
+{
+  "results": [{"id": "AC8", "persons": []}]
+}
+
+**Input:** "dianae / nemorensi / felici / maxima luci/niana pro inco/lumit et redis / l lucini viri s / vot sol"
+**Output:**
+{
+  "results": [{"id": "AC9", "persons": [
+    {"praenomen": null, "nomen": null, "cognomen": "Maxima", "gender": "female", "status": "votum solvit pro incolumitate et reditu L. Lucini viri sui", "raw_name": "maxima", "fragmentary": false}
+  ]}]
+}
+
+**Input:** "Valeriae Ma/ximillae dul/cissimae et inc/o<m=N>parabili con/iug(i) q(uae) v(ixit) ann(os) XXII / d(ies) XI ben(e) mer(enti) / Noricus col(onorum) / Ben(eventanorum) ar<c=K>(arius) / simulq(ue) et sibi vivus fec(it)"
+**Output:**
+{
+  "results": [{"id": "AC10", "persons": [
+    {"praenomen": null, "nomen": "Valeria", "cognomen": "Maximilla", "gender": "female", "status": "dulcissima et incomparabilis coniunx", "raw_name": "Valeriae Maximillae", "fragmentary": false},
+    {"praenomen": null, "nomen": null, "cognomen": "Noricus", "gender": "male", "status": "colonorum Beneventanorum arcarius", "raw_name": "Noricus col. Ben. arc.", "fragmentary": false}
+  ]}]
+}
+
+**Input:** "D(is) M(anibus) / Modestus Maxi/mo dulcissimo / fratri pietatem / fecit"
+**Output:**
+{
+  "results": [{"id": "AC11", "persons": [
+    {"praenomen": null, "nomen": null, "cognomen": "Modestus", "gender": "male", "status": null, "raw_name": "Modestus", "fragmentary": false},
+    {"praenomen": null, "nomen": null, "cognomen": "Maximus", "gender": "male", "status": "frater dulcissimus", "raw_name": "Maximo", "fragmentary": false}
+  ]}]
+}
+
+**Input:** "D(is) M(anibus) / Antigonae Anni f(iliae) / Flavianae Sabina / Maria Iusta ma/tri bene merenti / fecerunt"
+**Output:**
+{
+  "results": [{"id": "AC12", "persons": [
+    {"praenomen": null, "nomen": null, "cognomen": "Antigona Flaviana", "gender": "female", "status": "filia Annii, mater", "raw_name": "Antigonae Anni f. Flavianae", "fragmentary": false},
+    {"praenomen": null, "nomen": null, "cognomen": "Sabina", "gender": "female", "status": null, "raw_name": "Sabina", "fragmentary": false},
+    {"praenomen": null, "nomen": "Maria", "cognomen": "Iusta", "gender": "female", "status": null, "raw_name": "Maria Iusta", "fragmentary": false}
+  ]}]
+}
+
+**Input:** "]NLIANO"
+**Output:**
+{
+  "results": [{"id": "AC13", "persons": []}]
+}
+
+**Input:** "Apolloni"
+**Output:**
+{
+  "results": [{"id": "AC14", "persons": [
+    {"praenomen": null, "nomen": null, "cognomen": "Apollonius", "gender": "male", "status": null, "raw_name": "Apolloni", "fragmentary": false}
+  ]}]
+}
+
+**Input:** "Ex testamento / C(aio) Lisidio M(arci) f(ilio) Ste(llatina) leg(ione) XXX / M(arco) Lisidio Q(uinti) f(ilio) Pub(lilia) patri / Helviae L(uci) f(iliae) Rufae matri / Lisidiae C(ai) l(ibertae) Primae / Lisidiae C(ai) l(ibertae) Chrestae / C(aio) Lisidio C(ai) l(iberto) Fausto"
+**Output:**
+{
+  "results": [{"id": "AC15", "persons": [
+    {"praenomen": "Caius", "nomen": "Lisidius", "cognomen": null, "gender": "male", "status": "Marci filius, Stellatina, legio XXX", "raw_name": "C. Lisidio M. f. Ste. leg. XXX", "fragmentary": false},
+    {"praenomen": "Marcus", "nomen": "Lisidius", "cognomen": null, "gender": "male", "status": "Quinti filius, Publilia, pater", "raw_name": "M. Lisidio Q. f. Pub. patri", "fragmentary": false},
+    {"praenomen": null, "nomen": "Helvia", "cognomen": "Rufa", "gender": "female", "status": "Luci filia, mater", "raw_name": "Helviae L. f. Rufae", "fragmentary": false},
+    {"praenomen": null, "nomen": "Lisidia", "cognomen": "Prima", "gender": "female", "status": "Cai liberta", "raw_name": "Lisidiae C. l. Primae", "fragmentary": false},
+    {"praenomen": null, "nomen": "Lisidia", "cognomen": "Chresta", "gender": "female", "status": "Cai liberta", "raw_name": "Lisidiae C. l. Chrestae", "fragmentary": false},
+    {"praenomen": "Caius", "nomen": "Lisidius", "cognomen": "Faustus", "gender": "male", "status": "Cai libertus", "raw_name": "C. Lisidio C. l. Fausto", "fragmentary": false}
+  ]}]
+}
+
+**Input:** "C(aio) Munatio Mocili / Augustali / Pismatiae Rufinae filiae / Herenniae Ti(beri) f(iliae) / Bassae uxori / M(arco) Gavio M(arci) f(ilio) Ste(llatina) Basso / aedili"
+**Output:**
+{
+  "results": [{"id": "AC16", "persons": [
+    {"praenomen": "Caius", "nomen": "Munatius", "cognomen": "Mocilus", "gender": "male", "status": "Augustalis", "raw_name": "C. Munatio Mocili", "fragmentary": false},
+    {"praenomen": null, "nomen": "Pismatia", "cognomen": "Rufina", "gender": "female", "status": "filia", "raw_name": "Pismatiae Rufinae", "fragmentary": false},
+    {"praenomen": null, "nomen": "Herennia", "cognomen": "Bassa", "gender": "female", "status": "Tiberi filia, uxor", "raw_name": "Herenniae Ti. f. Bassae", "fragmentary": false},
+    {"praenomen": "Marcus", "nomen": "Gavius", "cognomen": "Bassus", "gender": "male", "status": "Marci filius, Stellatina, aedilis", "raw_name": "M. Gavio M. f. Ste. Basso", "fragmentary": false}
+  ]}]
+}
+
+**Input:** "Reparatori orbis / Romani d(omino) n(ostro) Cl(audio) / Iuliano Aug(usto) Aeterno / principi / ordo Acerunt[inus]"
+**Output:**
+{
+  "results": [{"id": "AC17", "persons": [
+    {"praenomen": null, "nomen": "Claudius", "cognomen": "Iulianus", "gender": "male", "status": "dominus noster, Augustus, Aeternus, princeps, reparator orbis Romani", "raw_name": "Cl. Iuliano Aug. Aeterno", "fragmentary": true}
+  ]}]
+}
+
+**Input:** "D(is) M(anibus) s(acrum) / M(arci) Serveni / Alexandri / Aug(ustalis) Claud(ialis) / Beneventi / vix(it) ann(os) XCVII / m(enses) II d(ies) XII Iunia / Capreola con/iugi bene merenti"
+**Output:**
+{
+  "results": [{"id": "AC18", "persons": [
+    {"praenomen": "Marcus", "nomen": "Servenius", "cognomen": "Alexander", "gender": "male", "status": "Augustalis Claudialis", "raw_name": "M. Serveni Alexandri", "fragmentary": false},
+    {"praenomen": null, "nomen": "Iunia", "cognomen": "Capreola", "gender": "female", "status": "coniugi bene merenti", "raw_name": "Iunia Capreola", "fragmentary": false}
+  ]}]
+}
+
+**Input:** "Sacrum / Silvano Co/rneliano / permissu C(ai) L(uci) Nei / Rufini Pamphilius / Rufinu(s) salus"
+**Output:**
+{
+  "results": [{"id": "AC19", "persons": [
+    {"praenomen": "Caius", "nomen": "Lucius Neius", "cognomen": "Rufinus", "gender": "male", "status": null, "raw_name": "C. L. Nei Rufini", "fragmentary": false},
+    {"praenomen": null, "nomen": null, "cognomen": "Pamphilius", "gender": "male", "status": "servus, salus", "raw_name": "Pamphilius Rufinu(s) salus", "fragmentary": false}
+  ]}]
+}
+
+**Input:** "Magno et / Invicto / Gallieno August(o) / co(n)s(uli) VI / desginato VII / pag(us)"
+**Output:**
+{
+  "results": [{"id": "AC20", "persons": [
+    {"praenomen": null, "nomen": null, "cognomen": "Gallienus", "gender": "male", "status": "Imperator Caesar Augustus Magnus Invictus, consul VI designato VII", "raw_name": "Magno et Invicto Gallieno Aug. co(n)s. VI desginato VII", "fragmentary": false}
+  ]}]
+}
+
+**Input:** "D{a}eo Ae(terno) / Resia / Victo/ria v(otum) / l(ibens) s(olvit)"
+**Output:**
+{
+  "results": [{"id": "AC21", "persons": [
+    {"praenomen": null, "nomen": "Resia", "cognomen": "Victoria", "gender": "female", "status": "votum libens solvit", "raw_name": "Resia Victoria", "fragmentary": false}
+  ]}]
+}
+
+**Input:** "Limen ad hoc populi persolvite vota Tonanti // Sed mea parnassi percipe vota deus / tu defende caput durantis tegmine lauri / sic ego nec tonitru nec metuamque Iovem"
+**Output:**
+{
+  "results": [{"id": "AC22", "persons": []}]
+}
+
+**Input:** "L(ucius) Luca/nius Sex/tio v(ixit) a(nnos) XV / pater f(ilio) / b(ene) m(erenti) f(ecit)"
+**Output:**
+{
+  "results": [{"id": "AC23", "persons": [
+    {"praenomen": "Lucius", "nomen": "Lucanius", "cognomen": "Sextius", "gender": "male", "status": "filius bene merenti", "raw_name": "L. Lucanius Sextio", "fragmentary": false}
+  ]}]
+}
+
+**Input:** "C(aius?) V[3] / Aug(ustalis) [3] / coni[ugi(?) 3] / L(ucio) Lollio L(uci) l(iberto) Primigenio"
+**Output:**
+{
+  "results": [{"id": "AC24", "persons": [
+    {"praenomen": "Lucius", "nomen": "Lollius", "cognomen": "Primigenius", "gender": "male", "status": "Luci libertus", "raw_name": "L. Lollio L. l. Primigenio", "fragmentary": false}
+  ]}]
+}
+
+**Input:** "Pontio Proserio Paulino / v(iro) c(larissimo) cons(ulari) Camp(aniae)"
+**Output:**
+{
+  "results": [{"id": "AC25", "persons": [
+    {"praenomen": null, "nomen": "Pontius Proserius", "cognomen": "Paulinus", "gender": "male", "status": "vir clarissimus, consularis Campaniae", "raw_name": "Pontio Proserio Paulino", "fragmentary": false}
+  ]}]
+}
+
+**Input:** "Messius D(ecimi) l(ibertus)"
+**Output:**
+{
+  "results": [{"id": "AC26", "persons": [
+    {"praenomen": null, "nomen": "Messius", "cognomen": null, "gender": "male", "status": "Decimi libertus", "raw_name": "Messius D. l.", "fragmentary": false}
+  ]}]
+}
+
+**Input:** "D(is) M(anibus) / Tullian(a)e Ma/rcell(a)e Pu/de(n)s co(n)iug(i) b(ene) m(erenti) f(ecit)"
+**Output:**
+{
+  "results": [{"id": "AC27", "persons": [
+    {"praenomen": null, "nomen": "Tulliana", "cognomen": "Marcella", "gender": "female", "status": "coniunx bene merenti", "raw_name": "Tullian(a)e Marcell(a)e", "fragmentary": false},
+    {"praenomen": null, "nomen": null, "cognomen": "Pudens", "gender": "male", "status": null, "raw_name": "Pude(n)s", "fragmentary": false}
+  ]}]
+}
+
+**Input:** "]rrius / [3]tus sibi / [3]e Helpidi / [3] posterisq(ue) / [3 s]uis fecit"
+**Output:**
+{
+  "results": [{"id": "AC28", "persons": [
+    {"praenomen": null, "nomen": "]rrius", "cognomen": null, "gender": "unknown", "status": null, "raw_name": "]rrius", "fragmentary": true},
+    {"praenomen": null, "nomen": null, "cognomen": "Helpis", "gender": "female", "status": null, "raw_name": "Helpidi", "fragmentary": false}
+  ]}]
+}
+
+**Input:** "Anicio Aucenio Basso v(iro) c(larissimo) / proconsuli Campaniae"
+**Output:**
+{
+  "results": [{"id": "AC29", "persons": [
+    {"praenomen": null, "nomen": "Anicius Aucenius", "cognomen": "Bassus", "gender": "male", "status": "vir clarissimus, proconsul Campaniae", "raw_name": "Anicio Aucenio Basso", "fragmentary": false}
+  ]}]
+}
+
+**Input:** "D(is) M(anibus) / L(ucio) Mettio Fortu/nato Mettia Suc(c)es/sa domino et patrono"
+**Output:**
+{
+  "results": [{"id": "AC30", "persons": [
+    {"praenomen": "Lucius", "nomen": "Mettius", "cognomen": "Fortunatus", "gender": "male", "status": "dominus et patronus", "raw_name": "L. Mettio Fortunato", "fragmentary": false},
+    {"praenomen": null, "nomen": "Mettia", "cognomen": "Successa", "gender": "female", "status": null, "raw_name": "Mettia Suc(c)essa", "fragmentary": false}
+  ]}]
+}
+
+**Input:** "Ser(vi) Cor(neli) Scip(ionis) Orfi[t]i co(n)s(ulis) [fi]liae / L(ucius) Lucilius Pansa"
+**Output:**
+{
+  "results": [{"id": "AC31", "persons": [
+    {"praenomen": "Lucius", "nomen": "Lucilius", "cognomen": "Pansa", "gender": "male", "status": null, "raw_name": "L. Lucilius Pansa", "fragmentary": false}
+  ]}]
+}
+
+**Input:** "[R]omanius M(arci) f(ilius) Cam(ilia) Sacerdos balnea ex sua pecunia faciunda curavit"
+**Output:**
+{
+  "results": [{"id": "AC32", "persons": [
+    {"praenomen": null, "nomen": "Romanius", "cognomen": "Sacerdos", "gender": "male", "status": "Marci filius Camilia", "raw_name": "[R]omanius M. f. Cam. Sacerdos", "fragmentary": true}
+  ]}]
+}
+
+**Input:** "Fl(avius) Lupus v(ir) c(larissimus) cons(ularis) Camp(aniae) faciente de proprio Insontio Secundino"
+**Output:**
+{
+  "results": [{"id": "AC33", "persons": [
+    {"praenomen": null, "nomen": "Flavius", "cognomen": "Lupus", "gender": "male", "status": "vir clarissimus consularis Campaniae", "raw_name": "Fl. Lupus", "fragmentary": false},
+    {"praenomen": null, "nomen": "Insontius", "cognomen": "Secundinus", "gender": "male", "status": null, "raw_name": "Insontio Secundino", "fragmentary": false}
+  ]}]
+}
+
+**Input:** "N(umerius) Maedius |(mulieris) l(ibertus) Nicephor et Media |(mulieris) l(iberta) Cleopatra mater vivi sibi fecerunt"
+**Output:**
+{
+  "results": [{"id": "AC34", "persons": [
+    {"praenomen": "Numerius", "nomen": "Maedius", "cognomen": "Nicephor", "gender": "male", "status": "libertus", "raw_name": "N. Maedius l. Nicephor", "fragmentary": false},
+    {"praenomen": null, "nomen": "Media", "cognomen": "Cleopatra", "gender": "female", "status": "liberta mater", "raw_name": "Media l. Cleopatra", "fragmentary": false}
+  ]}]
+}"""
+
     elif province.lower() in ('gallia narbonensis', 'belgica', 'aquitani(c)a',
                               'germania superior', 'germania inferior'):
         extra_examples = """
@@ -774,6 +1082,8 @@ NAME COHERENCE:
 - Relational nouns WITHOUT a name: if 'mater', 'pater', 'uxor', 'coniunx' (coniugi, coniuge), 'frater', 'soror', 'nata', 'filius' appear in the inscription but NO personal name follows or precedes them for that individual, do NOT extract a person for them. E.g. "Gaio Aelio Turpioni / mater" → extract Gaius Aelius Turpio only; do not create a second person named 'mater'. Similarly, 'coniugi bene merenti' is a dedicatory formula that describes the deceased — absorb it into status of the main person, do NOT create a second blank person.
 - Formula-only fragments: if the visible text contains ONLY formula words (annorum, pia/pius in suis, hic situs est, sit tibi terra levis, etc.) with no recognisable name token, return persons: [] for that record.
 - Polyonymy: Late Republican/Imperial aristocrats and senators sometimes bear 3-5 cognomina in a continuous sequence. When multiple name tokens appear in sequence after a nomen without a verb, separator ('et'), or filiation marker, treat them as additional cognomina for the SAME person — do NOT split into multiple persons. E.g. 'Q. Pompeius Senecio Roscius Murena Coelius' → one person, cognomen='Senecio Roscius Murena Coelius'.
+- TITLES ARE NOT NAMES (but can be cognomina): Civic and religious titles (e.g., Augustalis, sevir, decurio, aedilis, consul, sacerdos, praefectus) go in the status field, NOT in name fields — UNLESS the word occupies the cognomen slot in a standard name pattern (e.g. "Romanius Sacerdos" = cognomen Sacerdos).
+- STRICTLY NO HALLUCINATION: Transcribe names exactly as they appear (declined to nominative). Do not invent letters to fill a lacuna (e.g., "]rrius" remains "]rrius", do not guess "Perrus"). Do not 'correct' unusual spelling (e.g., "Aucenio" -> "Aucenius", do not change to "Baccus").
 
 EXAMPLES:
 {extra_examples}

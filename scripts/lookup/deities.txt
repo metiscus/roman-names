@@ -7,6 +7,11 @@
 # appear in those cases in dedications. Comments are ignored.
 
 # Olympian / Capitoline core (Roman)
+pallas
+palladi
+pomona
+lyaeus
+lyaeo
 iuppiter
 iupiter
 jupiter
@@ -77,6 +82,10 @@ genius
 genio
 numen
 numini
+deus
+deo
+aeternus
+aeterno
 
 # Personifications worshipped as goddesses
 salus
