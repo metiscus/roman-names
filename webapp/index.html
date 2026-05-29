@@ -224,8 +224,8 @@
             <div class="sidebar-header">
                 <h1 style="display:flex; align-items:center">Roman Names <button class="btn-about" id="about-btn" title="About this map">?</button></h1>
                 <select id="province-select">
+                    <option value="africa_proconsularis" selected>Africa Proconsularis</option>
                     <option value="all">All Regions</option>
-                    <option value="africa_proconsularis">Africa Proconsularis</option>
                     <option value="numidia">Numidia</option>
                     <option value="britannia">Britannia</option>
                     <option value="dalmatia">Dalmatia</option>
@@ -356,7 +356,7 @@
             apulia_et_calabria:      { label: 'Apulia et Calabria / Regio II', center: [41.0, 16.0], zoom: 7 },
         };
 
-        let currentProvince = 'all';
+        let currentProvince = 'africa_proconsularis';
         let map, markers, allData, clustersLookup;
         let activeClusterId = null;
         let activeGeoIds = null;
@@ -582,8 +582,8 @@
                 }
 
                 const match = f.properties.persons.filter(p => {
-                    if (search && !(`${p.praenomen} ${p.nomen} ${p.cognomen} ${p.raw_name}`.toLowerCase().includes(search))) return false;
-                    if (!confs.includes(p.cluster_confidence)) return false;
+                    if (search && !(`${p.praenomen||''} ${p.nomen||''} ${p.cognomen||''} ${p.raw_name}`.toLowerCase().includes(search))) return false;
+                    if (!confs.includes(p.cluster_confidence || 'high')) return false;
                     if (hideImp && p.is_imperial) return false;
                     if (hideDeity && p.is_deity) return false;
                     return true;
