@@ -198,7 +198,7 @@
             <p><strong>How to use:</strong></p>
             <ul>
                 <li>Select a province to focus the map</li>
-                <li>Search by name (praenomen, nomen, or cognomen)</li>
+                <li>Search by name, translation, summary, or inscription text</li>
                 <li>Click a marker to see the people named in that inscription</li>
                 <li>Use filters to explore by gender, confidence level, or social category</li>
                 <li>Follow "See all N attestations" to find all known appearances of a name</li>
@@ -258,7 +258,7 @@
 
             <div class="controls-area">
                 <div class="search-wrapper">
-                    <input type="text" id="search-input" placeholder="Search by name..." autocomplete="off" />
+                    <input type="text" id="search-input" placeholder="Search names, translations, text..." autocomplete="off" />
                     <button id="clear-search-btn" title="Clear Search">&times;</button>
                 </div>
                 
@@ -588,7 +588,14 @@
                     if (hideDeity && p.is_deity) return false;
                     return true;
                 });
-                return match.length > 0;
+                if (match.length > 0) return true;
+                // Also search translations, summaries, and raw text
+                if (search) {
+                    const enrich = enrichmentData[f.properties.edcs_id];
+                    const haystack = `${f.properties.raw_text||''} ${enrich ? (enrich.translation||'') + ' ' + (enrich.summary||'') : ''}`.toLowerCase();
+                    if (haystack.includes(search)) return true;
+                }
+                return false;
             });
 
             document.getElementById('results-count-label').innerText = currentResults.length;
