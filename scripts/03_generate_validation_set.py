@@ -7,7 +7,7 @@ import ast
 import re
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from config import LIRE_PATH, EVAL_DIR
+from config import LIRE_PATH, EVAL_DIR, EDCS_NAME_TO_SLUG
 
 
 def parse_people(value):
@@ -34,13 +34,19 @@ def parse_people(value):
     return []
 
 
-def generate_validation_set(province):
+def generate_validation_set(province, slug=None):
     input_file = LIRE_PATH
     output_dir = EVAL_DIR
     os.makedirs(output_dir, exist_ok=True)
-    
-    # Standardize filename format
-    safe_name = re.sub(r'[()]', '', province).lower().replace(' ', '_')
+
+    # Use explicit slug > config lookup > derived from province name
+    if slug:
+        safe_name = slug
+    elif province in EDCS_NAME_TO_SLUG:
+        safe_name = EDCS_NAME_TO_SLUG[province]
+    else:
+        safe_name = re.sub(r'[()/ ]+', '_', province).lower().strip('_')
+        safe_name = re.sub(r'_+', '_', safe_name)
     dev_path = os.path.join(output_dir, f'{safe_name}_dev.jsonl')
     eval_path = os.path.join(output_dir, f'{safe_name}_eval.jsonl')
 
@@ -105,6 +111,7 @@ def generate_validation_set(province):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Generate validation set from LIRE for a specific province.")
     parser.add_argument("--province", type=str, default="Africa proconsularis", help="The province name (e.g. 'Britannia', 'Aegyptus')")
+    parser.add_argument("--slug", type=str, default=None, help="Output filename slug (overrides auto-derived name)")
     args = parser.parse_args()
-    
-    generate_validation_set(args.province)
+
+    generate_validation_set(args.province, slug=args.slug)

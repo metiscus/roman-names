@@ -15,7 +15,7 @@ import sys
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from prompt_utils import get_system_prompt
-from config import EDCS_PATH, OUTPUT_DIR
+from config import EDCS_PATH, OUTPUT_DIR, EDCS_NAME_TO_SLUG
 
 load_dotenv()
 
@@ -132,7 +132,7 @@ def main():
     stop_after = args.stop_after
     model = args.model
     workers = args.workers
-    safe_name = re.sub(r'[()]', '', province).lower().replace(' ', '_')
+    safe_name = EDCS_NAME_TO_SLUG.get(province) or re.sub(r'[()]', '', province).lower().replace(' ', '_')
     output_path = OUTPUT_DIR / f'{safe_name}_ner_full.jsonl'
 
     api_key = os.getenv("GEMINI_API_KEY")

@@ -42,14 +42,14 @@ SCRIPTS = REPO_ROOT / "scripts"
 OUTPUT_DIR = REPO_ROOT / "data" / "output"
 PY = sys.executable
 
-ALL_STAGES = ["eval_set", "ner", "export", "eval", "cluster", "webapp"]
+ALL_STAGES = ["eval_set", "ner", "export", "eval", "eval_edh", "eval_r1b1", "cluster", "webapp"]
 EVAL_ONLY_STAGES = {"eval_set", "eval"}  # skipped for provinces without a LIRE eval set
 
 
 def stage_cmd(stage, slug, edcs_name, model, workers):
     s = str(SCRIPTS)
     if stage == "eval_set":
-        return [PY, f"{s}/03_generate_validation_set.py", "--province", edcs_name]
+        return [PY, f"{s}/03_generate_validation_set.py", "--province", edcs_name, "--slug", slug]
     if stage == "ner":
         return [PY, f"{s}/06_run_full_corpus.py", "--province", edcs_name,
                 "--model", model, "--workers", str(workers)]
@@ -58,6 +58,10 @@ def stage_cmd(stage, slug, edcs_name, model, workers):
                 "--province-name", edcs_name]
     if stage == "eval":
         return [PY, f"{s}/05b_eval_from_corpus.py", "--province", slug]
+    if stage == "eval_edh":
+        return [PY, f"{s}/05_evaluate_ner.py", "--province", slug, "--source", "edh"]
+    if stage == "eval_r1b1":
+        return [PY, f"{s}/05_evaluate_ner.py", "--province", slug, "--source", "r1b1"]
     if stage == "cluster":
         return [PY, f"{s}/08_cluster_attestations.py", "--province", slug]
     if stage == "webapp":

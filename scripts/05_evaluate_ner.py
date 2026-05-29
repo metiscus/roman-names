@@ -186,8 +186,8 @@ def print_summary(province, label, tp, fp_imperial, fp_other, fn, fn_damaged, di
             print(f"[{d['id']}] {d['name']} -> {d['expanded']} (Status: {d['status']})")
 
 
-def evaluate_r1b1(province):
-    """Evaluate full corpus NER output against Romans 1by1 ground truth."""
+def evaluate_external_gt(province, source_name):
+    """Evaluate full corpus NER output against an external ground truth (R1b1 or EDH)."""
     safe_name = re.sub(r'[()]', '', province).lower().replace(' ', '_')
     full_path = OUTPUT_DIR / f'{safe_name}_ner_full.jsonl'
 
@@ -195,7 +195,18 @@ def evaluate_r1b1(province):
         print(f"Error: {full_path} not found. Run the full corpus script first.")
         return
 
-    r1b1_gt = json.load(open(R1B1_GT_PATH))
+    if source_name == 'r1b1':
+        gt_path = R1B1_GT_PATH
+        label = 'R1b1 GT'
+    else:
+        gt_path = "data/edh_gt.json"
+        label = 'EDH GT'
+
+    if not os.path.exists(gt_path):
+        print(f"Error: {gt_path} not found.")
+        return
+
+    external_gt = json.load(open(gt_path))
 
     print("Loading EDCS text lookup...")
     edcs_text = {}
@@ -210,18 +221,18 @@ def evaluate_r1b1(province):
             r = json.loads(line)
             ner_records[r['id']] = r['persons']
 
-    overlap_ids = set(ner_records.keys()) & set(r1b1_gt.keys())
-    print(f"NER records: {len(ner_records)}, R1b1 GT: {len(r1b1_gt)}, Overlap: {len(overlap_ids)}")
+    overlap_ids = set(ner_records.keys()) & set(external_gt.keys())
+    print(f"NER records: {len(ner_records)}, {label}: {len(external_gt)}, Overlap: {len(overlap_ids)}")
 
     if not overlap_ids:
-        print("No overlap — R1b1 GT has no entries for this province's NER output.")
+        print(f"No overlap — {label} has no entries for this province's NER output.")
         return
 
     tp = fp_imperial = fp_other = fn = fn_damaged = 0
     discoveries_other = []
 
     for edcs_id in sorted(overlap_ids):
-        gt_people = r1b1_gt[edcs_id]
+        gt_people = external_gt[edcs_id]
         predictions = ner_records[edcs_id]
         text = edcs_text.get(edcs_id, '')
 
@@ -267,17 +278,17 @@ def evaluate_r1b1(province):
                 else:
                     fn += 1
 
-    print_summary(province, 'R1b1 GT', tp, fp_imperial, fp_other, fn, fn_damaged, discoveries_other)
+    print_summary(province, label, tp, fp_imperial, fp_other, fn, fn_damaged, discoveries_other)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Evaluate NER results for a specific province.")
     parser.add_argument("--province", type=str, default="Africa proconsularis", help="The province name")
-    parser.add_argument("--source", choices=["lire", "r1b1"], default="lire",
-                        help="GT source: lire (eval set, default) or r1b1 (full corpus vs Romans 1by1)")
+    parser.add_argument("--source", choices=["lire", "r1b1", "edh"], default="lire",
+                        help="GT source: lire (eval set, default), r1b1 (Romans 1by1), or edh (Heidelberg)")
     args = parser.parse_args()
 
-    if args.source == "r1b1":
-        evaluate_r1b1(args.province)
+    if args.source in ("r1b1", "edh"):
+        evaluate_external_gt(args.province, args.source)
     else:
         evaluate_ner(args.province)

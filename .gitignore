@@ -20,6 +20,7 @@ data/output/*
 !data/output/mauretania_tingitana_ner_full.jsonl
 !data/output/mauretania_caesariensis_ner_full.jsonl
 !data/output/creta_et_cyrenaica_ner_full.jsonl
+!data/output/etruria_ner_full.jsonl
 temp/
 
 # Python
@@ -35,6 +36,14 @@ followup/
 
 # Claude Code project instructions (local only)
 CLAUDE.md
+
+# Claude Code project memory (local only)
+.claude/
+
+# Logs and temp artefacts
+*.log
+rpeople.xls
+temp_output_list.txt
 
 # Secrets
 .env
