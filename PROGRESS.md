@@ -721,3 +721,38 @@ F1 0.85 is well above the 0.72 acceptable threshold, consistent with other North
 - Province selector: `<option value="mauretania_caesariensis">Mauretania Caesariensis</option>`
 - PROVINCES config: `mauretania_caesariensis: { label: 'Mauretania Caesariensis', center: [36.5, 2.5], zoom: 7 }`
 - Data files: `inscriptions_mauretania_caesariensis.geojson` (4,242 features), `clusters_mauretania_caesariensis.json`, `enrichment_mauretania_caesariensis.json`
+
+---
+
+## Week 10: Gaul and Ground Truth Expansion (May 2026)
+
+### Status: In Progress
+
+**Goal:** Expand ground truth coverage for regions outside the LIRE core (Gaul, Germany) and run the full pipeline for Gallia Narbonensis.
+
+### Accomplishments
+
+**Ground Truth Expansion:**
+- **Romans 1by1 (R1b1):** Rebuilt the full background data acquisition script to bypass the 20k record export limit by fetching data province-by-province. Secured ~130,000 potential records, though coverage for Gaul remains sparse in this source.
+- **EDH (Heidelberg):** Integrated the gold-standard Epigraphic Database Heidelberg prosopography dump (81,562 records). Built mapping bridge from HD-IDs to EDCS-IDs via LIRE metadata. 
+- **Evaluation Harness:** Updated `scripts/05_evaluate_ner.py` to support multiple external ground truth sources (`--source lire|r1b1|edh`).
+
+**Full Corpus Run (Gallia Narbonensis):**
+- 19,700 records processed (after 30%-lacuna damage filter).
+- Successfully validated against new EDH ground truth.
+
+**Evaluation Results (Gallia Narbonensis):**
+
+| Metric | Source: LIRE GT | Source: EDH GT |
+|--------|-----------------|----------------|
+| F1 (adjusted) | 0.62 | **0.70** |
+| Recall (adj) | 0.64 | 0.69 |
+| Precision (adj) | 0.61 | 0.70 |
+| Overlap (Inscriptions) | 33 | **66** |
+
+**Key finding:** EDH provides 2x the validation density of LIRE for Gaul. The model performance (0.70 F1) is consistent with other high-complexity substrate regions like Lusitania.
+
+### Next Steps
+- Finalize R1b1 background ingest for Danubian provinces.
+- Run full corpus for Gallia Lugdunensis and Aquitania.
+- Investigate Trismegistos People API for Egypt validation as per original research plan.

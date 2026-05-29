@@ -2,12 +2,13 @@
 Build a Romans 1by1 ground truth dataset and merge it with LIRE.
 
 Downloads all pages of rpeople.xls and rinscriptions.xls from Romans 1by1,
-resolves inscription codes to EDCS IDs via the TM→EDCS bridge in LIRE,
+iterating by province to bypass the default 20k record export limit.
+Resolves inscription codes to EDCS IDs via the TM→EDCS bridge in LIRE,
 and writes a GT file in the same format used by 05_evaluate_ner.py.
 
 Usage:
     python3 scripts/build_r1b1_gt.py               # full run
-    python3 scripts/build_r1b1_gt.py --dry-run      # test first 2 pages only
+    python3 scripts/build_r1b1_gt.py --dry-run      # test first 2 provinces only
     python3 scripts/build_r1b1_gt.py --skip-download # reuse cached files
 
 Output:
@@ -16,6 +17,7 @@ Output:
 
 import os, re, json, time, argparse, sys
 from collections import defaultdict
+import urllib.parse
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from config import LIRE_PATH, R1B1_GT_PATH
@@ -60,10 +62,6 @@ PROVINCE_ABBREVS = {
 
 # Province abbreviations excluded from GT because the rinscriptions.xls export
 # has missing rows vs R1b1 internal count, causing rank drift that corrupts the bridge.
-# Verified by spot-checking: R1b1 GT people don't match EDCS inscription texts.
-#   MI: 63 missing → severe drift
-#   PS: 4 missing → variable drift
-#   MS: 2 missing → drift confirmed by spot-check (adjacent Coelii give spurious 67% token match)
 UNRELIABLE_ABBREVS = {'MI', 'PS', 'MS'}
 
 
@@ -134,27 +132,47 @@ def parse_xml_table(raw):
 
 
 # ---------------------------------------------------------------------------
-# Download all pages
+# Download all pages for all provinces
 # ---------------------------------------------------------------------------
 
-def download_all(endpoint, parser, label, max_pages, dry_run):
+def download_all_by_province(endpoint, parser, label, dry_run):
     all_rows = []
-    for page in range(1, max_pages + 1):
-        url = f"{BASE_URL}/{endpoint}?page={page}"
-        cache = os.path.join(CACHE_DIR, f"{endpoint.replace('.xls','')}_p{page:03d}.bin")
-        raw = fetch_page(url, cache)
-        if raw is None:
-            print(f"  [{label}] page {page}: fetch failed, stopping")
-            break
-        _, rows = parser(raw)
-        if not rows:
-            print(f"  [{label}] page {page}: empty, stopping at {len(all_rows)} total")
-            break
-        all_rows.extend(rows)
-        print(f"  [{label}] page {page}/{max_pages}: +{len(rows)} rows (total {len(all_rows)})")
-        if dry_run and page >= 2:
-            print(f"  [{label}] dry-run: stopping after 2 pages")
-            break
+    provinces = sorted(PROVINCE_ABBREVS.keys())
+    
+    # Correct Ransack parameter names identified from HTML source
+    if 'people' in endpoint:
+        prov_param = "q[rinscriptions_rprovince_name_cont]"
+    else:
+        prov_param = "q[rprovince_name_cont]"
+
+    if dry_run:
+        provinces = provinces[:2]
+        
+    for prov in provinces:
+        print(f"\n--- Province: {prov} ---")
+        prov_slug = prov.lower().replace(' ', '_')
+        prov_encoded = urllib.parse.quote_plus(prov)
+        
+        for page in range(1, 1000): # Hard limit to prevent infinite loops
+            # Use the correct Ransack query syntax
+            url = f"{BASE_URL}/{endpoint}?{prov_param}={prov_encoded}&page={page}"
+            cache = os.path.join(CACHE_DIR, f"{endpoint.replace('.xls','')}_{prov_slug}_p{page:03d}.bin")
+            
+            raw = fetch_page(url, cache)
+            if raw is None:
+                print(f"  [{label}] {prov} page {page}: fetch failed, skipping province")
+                break
+                
+            _, rows = parser(raw)
+            if not rows:
+                print(f"  [{label}] {prov} page {page}: empty, moving to next province")
+                break
+                
+            all_rows.extend(rows)
+            print(f"  [{label}] {prov} page {page}: +{len(rows)} rows (total {len(all_rows)})")
+            
+            if dry_run and page >= 1:
+                break
     return all_rows
 
 
@@ -169,7 +187,8 @@ def build_tm_to_edcs(lire_path):
     tm_to_edcs = {}
     for feat in lire['features']:
         p = feat['properties']
-        tm = str(p.get('idno_tm', '')).strip()
+        # Support both old and new LIRE field names for TM URI/ID
+        tm = str(p.get('trismegistos_uri') or p.get('idno_tm') or '').strip()
         edcs = p.get('EDCS-ID', '')
         if tm and edcs:
             tm_num = tm.split('/')[-1].strip()
@@ -190,8 +209,6 @@ def build_code_to_tm(inscription_rows):
     """
     print("Building inscription code→TM map...")
 
-    # Build reverse abbrev map: province_name → abbrev
-    # (some provinces may map to same abbrev — that's a data ambiguity in R1b1)
     name_to_abbrev = PROVINCE_ABBREVS
 
     # Group by province name, sort by global ID, assign per-province rank
@@ -212,8 +229,8 @@ def build_code_to_tm(inscription_rows):
         entries.sort(key=lambda x: x[0])   # sort by global ID
         abbrev = name_to_abbrev.get(prov)
         if not abbrev:
-            # Derive a fallback abbrev from initials
-            abbrev = ''.join(w[0].upper() for w in prov.split())
+            continue
+            
         for rank, (gid, tm_num) in enumerate(entries, 1):
             code = f"{rank:05d}{abbrev}"
             code_to_tm[code] = tm_num
@@ -282,7 +299,7 @@ def parse_people(people_rows, code_to_tm, tm_to_edcs):
         stats['ok'] += 1
 
     print(f"  Resolved:         {stats['ok']:,} person records")
-    print(f"  Unreliable prov:  {stats['unreliable_province']:,}  (MI/PS excluded — rank drift too large)")
+    print(f"  Unreliable prov:  {stats['unreliable_province']:,}  (MI/PS/MS excluded — rank drift too large)")
     print(f"  Code not found:   {stats['code_not_found']:,}  (province name mismatch / unknown)")
     print(f"  No TM bridge:     {stats['no_tm_bridge']:,}  (inscription has no TM ID in R1b1)")
     print(f"  TM not in LIRE:   {stats['tm_not_in_lire']:,}")
@@ -299,22 +316,60 @@ def parse_people(people_rows, code_to_tm, tm_to_edcs):
 def main():
     parser = argparse.ArgumentParser(description="Build Romans 1by1 ground truth dataset")
     parser.add_argument('--dry-run', action='store_true',
-                        help='Download only first 2 pages of each file (testing)')
+                        help='Download only first 2 provinces (testing)')
     parser.add_argument('--skip-download', action='store_true',
                         help='Use cached files only, skip HTTP requests')
+    parser.add_argument('--province', type=str, help='Only download/process a specific province')
     args = parser.parse_args()
-
-    max_pages = 2 if args.dry_run else 41
 
     # Step 1: download
     if not args.skip_download:
-        print(f"\n=== Downloading people ({max_pages} pages) ===")
-        people_rows = download_all('rpeople.xls', parse_html_table, 'people', max_pages, args.dry_run)
-        print(f"\n=== Downloading inscriptions ({max_pages} pages) ===")
-        inscription_rows = download_all('rinscriptions.xls', parse_xml_table, 'inscriptions', max_pages, args.dry_run)
+        provinces = [args.province] if args.province else sorted(PROVINCE_ABBREVS.keys())
+        if args.dry_run and not args.province:
+            provinces = provinces[:2]
+        
+        people_rows = []
+        inscription_rows = []
+        
+        # Refactor download logic to allow per-province targeting
+        for prov in provinces:
+            print(f"\n=== Province: {prov} ===")
+            prov_slug = prov.lower().replace(' ', '_')
+            prov_encoded = urllib.parse.quote_plus(prov)
+            
+            # Download people
+            p_param = "q[rinscriptions_rprovince_name_cont]"
+            for page in range(1, 1000):
+                url = f"{BASE_URL}/rpeople.xls?{p_param}={prov_encoded}&page={page}"
+                cache = os.path.join(CACHE_DIR, f"rpeople_{prov_slug}_p{page:03d}.bin")
+                raw = fetch_page(url, cache)
+                if raw is None: break
+                _, rows = parse_html_table(raw)
+                if not rows: break
+                people_rows.extend(rows)
+                print(f"  [people] {prov} page {page}: +{len(rows)} rows")
+                if args.dry_run: break
+            
+            # Download inscriptions
+            i_param = "q[rprovince_name_cont]"
+            for page in range(1, 1000):
+                url = f"{BASE_URL}/rinscriptions.xls?{i_param}={prov_encoded}&page={page}"
+                cache = os.path.join(CACHE_DIR, f"rinscriptions_{prov_slug}_p{page:03d}.bin")
+                raw = fetch_page(url, cache)
+                if raw is None: break
+                _, rows = parse_xml_table(raw)
+                if not rows: break
+                inscription_rows.extend(rows)
+                print(f"  [inscriptions] {prov} page {page}: +{len(rows)} rows")
+                if args.dry_run: break
+
     else:
         print("\n=== Loading from cache ===")
         people_rows, inscription_rows = [], []
+        if not os.path.exists(CACHE_DIR):
+            print(f"ERROR: {CACHE_DIR} not found")
+            return
+            
         for fname in sorted(os.listdir(CACHE_DIR)):
             path = os.path.join(CACHE_DIR, fname)
             raw = open(path, 'rb').read()

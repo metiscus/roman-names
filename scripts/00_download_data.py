@@ -41,19 +41,20 @@ def main():
             else:
                 print(f"{f['key']} already exists.")
 
-    # Record 2: LIRE v3.0 (DOI 10.5281/zenodo.8431452)
-    # To upgrade: update LIRE_PATH in scripts/config.py, then re-run this script.
-    print("\nFetching LIRE file metadata...")
-    lire_files = get_zenodo_files('8431452')
-    for f in lire_files:
-        dest = LIRE_PATH.parent / f['key']
-        if f['key'].endswith('.geojson') and f['key'] == LIRE_PATH.name:
-            url = f['links']['self']
-            if not dest.exists():
-                print(f"Downloading {f['key']}...")
-                download_file(url, str(dest))
-            else:
-                print(f"{f['key']} already exists.")
+    # Record 3: EDH (Heidelberg) Prosopography
+    print("\nFetching EDH prosopography...")
+    edh_url = "https://edh.ub.uni-heidelberg.de/data/download/edh_data_pers.csv"
+    edh_dest = "data/edh_data_pers.csv"
+    if not os.path.exists(edh_dest):
+        print("Downloading EDH prosopography...")
+        download_file(edh_url, edh_dest)
+    else:
+        print("EDH prosopography already exists.")
+
+    # Build GT files
+    print("\nBuilding ground truth files...")
+    os.system("python3 scripts/build_edh_gt.py")
+
 
 if __name__ == "__main__":
     main()

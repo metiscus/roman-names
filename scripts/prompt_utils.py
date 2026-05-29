@@ -360,6 +360,53 @@ def get_system_prompt(province):
   ]}]
 }"""
 
+    elif province.lower() in ('etruria / regio vii', 'etruria'):
+        extra_examples = """
+**ETRURIA / REGIO VII RULES:**
+1. AMPHORAE & VESSEL STAMPS: Many Etrurian inscriptions are single-word or single-name stamps on amphorae or vessels (e.g. "Ses(tius)", "Sest(ius)", "Ciclops", "Aloni"). Extract the stamp owner's name normally (usually cognomen only or nomen only).
+2. VESSEL VOCABULARY: Common Latin words for containers are NOT personal names. "poco(lom)" / "poculom" / "poculum" = cup/vessel — return persons: [] for inscriptions containing only this word.
+3. MINIMUM FRAGMENT THRESHOLD: Do NOT extract a person when the entire visible text (after removing brackets and lacuna markers) yields **no single contiguous token of 5+ letters** that could be a personal name. Specifically: "]rdo" → skip (3 letters); "]us Pri[" → skip (each token ≤3 letters); "[3]mus" → skip (3 letters after lacuna). If you see only tokens of ≤4 letters and none of them is a known standalone name, return persons: []. A complete visible name like "Dion" (4 letters but a known Greek name) may still be extracted if you are confident it is a personal name.
+4. GNATUS / NATUS = ORIGIN, NOT COGNOMEN: "gnatus" / "natus" followed by an ablative noun or name indicates birth origin — "Vibia gnatus" means "born of Vibia" (his mother). Do NOT treat the ablative noun as a cognomen. Record the main person without a cognomen derived from "gnatus": e.g. "A(ulus) Herennius L(uci) f(ilius) Vibia gnatus" → praenomen=Aulus, nomen=Herennius, cognomen=null, status="filius Luci".
+5. "ORDO" IS NOT A NAME: "ordo" in Latin means council or rank. Do not extract it as a personal name.
+
+**Input:** "[3] poco(lom)"
+**Output:**
+{
+  "results": [{"id": "ET1", "persons": []}]
+}
+
+**Input:** "A(ulus) Herennius L(uci) f(ilius) Vibia / gnatus"
+**Output:**
+{
+  "results": [{"id": "ET2", "persons": [
+    {"praenomen": "Aulus", "nomen": "Herennius", "cognomen": null, "gender": "male", "status": "filius Luci", "raw_name": "A. Herennius L. f. Vibia gnatus", "fragmentary": false}
+  ]}]
+}
+
+**Input:** "[3]mus et [3]ste / [3]ia / Postumiae L. l(ibertae) Lesbiae"
+**Output:**
+{
+  "results": [{"id": "ET3", "persons": [
+    {"praenomen": null, "nomen": "Postumia", "cognomen": "Lesbia", "gender": "female", "status": "liberta Luci", "raw_name": "Postumiae L. l(ibertae) Lesbiae", "fragmentary": false}
+  ]}]
+}
+
+**Input:** "Ex offic(ina) C(ai) Iuli / Hymenis"
+**Output:**
+{
+  "results": [{"id": "ET4", "persons": [
+    {"praenomen": "Gaius", "nomen": "Iulius", "cognomen": "Hymen", "gender": "male", "status": "ex officina", "raw_name": "C. Iuli Hymenis", "fragmentary": false}
+  ]}]
+}
+
+**Input:** "Pacia C(ai) f(ilia) Galla"
+**Output:**
+{
+  "results": [{"id": "ET5", "persons": [
+    {"praenomen": null, "nomen": "Pacia", "cognomen": "Galla", "gender": "female", "status": "filia Cai", "raw_name": "Pacia C. f. Galla", "fragmentary": false}
+  ]}]
+}"""
+
     elif province.lower() in ('gallia narbonensis', 'belgica', 'aquitani(c)a',
                               'germania superior', 'germania inferior'):
         extra_examples = """

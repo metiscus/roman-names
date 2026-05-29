@@ -17,7 +17,7 @@ import argparse
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from config import EDCS_PATH, LIRE_PATH, OUTPUT_DIR
+from config import EDCS_PATH, LIRE_PATH, OUTPUT_DIR, SLUG_TO_EDCS_NAME
 
 DAMAGE_THRESHOLD = 0.30
 
@@ -96,10 +96,12 @@ def main():
         province_slug = args.province.lower().replace(' ', '_')
     else:
         province_slug = args.province
-        # Use replace+capitalize per word but preserve original case of first char
-        # to match EDCS storage (e.g. "Pannonia superior" not "Pannonia Superior")
-        words = args.province.replace('_', ' ').split()
-        province_name = words[0].capitalize() + (' ' + ' '.join(w.lower() for w in words[1:]) if len(words) > 1 else '')
+        # Prefer exact config lookup so "etruria" → "Etruria / Regio VII"
+        if province_slug in SLUG_TO_EDCS_NAME:
+            province_name = SLUG_TO_EDCS_NAME[province_slug]
+        else:
+            words = args.province.replace('_', ' ').split()
+            province_name = words[0].capitalize() + (' ' + ' '.join(w.lower() for w in words[1:]) if len(words) > 1 else '')
 
     records = load_corpus_output(province_slug)
     texts = load_source_texts(province_name)

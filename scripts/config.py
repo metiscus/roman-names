@@ -52,7 +52,7 @@ PROVINCES = [
     ("mauretania_tingitana",    "Mauretania Tingitana",    True),
     ("mauretania_caesariensis", "Mauretania Caesariensis", True),
     ("creta_et_cyrenaica",      "Creta et Cyrenaica",      True),
-    ("aegyptus",                "Aegyptus",                False),
+    ("aegyptus",              "Aegyptus",               True),
     ("corsica",                 "Corsica",                 True),
     ("sardinia",                "Sardinia",                True),
     ("sicilia",                 "Sicilia",                 True),
@@ -61,6 +61,11 @@ PROVINCES = [
     ("aquitanica",             "Aquitani(c)a",            True),
     ("germania_superior",      "Germania superior",       True),
     ("germania_inferior",      "Germania inferior",       True),
+    ("etruria",                "Etruria / Regio VII",     True),
 ]
 
 PROVINCE_SLUGS = [slug for slug, _name, _has_eval in PROVINCES]
+
+# Lookup: EDCS province name → slug (for scripts that receive the EDCS name)
+EDCS_NAME_TO_SLUG = {edcs_name: slug for slug, edcs_name, _ in PROVINCES}
+SLUG_TO_EDCS_NAME = {slug: edcs_name for slug, edcs_name, _ in PROVINCES}
