@@ -756,3 +756,54 @@ F1 0.85 is well above the 0.72 acceptable threshold, consistent with other North
 - Finalize R1b1 background ingest for Danubian provinces.
 - Run full corpus for Gallia Lugdunensis and Aquitania.
 - Investigate Trismegistos People API for Egypt validation as per original research plan.
+
+---
+
+## Week 11: Apulia et Calabria / Regio II & Webapp Optimizations (May 2026)
+
+### Status: Complete
+
+**Goal:** Run the full NER pipeline for Apulia et Calabria (Regio II), optimize webapp data size and loading, and extend translation coverage to non-LIRE inscriptions.
+
+### Accomplishments
+
+**Full Corpus Run (Apulia et Calabria / Regio II):**
+- 5,490 inscriptions processed (6,572 total, 5,491 after damage filtering), 7,537 names extracted.
+- Province-specific prompt: 23 rules, 34 few-shot examples (AC1–AC34), ~34K chars.
+- **Model upgrade required:** The complex prompt caused ~24% error rate on `gemini-2.5-flash-lite`. Switching to `gemini-flash-lite-latest` (Gemini 3.5 Flash Lite) dropped errors to ~8-10%, then to ~4-6% after targeted fixes. Cost is ~1.4x ($0.25/$1.50 vs $0.10/$0.40 per M tokens). This is documented in the runbook for future provinces with large prompt branches.
+- Key prompt fixes: Rule 19 (title words like "Sacerdos" can be cognomina), Rule 23 (adjacent nomen+cognomen in oblique case = one person), plus global NAME COHERENCE rules.
+- Added regional deities to `deities.txt`: Pallas/Palladi, Pomona, Lyaeus/Lyaeo, Deus/Deo/Aeternus/Aeterno.
+- Total NER cost: $0.65 (flash-lite-latest), 0 API errors.
+
+**Evaluation Results:**
+
+| Metric | Value |
+|--------|-------|
+| F1 (adjusted) | 0.87 |
+| Recall (adj) | 0.85 |
+| Precision (adj) | 0.89 |
+| Spot-check error rate | ~4-6% (borderline/ambiguous) |
+
+**Webapp Data Optimizations:**
+- Reduced total webapp data from **162.3 MB → 118.8 MB** (-27% on disk) by:
+  - Stripping empty/default person fields (praenomen, status, fragmentary, is_imperial, is_deity)
+  - Removing cluster_id/cluster_size for singleton clusters
+  - Using compact JSON separators for geojson and cluster files
+  - Rounding coordinates to 2 decimal places (~1km precision, sufficient for map display)
+- Changed default province from "All Regions" (loads all 25 files, ~16 MB gzipped) to a single province (~2 MB gzipped). Reduces default page load by ~8x and protects GitHub Pages bandwidth (100 GB/month limit).
+- Extended search to include translations, summaries, and raw inscription text (not just person names).
+
+**Translation Pipeline Enhancement (`--include-raw`):**
+- Added `--include-raw` flag to `11_translate_inscriptions.py` to translate inscriptions that have no LIRE `text_edition`, using the EDCS raw text instead. The EDCS text contains scholarly abbreviation expansions (e.g. `Cn(aeo)`, `b(ene) mer(enti)`) which are suitable for translation.
+- Apulia et Calabria coverage: **52% → 99.7%** (2,200 → 3,740 of 3,752 records) for just $0.07.
+- Running `--include-raw` across all 25 provinces to bring translation coverage to near-100% everywhere.
+
+### Webapp
+- Province selector: `<option value="apulia_et_calabria">Apulia et Calabria / Regio II</option>`
+- PROVINCES config: `apulia_et_calabria: { label: 'Apulia et Calabria / Regio II', center: [41.0, 16.0], zoom: 7 }`
+- Data files: `inscriptions_apulia_et_calabria.geojson` (4,199 features), `clusters_apulia_et_calabria.json`, `enrichment_apulia_et_calabria.json`
+
+### Next Steps
+- Complete `--include-raw` translation run across all provinces.
+- Rebuild webapp data for all provinces to include new translations.
+- Continue Italian peninsula expansion (Regio III–XI).
