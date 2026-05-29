@@ -62,6 +62,7 @@ PROVINCES = [
     ("germania_superior",      "Germania superior",       True),
     ("germania_inferior",      "Germania inferior",       True),
     ("etruria",                "Etruria / Regio VII",     True),
+    ("latium_et_campania",     "Latium et Campania / Regio I", True),
 ]
 
 PROVINCE_SLUGS = [slug for slug, _name, _has_eval in PROVINCES]

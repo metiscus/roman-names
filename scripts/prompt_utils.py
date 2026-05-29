@@ -407,6 +407,123 @@ def get_system_prompt(province):
   ]}]
 }"""
 
+    elif province.lower() in ('latium et campania / regio i', 'latium_et_campania', 'latium et campania'):
+        extra_examples = """
+**LATIUM ET CAMPANIA / REGIO I RULES:**
+1. STAMP FORMULAE — OFFICINA / OPUS DOLIARE: "Of(ficina) X" or "Ex offic(ina) X" means workshop of X — extract X as the person (status "ex officina"). "Opus doliare ex praediis X" — X is the estate owner (extract). "Ex figlinis / de figlinis Y" — Y is a kiln name (adjective like "Caninianis", "Domitianis") — NOT a person; skip it unless followed by a personal genitive. Never extract "Opus", "doliare", "figlinae", "praedia" as names.
+2. MINIMUM FRAGMENT THRESHOLD: Do NOT extract any person when the longest single contiguous visible token (after removing brackets and lacuna markers like [3]) is 4 letters or fewer. Specifically skip: "CRA" (3), "NDI" (3), "E" (1), "[3]ctae" (4), "]ori d[" (3+1), "Afri" (4), "Luri" (4), "Vibi" (4), "Anni" (4), "Atei" (4), "Sert" (4), "Fru" (3), "Um" (2). These 4-letter tokens are typically incomplete pottery-stamp abbreviations, NOT identifiable persons — return persons: []. Also: a raw_name consisting ONLY of a praenomen initial + relationship abbreviation — "M. l.", "A. l.", "P. l.", "L. l.", "M. f.", "L. f.", "P. f." — is NOT a person (it is merely a libertus/filius marker with no name). Exception: collyrium-stamp initials like "M. V. I." where all three letters are name-initials (not "l." or "f.") are extracted per rule 5. A complete recognisable name of 5+ letters may be extracted even if preceded by "]".
+3. GREEK-SCRIPT INSCRIPTIONS: If the text is predominantly or entirely in Greek script (α β γ δ ε ζ η θ etc.), return persons: []. Do not attempt to transliterate or extract Greek names from Greek-script text.
+4. ELECTORAL PROGRAMMATA (POMPEII): "X rogat Y aedilem / duovirum faciat" — extract Y (the candidate). "rogat", "faciat", "oro vos" are verbs, NOT names.
+5. COLLYRIUM / OCULIST STAMPS: Texts of the form "M.V.I. croco(des) ad aspr(itudinem) // M.V.I. stact(um) ad calig(inem)" are oculist stamps listing the same maker's name with different medicament types ("crocodes", "stactum", "diasmyrnes" etc.). Extract the maker **once only**. Product-type words are NOT part of the personal name and must not appear in raw_name.
+6. LIBERTUS/LIBERTA: "Marci liberti Priami" = Primus, freedman of Marcus. Put "libertus/liberta Marci" in status. The freedman's own name (here: Primus) is the cognomen.
+7. SHORT GENITIVE STAMPS: A single genitive phrase like "Furi Placidi" or "Quinti Muci Asclepiadis" is an ownership mark — extract the person in nominative form (Furius Placidus, Quintus Mucius Asclepiades).
+8. "VIRI CLARISSIMI / FEMINAE CLARISSIMAE": Senatorial rank titles — put in status, not cognomen.
+9. INSTITUTIONAL FORMULAE (not persons): "Senatus populusque Romanus" / "SPQR", "IOM" (= Iovi Optimo Maximo), "DM" / "Dis Manibus", "ossa" / "o(ssa)" (= bones, funerary formula) are formulaic phrases, NOT persons. Return persons: []. Also: short all-caps tokens of 4 letters or fewer (COLI, SALI, PHI, IOM, CRA, etc.) that are not clearly expanded Roman names must return persons: [].
+10. MILITARY CENTURIAL DESIGNATIONS: Notations like "|(centuria) III has(tati) post(erioris)", "|(centuria) VI pili prioris", "|(centuria) I principis prioris" are unit/rank identifiers, NOT personal names. Do NOT extract centurial designations as persons. Similarly: legion epithets like "P(iae) F(elicis)", "A(eternae)", "S(everianae)" applied to a legion number are adjectives of that legion, not personal names. Only extract the named soldier and their relatives.
+11. RELATIONSHIP WORDS AS PHANTOM PERSONS: "pater", "mater", "filius", "filia", "frater", "soror" are Latin kinship words. Do NOT extract them as personal names when they appear alone or without a preceding name in the same clause. Examples of wrong extraction: "quod miserrimum est mater fecit" → do NOT extract "mater" as a person (unnamed mother). "] / pater [3]" → do NOT extract "pater" as a person. If the actual person's name is missing (lacuna or not given), return [] for that entry — never substitute the kinship word as the name.
+12. DEITY DATIVES IN VOTIVE INSCRIPTIONS: When an inscription dedicates an object or vow to a deity — keywords: "votum solvit", "v(otum) s(olvit)", "sacrum", "donum dedit", "posuit", "dedicavit" — the deity's name in the dative is NOT a person. Deity datives to skip: Silvano, Herculi, Marti, Mercurio, Apollini, Dianae, Fortunae, Iunoni, Neptuno, Minervae, Veneri, Baccho, Libero. Extract only the human dedicant(s). Example: "Saltuarius votum Silvano solvit libens merito" → extract Saltuarius (dedicant) only; Silvanus is a deity.
+
+**Input:** "Of(ficina) Evani"
+**Output:**
+{
+  "results": [{"id": "LC1", "persons": [
+    {"praenomen": null, "nomen": null, "cognomen": "Evanus", "gender": "male", "status": "ex officina", "raw_name": "Of(ficina) Evani", "fragmentary": false}
+  ]}]
+}
+
+**Input:** "Θεοῖς καταχθονίοις Κλαύδιος Ἐρωτίων καὶ Κλαυδία Ἱππονόη"
+**Output:**
+{
+  "results": [{"id": "LC2", "persons": []}]
+}
+
+**Input:** "CRA"
+**Output:**
+{
+  "results": [{"id": "LC3", "persons": []}]
+}
+
+**Input:** "]nice / [3]ctae / [3] Lurio"
+**Output:**
+{
+  "results": [{"id": "LC4", "persons": [
+    {"praenomen": null, "nomen": null, "cognomen": "Lurio", "gender": "male", "status": null, "raw_name": "[3] Lurio", "fragmentary": true}
+  ]}]
+}
+
+**Input:** "M(arci) V() I() croco(des) / ad a[spr]itu[d(inem)] // M(arci) V() I() stact(um) / ad caligine(m)"
+**Output:**
+{
+  "results": [{"id": "LC5", "persons": [
+    {"praenomen": "Marcus", "nomen": null, "cognomen": null, "gender": "male", "status": "medicus ocularius", "raw_name": "M. V. I.", "fragmentary": false}
+  ]}]
+}
+
+**Input:** "Opus doliare ex praediis Lucili Veri / ex figlinis Caninianis Vibi Pudentis"
+**Output:**
+{
+  "results": [{"id": "LC6", "persons": [
+    {"praenomen": null, "nomen": "Lucilius", "cognomen": "Verus", "gender": "male", "status": "dominus praediorum", "raw_name": "Lucili Veri", "fragmentary": false},
+    {"praenomen": "Vibius", "nomen": null, "cognomen": "Pudens", "gender": "male", "status": "figlinator", "raw_name": "Vibi Pudentis", "fragmentary": false}
+  ]}]
+}
+
+**Input:** "Iulia Augusta Gn(a)eo Domitio Tallo"
+**Output:**
+{
+  "results": [{"id": "LC7", "persons": [
+    {"praenomen": null, "nomen": "Iulia", "cognomen": "Augusta", "gender": "female", "status": "Augusta", "raw_name": "Iulia Augusta", "fragmentary": false},
+    {"praenomen": "Gnaeus", "nomen": "Domitius", "cognomen": "Tallus", "gender": "male", "status": null, "raw_name": "Gn(a)eo Domitio Tallo", "fragmentary": false}
+  ]}]
+}
+
+**Input:** "XVIIII / senatus / populusque / Romanus"
+**Output:**
+{
+  "results": [{"id": "LC8", "persons": []}]
+}
+
+**Input:** "IOM"
+**Output:**
+{
+  "results": [{"id": "LC9", "persons": []}]
+}
+
+**Input:** "Aur(elius) Varzo mil(es) [l]/eg(ionis) II Par(thicae) / |(centuria) IIII p(ili) p(osterioris)"
+**Output:**
+{
+  "results": [{"id": "LC10", "persons": [
+    {"praenomen": null, "nomen": "Aurelius", "cognomen": "Varzo", "gender": "male", "status": "miles legionis II Parthicae, centuria IIII pili posterioris", "raw_name": "Aur(elius) Varzo mil(es) leg(ionis) II Par(thicae)", "fragmentary": false}
+  ]}]
+}
+
+**Input:** "] / pater [3] / [3]no filio / [dulci]ssimo et / [3]mo fec(it)"
+**Output:**
+{
+  "results": [{"id": "LC11", "persons": []}]
+}
+
+**Input:** "Communis C(ai) Petroni [l(ibertus?)] / Saltuarius votum / Silvano solvit libe(n)s / merito"
+**Output:**
+{
+  "results": [{"id": "LC12", "persons": [
+    {"praenomen": null, "nomen": "Petronius", "cognomen": "Communis", "gender": "male", "status": "libertus", "raw_name": "C. Petroni [l.] Communis", "fragmentary": false},
+    {"praenomen": null, "nomen": null, "cognomen": "Saltuarius", "gender": "male", "status": null, "raw_name": "Saltuarius", "fragmentary": false}
+  ]}]
+}
+
+**Input:** "Vibi"
+**Output:**
+{
+  "results": [{"id": "LC13", "persons": []}]
+}
+
+**Input:** "M. l."
+**Output:**
+{
+  "results": [{"id": "LC14", "persons": []}]
+}"""
+
     elif province.lower() in ('gallia narbonensis', 'belgica', 'aquitani(c)a',
                               'germania superior', 'germania inferior'):
         extra_examples = """

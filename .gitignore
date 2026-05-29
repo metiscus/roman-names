@@ -21,6 +21,7 @@ data/output/*
 !data/output/mauretania_caesariensis_ner_full.jsonl
 !data/output/creta_et_cyrenaica_ner_full.jsonl
 !data/output/etruria_ner_full.jsonl
+!data/output/latium_et_campania_ner_full.jsonl
 temp/
 
 # Python
