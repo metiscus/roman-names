@@ -1,11 +1,11 @@
 # Roman Name Attestations — Webapp
 
-A static map visualization of Roman personal name attestations extracted from Latin inscriptions across eight provinces of the Roman Empire.
+A static map visualization of Roman personal name attestations extracted from Latin inscriptions across 27 provinces of the Roman Empire.
 
 ## Features
 
 - **Interactive Map:** Leaflet with DARE Roman-period base tiles. Marker clustering handles large corpora efficiently.
-- **Province Selector:** Switch between eight provinces; map re-centers and reloads data automatically.
+- **Province Selector:** Switch between all 27 provinces; map re-centers and reloads data automatically.
 - **Name Search & Filtering:** Real-time search by praenomen/nomen/cognomen. Filter by gender, cluster confidence, and special categories (Imperial families, Deities).
 - **Prosopographical Clusters:** Attestations identified as likely the same individual are linked across inscriptions.
 - **Enriched Popups:** Each inscription popup shows:
@@ -19,20 +19,39 @@ A static map visualization of Roman personal name attestations extracted from La
 
 ## Data
 
-| Province | Inscriptions | Attestations | Eval F1 |
-|---|---|---|---|
-| Africa Proconsularis | 22,754 | 34,788 | 0.77 |
-| Britannia | 6,966 | 9,094 | 0.86 |
-| Dalmatia | 5,928 | — | — |
-| Dacia | 3,016 | 5,452 | 0.85 |
-| Noricum | 2,737 | — | — |
-| Pannonia inferior | 2,390 | 4,937 | 0.90 |
-| Pannonia superior | 4,127 | — | — |
-| Moesia superior | 1,151 | — | — |
+| Province | Inscriptions | Eval F1 |
+|---|---|---|
+| Aegyptus | 553 | — |
+| Africa Proconsularis | 23,509 | 0.74 |
+| Apulia et Calabria / Regio II | 4,199 | 0.87 |
+| Aquitanica | 12,801 | — |
+| Baetica | 4,315 | — |
+| Britannia | 6,419 | 0.76 |
+| Corsica | 98 | — |
+| Creta et Cyrenaica | 203 | — |
+| Dacia | 3,162 | 0.77 |
+| Dalmatia | 6,054 | 0.75 |
+| Etruria / Regio VII | 7,500 | — |
+| Gallia Narbonensis | 15,410 | 0.70 |
+| Hispania citerior | 11,127 | 0.76 |
+| Latium et Campania / Regio I | 27,789 | — |
+| Lusitania | 4,966 | 0.64 |
+| Mauretania Caesariensis | 4,242 | 0.85 |
+| Mauretania Tingitana | 560 | — |
+| Moesia inferior | 1,907 | — |
+| Moesia superior | 1,156 | 0.79 |
+| Noricum | 2,787 | 0.78 |
+| Numidia | 13,905 | 0.84 |
+| Pannonia inferior | 2,422 | 0.76 |
+| Pannonia superior | 4,187 | 0.75 |
+| Picenum / Regio V | 1,390 | — |
+| Sardinia | 1,904 | — |
+| Sicilia | 3,549 | — |
+| Venetia et Histria / Regio X | 9,888 | — |
 
-NER extracted using Gemini 2.5 Flash with structured output. Validated against [LIRE v3.0](https://doi.org/10.5281/zenodo.8431452) ground truth. Source: [EDCS 2022](https://doi.org/10.5281/zenodo.7072337).
+NER extracted using Gemini 2.5 Flash-Lite with structured output. Validated against [LIRE v3.0](https://doi.org/10.5281/zenodo.8431452) ground truth (Gallia Narbonensis validated against EDH). Source: [EDCS 2022](https://doi.org/10.5281/zenodo.7072337). Provinces marked "—" have not been formally evaluated against a ground-truth set.
 
-Popup enrichment data (interpretive text, publication refs, external links) sourced from [LIRE v3.0](https://doi.org/10.5281/zenodo.8431452). English translations generated with Gemini 2.5 Flash via `scripts/11_translate_inscriptions.py`.
+Popup enrichment data (interpretive text, publication refs, external links) sourced from [LIRE v3.0](https://doi.org/10.5281/zenodo.8431452). English translations generated with Gemini 2.5 Flash-Lite via `scripts/11_translate_inscriptions.py`.
 
 ## Local Development
 
@@ -64,7 +83,7 @@ python scripts/09_build_webapp_data.py --province africa_proconsularis
 ```
 
 Repeat `08` and `09` for each province slug:
-`africa_proconsularis` · `britannia` · `dalmatia` · `dacia` · `noricum` · `pannonia_inferior` · `pannonia_superior` · `moesia_superior`
+`africa_proconsularis` · `aegyptus` · `apulia_et_calabria` · `aquitanica` · `baetica` · `britannia` · `corsica` · `creta_et_cyrenaica` · `dacia` · `dalmatia` · `etruria` · `gallia_narbonensis` · `hispania_citerior` · `latium_et_campania` · `lusitania` · `mauretania_caesariensis` · `mauretania_tingitana` · `moesia_inferior` · `moesia_superior` · `noricum` · `numidia` · `pannonia_inferior` · `pannonia_superior` · `picenum` · `sardinia` · `sicilia` · `venetia_et_histria`
 
 ### Adding English translations (optional)
 
@@ -106,8 +125,8 @@ Enrichment JSON fields per record:
 | `tm_uri` | LIRE | Trismegistos full URI |
 | `photo_url` | LIRE (photo field) | CIL ACE image URL (link-out only) |
 | `lupa_url` | LIRE (external_image_uris) | Ubi Erat Lupa page URL |
-| `translation` | Gemini 2.5 Flash | English translation |
-| `summary` | Gemini 2.5 Flash | One-sentence description |
+| `translation` | Gemini 2.5 Flash-Lite | English translation |
+| `summary` | Gemini 2.5 Flash-Lite | One-sentence description |
 
 `data/lire_enrichment.json` is an intermediate build artifact (~19MB) produced by `10_build_lire_lookup.py`; it does not need to be committed.
 
