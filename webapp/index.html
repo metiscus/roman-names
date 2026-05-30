@@ -224,8 +224,8 @@
             <div class="sidebar-header">
                 <h1 style="display:flex; align-items:center">Roman Names <button class="btn-about" id="about-btn" title="About this map">?</button></h1>
                 <select id="province-select">
-                    <option value="africa_proconsularis" selected>Africa Proconsularis</option>
-                    <option value="all">All Regions</option>
+                    <option value="africa_proconsularis">Africa Proconsularis</option>
+                    <option value="all" selected>All Regions</option>
                     <option value="numidia">Numidia</option>
                     <option value="britannia">Britannia</option>
                     <option value="dalmatia">Dalmatia</option>
@@ -360,7 +360,7 @@
             venetia_et_histria:      { label: 'Venetia et Histria / Regio X',  center: [45.8, 12.5], zoom: 7 },
         };
 
-        let currentProvince = 'africa_proconsularis';
+        let currentProvince = 'all';
         let map, markers, allData, clustersLookup;
         let activeClusterId = null;
         let activeGeoIds = null;
