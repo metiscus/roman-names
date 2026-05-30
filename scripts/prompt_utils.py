@@ -832,6 +832,183 @@ def get_system_prompt(province):
   ]}]
 }"""
 
+    elif province.lower() in ('picenum / regio v', 'picenum'):
+        extra_examples = """
+**PICENUM / REGIO V RULES:**
+1. STAMP FORMULAE — OFFICINA / OPUS DOLIARE: "Of(ficina) X" or "Ex offic(ina) X" where X is a PERSONAL GENITIVE (ending -i, -ae, -is) → extract X as the workshop owner (status "ex officina"). But "Officina [adjective-ana/iana]" (e.g. "Officina Domitiana", "figlinae Cinnianae") uses an estate-name adjective, NOT a personal genitive → return persons: []. "Opus doliare ex praediis domini nostri Augusti" / "Ex praediis Imperatoris" → imperial administrative formula → return persons: []. "Opus doliare ex praediis X" where X is a named private person → extract X.
+2. CIVIC COLLECTIVE STAMPS — "FIRMANI" AND DEMONYMS: Nouns ending in "-ani" that are civic demonyms — "Firmani" (= citizens of Firmum), "Asculani" (= citizens of Asculum) — are collective municipal stamps, NOT personal names → return persons: []. Similarly, group votive formulae like "Annalenorum Herculi dederunt libentes merito" list a collective (the Annaleni) giving an offering to a deity — no individual is named → return persons: [].
+3. PANSIANA STAMPS: "Pansiana" / "Pan(siana)" / "Pansian(a)" is a figlinae estate-name adjective, NOT a personal name. Return persons: [] for records consisting solely of an imperial genitive + "Pansiana" (e.g. "Tiberi Pansiana", "Vesp(asiani) Pansian(a)"). The emperor genitive is an administrative date formula, not a person to extract.
+4. MINIMUM FRAGMENT THRESHOLD: Do NOT extract any person when the longest single visible token is 4 letters or fewer after removing brackets and lacuna markers. Short stamps like "Feri Po", "ATI", "EIV", "LAL", "MSSAR", "Mar" → return persons: []. Exception: a complete standalone personal name of exactly 4 letters (e.g. "Geta", "Aper") may be extracted only when it is clearly a name in an otherwise legible inscription context, not an isolated stamp abbreviation.
+5. SHORT GENITIVE OWNERSHIP STAMPS: A genitive phrase naming an owner — "Fusci" (= Fuscus), "Cai Clodi Sabini" (= Caius Clodius Sabinus), "Luci Munati Crescentis" (= Lucius Munatius Crescens) — is a valid ownership stamp; extract the person in nominative form.
+6. LIBERTUS/LIBERTA PATRON PRAENOMEN: In the formula "[patron initial]. l(ibertus/a)" — e.g. "A(uli) l(ibertus)" or "L(uci) l(ibertae)" — the letter before "l." is the PATRON'S praenomen in genitive. It is NOT the freed person's own praenomen. Example: "Frontinius A(uli) l(ibertus) Acer" → nomen=Frontinius, cognomen=Acer, status="Auli libertus". DO NOT put "Aulus" as the person's praenomen. Also: "Sicinia mulieris liberta Calliopa" — "mulieris" (or the pipe `|` character) = freed by an unnamed woman → nomen=Sicinia, cognomen=Calliopa, status="liberta mulieris".
+7. VELINA TRIBE: Picentine cities (Firmum, Asculum, Hatria, Interamna) enrolled citizens in the Velina tribe. "Velina" appearing between a filiation marker (f., fil.) and the cognomen is the tribe abbreviation — record as "tribus: Velina" in status, NOT as a nomen.
+8. INSTITUTIONAL FORMULAE (not persons): Legion names ("Legio XX", "Leg. II Aug.", "coh. I Nor."), "Senatus populusque Romanus" / "SPQR", "Iovi Optimo Maximo" / "IOM", "Dis Manibus", collective civic bodies ("decuriones et plebs", "res publica", "ordo") are NOT personal names.
+9. DEITY DATIVES IN VOTIVE INSCRIPTIONS: Deity names in dative with votive keywords ("sacrum", "votum solvit", "v.s.l.m.", "dederunt", "donum dedit") are NOT persons. Extract only the human dedicant(s). Deities common in Picenum include: Vertumnus (Vertumno), Hercules (Herculi), Iuno (Iunoni), Nymphae (Nymphis), Sol (Soli), Isis (Isidi), Fortuna (Fortunae). "Iunoni Nonia" = dedication to Juno by Nonia → extract Nonia only. "Vertumno Augusto sacrum" = dedication to Vertumnus (deity) — "Augusto" here is an epitheton of the deity, NOT a person named Augustus → return [] for Vertumnus, extract only the human dedicant. "Nymphis Aug(ustis) votum posuit" → extract only the human who made the vow.
+11. GENITIVE CO-OWNERSHIP STAMPS: Two or more genitives on separate lines without a connecting word indicate co-owners — extract each as a SEPARATE person. "Hortesiae / Alcis" = two owners: Hortesia (female) and Alcus (male). Do NOT merge into one person.
+10. MULTI-PERSON LIBERTI INSCRIPTIONS: When multiple freedpeople of the same patron are listed in sequence (e.g. "Lucius Vettius L. l. Menophilus / Lucius Vettius L. l. Crinus / Vettia L. l. Ge / Vettia L. l. Hilara"), each is a SEPARATE person sharing the patron's nomen. Extract each individually.
+
+**Input:** "Firmani"
+**Output:**
+{
+  "results": [{"id": "PI1", "persons": []}]
+}
+
+**Input:** "Pansiana"
+**Output:**
+{
+  "results": [{"id": "PI2", "persons": []}]
+}
+
+**Input:** "Cai Clodi Sabini"
+**Output:**
+{
+  "results": [{"id": "PI3", "persons": [
+    {"praenomen": "Caius", "nomen": "Clodius", "cognomen": "Sabinus", "gender": "male", "status": null, "raw_name": "Cai Clodi Sabini", "fragmentary": false}
+  ]}]
+}
+
+**Input:** "Luci Munati Crescentis"
+**Output:**
+{
+  "results": [{"id": "PI4", "persons": [
+    {"praenomen": "Lucius", "nomen": "Munatius", "cognomen": "Crescens", "gender": "male", "status": null, "raw_name": "Luci Munati Crescentis", "fragmentary": false}
+  ]}]
+}
+
+**Input:** "Sicinia mulieris liberta Calliopa"
+**Output:**
+{
+  "results": [{"id": "PI5", "persons": [
+    {"praenomen": null, "nomen": "Sicinia", "cognomen": "Calliopa", "gender": "female", "status": "liberta mulieris", "raw_name": "Sicinia mulieris liberta Calliopa", "fragmentary": false}
+  ]}]
+}
+
+**Input:** "Lucio Volcacio Quinti filio Velina Primo praefecto cohortis I Noricorum in Pannonia praefecto ripae Danuvii et civitatium duarum"
+**Output:**
+{
+  "results": [{"id": "PI6", "persons": [
+    {"praenomen": "Lucius", "nomen": "Volcacius", "cognomen": "Primus", "gender": "male", "status": "Quinti filius, tribus: Velina, praefectus cohortis I Noricorum in Pannonia, praefectus ripae Danuvii et civitatium duarum", "raw_name": "Lucio Volcacio Quinti filio Velina Primo", "fragmentary": false}
+  ]}]
+}
+
+**Input:** "Officina Domitiana"
+**Output:**
+{
+  "results": [{"id": "PI7", "persons": []}]
+}
+
+**Input:** "Ex praediis domini nostri Augusti"
+**Output:**
+{
+  "results": [{"id": "PI8", "persons": []}]
+}
+
+**Input:** "Annalenorum Herculi dederunt libentes merito"
+**Output:**
+{
+  "results": [{"id": "PI9", "persons": []}]
+}
+
+**Input:** "D(is) M(anibus) / Lucius Vettius L(uci) l(ibertus) Menophilus / Lucius Vettius L(uci) l(ibertus) Crinus / Vettia L(uci) l(iberta) Ge(mella) / Vettia L(uci) l(iberta) Hilara / in agro pedes XVI"
+**Output:**
+{
+  "results": [{"id": "PI10", "persons": [
+    {"praenomen": "Lucius", "nomen": "Vettius", "cognomen": "Menophilus", "gender": "male", "status": "libertus Luci", "raw_name": "Lucius Vettius L. l. Menophilus", "fragmentary": false},
+    {"praenomen": "Lucius", "nomen": "Vettius", "cognomen": "Crinus", "gender": "male", "status": "libertus Luci", "raw_name": "Lucius Vettius L. l. Crinus", "fragmentary": false},
+    {"praenomen": null, "nomen": "Vettia", "cognomen": "Gemella", "gender": "female", "status": "liberta Luci", "raw_name": "Vettia L. l. Ge(mella)", "fragmentary": false},
+    {"praenomen": null, "nomen": "Vettia", "cognomen": "Hilara", "gender": "female", "status": "liberta Luci", "raw_name": "Vettia L. l. Hilara", "fragmentary": false}
+  ]}]
+}
+
+**Input:** "Iunoni / Nonia / [3]"
+**Output:**
+{
+  "results": [{"id": "PI11", "persons": [
+    {"praenomen": null, "nomen": "Nonia", "cognomen": null, "gender": "female", "status": null, "raw_name": "Nonia", "fragmentary": false}
+  ]}]
+}
+
+**Input:** "Vertumno / Augusto sacrum / Karus AI[3] / disp(ensator) [3] / v(otum) s(olvit)"
+**Output:**
+{
+  "results": [{"id": "PI15", "persons": [
+    {"praenomen": null, "nomen": null, "cognomen": "Karus", "gender": "male", "status": "dispensator, votum solvit", "raw_name": "Karus AI[3]", "fragmentary": true}
+  ]}]
+}
+
+**Input:** "Hortesiae / Alcis"
+**Output:**
+{
+  "results": [{"id": "PI16", "persons": [
+    {"praenomen": null, "nomen": "Hortesia", "cognomen": null, "gender": "female", "status": null, "raw_name": "Hortesiae", "fragmentary": false},
+    {"praenomen": null, "nomen": null, "cognomen": "Alcus", "gender": "male", "status": null, "raw_name": "Alcis", "fragmentary": false}
+  ]}]
+}
+
+**Input:** "m(enses) VIII d(ies) XV / Scaepia / Calliope / mater / b(ene) m(erenti)"
+**Output:**
+{
+  "results": [{"id": "PI17", "persons": [
+    {"praenomen": null, "nomen": "Scaepia", "cognomen": "Calliope", "gender": "female", "status": "mater, bene merenti", "raw_name": "Scaepia Calliope", "fragmentary": false}
+  ]}]
+}
+
+**Input:** "D(is) M(anibus) / Calusiae / Ianuariae / L(ucius) Voconius / Venustus / et Calusia Ursa / soror / b(ene) m(erenti)"
+**Output:**
+{
+  "results": [{"id": "PI18", "persons": [
+    {"praenomen": null, "nomen": "Calusia", "cognomen": "Ianuaria", "gender": "female", "status": null, "raw_name": "Calusiae Ianuariae", "fragmentary": false},
+    {"praenomen": "Lucius", "nomen": "Voconius", "cognomen": "Venustus", "gender": "male", "status": null, "raw_name": "L. Voconius Venustus", "fragmentary": false},
+    {"praenomen": null, "nomen": "Calusia", "cognomen": "Ursa", "gender": "female", "status": "soror, bene merenti", "raw_name": "Calusia Ursa", "fragmentary": false}
+  ]}]
+}
+
+**Input:** "D(is) M(anibus) / C(ai) Calu[si] / Victor(is) / Calusia Ursa / soror et / Voconius Venustus / b(ene) m(erenti)"
+**Output:**
+{
+  "results": [{"id": "PI19", "persons": [
+    {"praenomen": "Caius", "nomen": "Calusius", "cognomen": "Victor", "gender": "male", "status": null, "raw_name": "C. Calusi Victoris", "fragmentary": true},
+    {"praenomen": null, "nomen": "Calusia", "cognomen": "Ursa", "gender": "female", "status": "soror", "raw_name": "Calusia Ursa", "fragmentary": false},
+    {"praenomen": null, "nomen": "Voconius", "cognomen": "Venustus", "gender": "male", "status": "bene merenti", "raw_name": "Voconius Venustus", "fragmentary": false}
+  ]}]
+}
+
+**Input:** "D(is) M(anibus) / Metrodo/rae coniu/gi b(ene) m(erenti) / Ofellius / Caes(aris) n(ostri) / fecit"
+**Output:**
+{
+  "results": [{"id": "PI20", "persons": [
+    {"praenomen": null, "nomen": null, "cognomen": "Metrodora", "gender": "female", "status": "coniugi bene merenti", "raw_name": "Metrodor/ae", "fragmentary": false},
+    {"praenomen": null, "nomen": null, "cognomen": "Ofellius", "gender": "male", "status": "Caesaris nostri (servus/libertus)", "raw_name": "Ofellius Caes. n.", "fragmentary": false}
+  ]}]
+}
+
+**Input:** "Lucius Modiarius Luci libertus Hera / Nevia Publi liberta Crysarium"
+**Output:**
+{
+  "results": [{"id": "PI12", "persons": [
+    {"praenomen": "Lucius", "nomen": "Modiarius", "cognomen": "Hera", "gender": "male", "status": "libertus Luci", "raw_name": "Lucius Modiarius Luci libertus Hera", "fragmentary": false},
+    {"praenomen": null, "nomen": "Nevia", "cognomen": "Crysarium", "gender": "female", "status": "liberta Publi", "raw_name": "Nevia Publi liberta Crysarium", "fragmentary": false}
+  ]}]
+}
+
+**Input:** "Coniugis Firminae / bono reddito dea(e) Salutis / Frontinius / A(uli) l(ibertus) Acer / h(a)ec tibi dona dedit"
+**Output:**
+{
+  "results": [{"id": "PI13", "persons": [
+    {"praenomen": null, "nomen": null, "cognomen": "Firmina", "gender": "female", "status": "coniugis bono reddito deae Salutis", "raw_name": "Firminae", "fragmentary": false},
+    {"praenomen": null, "nomen": "Frontinius", "cognomen": "Acer", "gender": "male", "status": "Auli libertus", "raw_name": "Frontinius A(uli) l(ibertus) Acer", "fragmentary": false}
+  ]}]
+}
+
+**Input:** "D(is) M(anibus) / Labieno / Renato / Labiena / Procula / mater / b(ene) m(erenti)"
+**Output:**
+{
+  "results": [{"id": "PI14", "persons": [
+    {"praenomen": null, "nomen": "Labienus", "cognomen": "Renatus", "gender": "male", "status": null, "raw_name": "Labieno Renato", "fragmentary": false},
+    {"praenomen": null, "nomen": "Labiena", "cognomen": "Procula", "gender": "female", "status": "mater, bene merenti", "raw_name": "Labiena Procula", "fragmentary": false}
+  ]}]
+}"""
+
     elif province.lower() in ('venetia et histria / regio x', 'venetia_et_histria', 'venetia et histria'):
         extra_examples = """
 **VENETIA ET HISTRIA / REGIO X RULES:**

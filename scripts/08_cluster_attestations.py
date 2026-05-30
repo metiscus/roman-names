@@ -15,16 +15,20 @@ and no cluster_id). is_imperial and fragmentary records ARE included with
 flags propagated through.
 
 Match key:
-- Primary pool (has nomen + cognomen): 6-char-prefix match on both.
-- Single-cognomen pool (no nomen): 6-char-prefix on cognomen, with the
-  stricter requirement that findspot text matches exactly. Single names
-  collide too easily across the province to allow looser matching.
+- Primary pool (has nomen + cognomen): 6-char-prefix match on both names 
+  AFTER Latin orthographic normalization (ae->e, v->u, h-stripping, etc.).
+- Single-cognomen pool (no nomen): Exact match on normalized cognomen, 
+  with the stricter requirement that findspot text matches exactly. 
+  Single names collide too easily across the province to allow looser matching.
 
 Compatibility checks within a bucket (all must pass for an edge):
 - Praenomen: if both present and they differ (after spelling normalization
   Caius/Gaius etc.), no edge.
 - Location: same findspot text (case-insensitive) OR coordinates within
-  50km. Permissive if one or both have no location data.
+  a threshold. 
+  - Standard threshold: 50km.
+  - High-status threshold: 150km (for mobile elites like legates, proconsuls, 
+    governors, etc., identified via keywords in the status field).
 - Date: date_from/date_to ranges must overlap. Permissive if either side
   has no date data.
 
@@ -48,8 +52,15 @@ from collections import defaultdict
 import pandas as pd
 
 KM_THRESHOLD = 50.0
+KM_THRESHOLD_HIGH_STATUS = 150.0
 PREFIX_LEN = 6
 ANTONINIANA_YEAR = 212
+
+HIGH_STATUS_KEYWORDS = {
+    'legat', 'procurator', 'proconsul', 'praefect', 'hegemon',
+    'governor', 'praeses', 'consul', 'v(ir) p(erfectissimus)',
+    'v(ir) e(gregius)', 'v(ir) c(larissimus)'
+}
 
 # Praenomen spelling-variant normalization. We treat e.g. Caius and Gaius
 # as the same praenomen for compatibility checks.
@@ -58,6 +69,33 @@ PRAENOMEN_NORM = {
     'caia': 'gaia',
     'caeso': 'kaeso',
 }
+
+
+def normalize_latin_orthography(s):
+    """Normalize common Latin epigraphic spelling variants."""
+    if not s:
+        return None
+    s = str(s).lower().strip()
+    s = s.replace('ae', 'e').replace('oe', 'e')
+    s = s.replace('y', 'i')
+    s = s.replace('ph', 'f').replace('th', 't').replace('ch', 'c')
+    s = s.replace('qu', 'c').replace('k', 'c')
+    s = s.replace('v', 'u').replace('j', 'i')
+    s = s.replace('h', '')
+
+    # Deduplicate consecutive identical consonants (e.g., 'll' -> 'l')
+    res = []
+    vowels = 'aeiou'
+    for char in s:
+        if not res or char != res[-1] or char in vowels:
+            res.append(char)
+    return "".join(res)
+
+
+def is_high_status(record):
+    """Check if an individual holds a high-status mobile office."""
+    status = record.get('status_norm') or ''
+    return any(kw in status for kw in HIGH_STATUS_KEYWORDS)
 
 
 class UnionFind:
@@ -134,11 +172,12 @@ def compatible_location(r1, r2, require_findspot_exact=False):
             return False
         return fs1.lower().strip() == fs2.lower().strip()
 
-    lat1, lon1 = r1.get('lat'), r2.get('lat')  # placeholder, real check below
     lat1, lon1 = r1.get('lat'), r1.get('lon')
     lat2, lon2 = r2.get('lat'), r2.get('lon')
     if lat1 is not None and lon1 is not None and lat2 is not None and lon2 is not None:
-        return haversine_km(lat1, lon1, lat2, lon2) <= KM_THRESHOLD
+        dist = haversine_km(lat1, lon1, lat2, lon2)
+        threshold = KM_THRESHOLD_HIGH_STATUS if (is_high_status(r1) or is_high_status(r2)) else KM_THRESHOLD
+        return dist <= threshold
     fs1, fs2 = r1.get('findspot'), r2.get('findspot')
     if fs1 and fs2:
         return fs1.lower().strip() == fs2.lower().strip()
@@ -207,6 +246,7 @@ def build_records(universe_df):
         cognomen = row.get('cognomen') if pd.notna(row.get('cognomen')) else None
         praenomen = row.get('praenomen') if pd.notna(row.get('praenomen')) else None
         findspot = row.get('findspot') if pd.notna(row.get('findspot')) else None
+        status = row.get('status') if pd.notna(row.get('status')) else None
 
         def _coord(x):
             if x is None or (isinstance(x, float) and math.isnan(x)):
@@ -226,9 +266,13 @@ def build_records(universe_df):
             'cognomen': cognomen,
             'nomen_prefix': prefix(nomen),
             'cognomen_prefix': prefix(cognomen),
+            'nomen_norm_prefix': prefix(normalize_latin_orthography(nomen)),
+            'cognomen_norm_prefix': prefix(normalize_latin_orthography(cognomen)),
             'lat': _coord(row.get('latitude')),
             'lon': _coord(row.get('longitude')),
             'findspot': str(findspot).strip() if findspot else None,
+            'status': status,
+            'status_norm': str(status).lower() if status else None,
             'date_from_year': parse_year(row.get('date_from')),
             'date_to_year': parse_year(row.get('date_to')),
             'is_imperial': bool(row.get('is_imperial', False)),
@@ -296,28 +340,26 @@ def main(province='africa_proconsularis'):
 
     records = build_records(universe)
 
-    has_full = [i for i, r in enumerate(records) if r['nomen_prefix'] and r['cognomen_prefix']]
-    single_cog = [i for i, r in enumerate(records) if not r['nomen_prefix'] and r['cognomen_prefix']]
-    no_key = [i for i, r in enumerate(records) if not r['cognomen_prefix']]
+    has_full = [i for i, r in enumerate(records) if r['nomen_norm_prefix'] and r['cognomen_norm_prefix']]
+    single_cog = [i for i, r in enumerate(records) if not r['nomen_norm_prefix'] and r['cognomen_norm_prefix']]
+    no_key = [i for i, r in enumerate(records) if not r['cognomen_norm_prefix']]
     print(f"    has nomen+cognomen: {len(has_full)}")
     print(f"    single cognomen:    {len(single_cog)}")
     print(f"    no usable key:      {len(no_key)}  (each becomes own singleton)")
 
-    print("Clustering main pool (nomen+cognomen prefix)...")
+    print("Clustering main pool (normalized nomen+cognomen prefix)...")
     main_clusters = cluster_pool(
         records, has_full,
-        key_fn=lambda r: (r['nomen_prefix'], r['cognomen_prefix']),
+        key_fn=lambda r: (r['nomen_norm_prefix'], r['cognomen_norm_prefix']),
     )
 
-    print("Clustering single-cognomen pool (findspot-strict, exact cognomen match)...")
-    # Exact cognomen match (not prefix) — the 6-char prefix conflates Victor /
-    # Victorinus / Victorina etc. (all share "victor"). In the main pool the
-    # nomen discriminates between derivatives, but here cognomen is the only
-    # signal so we tighten to exact match. Case-variant losses (Victor / Victori)
-    # are an acceptable tradeoff — single-name clusters are already low-confidence.
+    print("Clustering single-cognomen pool (findspot-strict, exact normalized cognomen match)...")
+    # Exact normalized cognomen match (not prefix) — we use the full normalized
+    # string as the key to avoid prefix collisions on short names, but keep
+    # the findspot strictness.
     cog_clusters = cluster_pool(
         records, single_cog,
-        key_fn=lambda r: (str(r['cognomen']).strip().lower(),) if r['cognomen'] else None,
+        key_fn=lambda r: (normalize_latin_orthography(r['cognomen']),) if r['cognomen'] else None,
         require_findspot_exact=True,
     )
 
