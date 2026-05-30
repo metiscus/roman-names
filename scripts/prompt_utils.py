@@ -832,6 +832,51 @@ def get_system_prompt(province):
   ]}]
 }"""
 
+    elif province.lower() in ('venetia et histria / regio x', 'venetia_et_histria', 'venetia et histria'):
+        extra_examples = """
+**VENETIA ET HISTRIA / REGIO X RULES:**
+1. FIGLINAE (BRICK/TILE) STAMP FORMULAE: Many inscriptions from this region are stamps on bricks or tiles from the Pansiana figlinae near Aquileia. The formula is `[emperor genitive] + Pansiana/Pansian(a)/Pan(siana)` — e.g. "Ti(beri) Pansiana", "Neronis Cla(udi) Pan(siana)", "Vesp(asiani) Caes(aris) Pansian(a)". "Pansiana" is the workshop name (an adjective meaning "of the Pansian estate"), NOT a personal name. Do NOT extract "Pansiana" or "Pansianus" as a person. The emperor genitive indicates the reign period, not a person to extract (emperors appearing in administrative formulae are already excluded as imperial names). Return persons: [] for pure figlinae stamp formulae.
+2. VENETIC SUBSTRATE NAMES: Pre-Roman Venetic single names (e.g. Ostiala, Egelaste, Fugia, Voltiomno) appear as cognomen-only. Treat like Illyrian single names: praenomen=null, nomen=null.
+3. SINGLE-GENITIVE STAMPS: A single genitive like "Strobili", "Verecundi", "Pacati", "Lupati" is a valid ownership stamp — extract the person in nominative form (Strobilus, Verecundus, Pacatus, Lupatus) as cognomen-only.
+4. MINIMUM FRAGMENT THRESHOLD: Do NOT extract a person when every visible token is 4 letters or fewer (after removing brackets and lacuna markers). Single-letter abbreviations like "N()", "M()", "P()", "An()" standing alone are NOT extractable persons — return persons: []. A raw_name consisting only of a praenomen initial + "l." or "f." (e.g. "M. l.", "T. f.") is NOT a person.
+5. FILIATION PRAENOMEN: When a praenomen appears in filiation context — e.g. "T(iti) f(iliae)", "L(uci) f(ilii)" — that praenomen belongs to the FATHER, not the subject. Example: "Coeliae T(iti) f(iliae) Fuctienae uxori" → subject is Coelia Fuctienae (female), status="filia Titi, uxor". Do NOT assign "Titus" as the subject's praenomen.
+6. POETIC / EPITAPH FORMULAE WITHOUT NAMES: Texts consisting entirely of Latin phrases with no personal name (e.g. "amicorum meorum", "quid plura dicam", "inter flores iacet") should return persons: []. Do not extract fragments of such phrases as names.
+
+**Input:** "Ti(beri) Pansian(a)"
+**Output:**
+{
+  "results": [{"id": "VH1", "persons": []}]
+}
+
+**Input:** "Neronis Cla(udi) Pan(siana)"
+**Output:**
+{
+  "results": [{"id": "VH2", "persons": []}]
+}
+
+**Input:** "Strobili"
+**Output:**
+{
+  "results": [{"id": "VH3", "persons": [
+    {"praenomen": null, "nomen": null, "cognomen": "Strobilus", "gender": "male", "status": null, "raw_name": "Strobili", "fragmentary": false}
+  ]}]
+}
+
+**Input:** "Coeliae T(iti) f(iliae) Fuctienae uxori / P(ublius) Cutius Rufus"
+**Output:**
+{
+  "results": [{"id": "VH4", "persons": [
+    {"praenomen": null, "nomen": "Coelia", "cognomen": "Fuctienae", "gender": "female", "status": "filia Titi, uxor", "raw_name": "Coeliae T. f. Fuctienae uxori", "fragmentary": false},
+    {"praenomen": "Publius", "nomen": "Cutius", "cognomen": "Rufus", "gender": "male", "status": null, "raw_name": "P. Cutius Rufus", "fragmentary": false}
+  ]}]
+}
+
+**Input:** "N()"
+**Output:**
+{
+  "results": [{"id": "VH5", "persons": []}]
+}"""
+
     elif province.lower() in ('gallia narbonensis', 'belgica', 'aquitani(c)a',
                               'germania superior', 'germania inferior'):
         extra_examples = """

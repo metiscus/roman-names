@@ -34,6 +34,28 @@ because `06_run` resumes by ID and would otherwise no-op on old output);
 `--resume` appends. The supervised step-by-step below is for first-time runs on
 a new province or when debugging a systematic error pattern.
 
+### Token filter (`--token-filter`)
+
+Both `run_pipeline.py` and `06_run_full_corpus.py` accept `--token-filter`. When
+enabled, records whose longest effective token is ≤ 4 characters (after expanding
+EDCS abbreviations and stripping lacunae) are skipped before any API call. This
+eliminates unintelligible stamps ("SE", "SERI"), pure measurement texts, and
+heavily fragmented records that the model would return `[]` for anyway.
+
+**When to use it:** Stamp-heavy Italian provinces — confirmed useful for Venetia
+et Histria (Regio X), which has ~2,980 `tituli fabricationis` stamp records. The
+filter is **off by default** to preserve reproducibility for provinces already run
+without it; enabling it on a rerun would change which records are processed and
+make the output non-comparable to the original.
+
+```bash
+python3 scripts/06_run_full_corpus.py --province "Venetia et Histria / Regio X" \
+    --model gemini-flash-lite-latest --token-filter --workers 20
+```
+
+Rule of thumb: if the gut-check spot-check shows >5% errors from sub-4-character
+tokens being extracted as persons, enable `--token-filter` for that province.
+
 ---
 
 ## Environment
