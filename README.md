@@ -3,7 +3,7 @@
 Automated extraction and classification of personal names from the corpus of Latin inscriptions (*Epigraphik-Datenbank Clauss / Slaby*) using LLM-based Named Entity Recognition.
 
 ## Project Goal
-Produce a structured, openly published index of personal names from Roman inscriptions, starting with provinces currently lacking dense prosopographical coverage. The pilot province is **Africa Proconsularis**.
+Produce a structured, openly published index of personal names from Roman inscriptions across 27 provinces of the Roman Empire.
 
 The pipeline uses **Gemini 2.5 Flash-Lite** (thinking disabled, batch size 15, up to 20 concurrent workers) with structured JSON output to:
 1. Identify individuals in raw Latin inscription text.
@@ -22,11 +22,11 @@ The pipeline uses **Gemini 2.5 Flash-Lite** (thinking disabled, batch size 15, u
 - [x] Data acquisition: EDCS 465MB, LIRE v3.0 474MB (upgraded from v1.2; 182k → ground-truth records).
 - [x] Evaluation set generated from LIRE ground truth per province.
 - [x] NER pipeline validated — see results below.
-- [x] Scale to full corpus: Africa Proconsularis, Britannia, Numidia, Dalmatia, Pannonia Superior/Inferior, Noricum, Dacia, Moesia Superior/Inferior.
+- [x] Scale to full corpus: 27 provinces, including Africa Proconsularis, Britannia, Numidia, Dalmatia, Pannonia Superior/Inferior, Noricum, Dacia, Moesia Superior/Inferior, Lusitania, Hispania Citerior, Baetica, Gallia Narbonensis, Aquitanica, Mauretania (both), and Italian regions.
+- [x] Full rerun with hardened prompt (nominative normalization, abbreviation expansion, generic few-shots).
 - [x] Prosopographical clustering across all provinces.
 - [x] Interactive webapp with enriched popups, permalinks, and external database links.
-- [x] English translations of inscription text (optional pipeline; run `scripts/11_translate_inscriptions.py`).
-- [~] Full rerun with hardened prompt (nominative normalization, abbreviation expansion, generic few-shots) — **in progress**.
+- [x] English translations of inscription text across all provinces.
 - [ ] Manual review of candidate discoveries list.
 
 ## Evaluation Results
@@ -36,16 +36,21 @@ Numbers are reported under the **corrected evaluation** (one-to-one matching + h
 | Province | Recall (adj) | Precision (adj) | F1 (adj) | Discoveries |
 |----------|--------------|-----------------|----------|-------------|
 | Africa Proconsularis | 0.73 | 0.75 | **0.74** | 133 |
+| Apulia et Calabria | 0.85 | 0.89 | **0.87** | — |
 | Britannia | 0.70 | 0.83 | **0.76** | 72 |
 | Dacia | 0.75 | 0.79 | **0.77** | 125 |
 | Dalmatia | 0.75 | 0.74 | **0.75** | 184 |
+| Gallia Narbonensis | 0.69 | 0.70 | **0.70** | — |
+| Hispania citerior | 0.74 | 0.78 | **0.76** | 140 |
+| Lusitania | 0.63 | 0.65 | **0.64** | 90 |
+| Mauretania Caesariensis | 0.82 | 0.89 | **0.85** | 22 |
+| Moesia superior | 0.75 | 0.82 | **0.79** | 155 |
 | Noricum | 0.75 | 0.82 | **0.78** | 204 |
 | Numidia | 0.82 | 0.85 | **0.84** | 81 |
 | Pannonia inferior | 0.73 | 0.79 | **0.76** | 133 |
 | Pannonia superior | 0.73 | 0.78 | **0.75** | 161 |
-| Moesia superior | 0.75 | 0.82 | **0.79** | 155 |
 
-> Precision is a **lower bound** — genuine attestations absent from LIRE ground truth are counted as false positives ("discoveries"). Baetica and Moesia inferior are pending their full corpus run.
+> Precision is a **lower bound** — genuine attestations absent from LIRE ground truth are counted as false positives ("discoveries"). Gallia Narbonensis F1 is measured against EDH ground truth (2× validation density vs LIRE for that region). Remaining provinces in the webapp have not yet been formally evaluated.
 
 **Key finding:** the majority of false negatives are inscriptions where the ground-truth name is partially or fully in lacunae (`[---]`). The model cannot recover these from the raw text — an inherent limit of the text-based approach, not a model failure.
 
@@ -92,10 +97,9 @@ See [`webapp/README.md`](webapp/README.md) for data details and instructions to 
 
 ## Future Directions
 
-- **English translations**: `scripts/11_translate_inscriptions.py` batch-translates inscription text with Gemini 2.5 Flash. Run with `--province all --limit N` to control cost. Translations are stored in `webapp/data/enrichment_{province}.json` and displayed in popups when available. A 25-inscription sample (across all provinces and types) showed high quality results.
 - **Lacuna restoration**: For damaged records, an Ithaca-style model (cf. Assael et al., *Nature* 2022) could recover names in lacunae — an inherent limit of the text-based approach.
-- **Additional provinces**: The pipeline is transferable; each province needs province-specific few-shot examples.
 - **Manual review**: Spot-check the candidate discoveries list against RIB, PIR, and secondary scholarship to produce a precision-of-discoveries number.
+- **Additional provinces**: The pipeline is transferable to remaining EDCS provinces not yet processed.
 
 ## Methodology
 Full research plan: [roman_ner_research_plan.md](roman_ner_research_plan.md).
