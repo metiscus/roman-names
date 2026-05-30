@@ -66,7 +66,7 @@ PROVINCES = [
     ("apulia_et_calabria",     "Apulia et Calabria / Regio II", True),
     ("bruttium_et_lucania",    "Bruttium et Lucania / Regio III", False),
     ("samnium",                "Samnium / Regio IV",      False),
-    ("picenum",                "Picenum / Regio V",       False),
+    ("picenum",                "Picenum / Regio V",       True),
     ("umbria",                 "Umbria / Regio VI",       False),
     ("aemilia",                "Aemilia / Regio VIII",    False),
     ("liguria",                "Liguria / Regio IX",      False),
