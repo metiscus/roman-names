@@ -167,6 +167,37 @@
         }
         .btn-about:hover { background: #f0f0f0; color: var(--primary-color); }
 
+        /* Mobile layout */
+        #mobile-sidebar-toggle {
+            display: none;
+            position: fixed; bottom: 20px; right: 20px; z-index: 1002;
+            background: var(--accent-color); color: white;
+            border: none; border-radius: 50%; width: 50px; height: 50px;
+            font-size: 1.4rem; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            align-items: center; justify-content: center;
+        }
+        @media (max-width: 768px) {
+            #sidebar {
+                position: fixed;
+                bottom: 0; left: 0; right: 0;
+                width: 100%;
+                height: 55vh;
+                border-left: none;
+                border-top: 2px solid var(--border-color);
+                transform: translateY(100%);
+                transition: transform 0.3s ease;
+                box-shadow: 0 -4px 20px rgba(0,0,0,0.15);
+            }
+            #sidebar.mobile-open {
+                transform: translateY(0);
+            }
+            #mobile-sidebar-toggle {
+                display: flex;
+            }
+            .popup-content { min-width: 220px; max-width: 90vw; }
+            .intro-card { padding: 20px; }
+        }
+
         /* Enhanced popup elements */
         .inscr-type { background: #6c757d; }
         .text-edition-area { font-size: 0.85rem; padding: 8px; background: #fff; border: 1px solid #ddd; border-radius: 4px; margin-top: 6px; line-height: 1.5; }
@@ -194,7 +225,7 @@
         <div class="intro-card">
             <h2>Roman Name Attestations</h2>
             <p>This map shows the people named in Roman stone inscriptions — soldiers, merchants, freedwomen, magistrates, slaves — drawn from over half a million texts in the <a href="https://db.edcs.eu/" target="_blank">Epigraphic Database Clauss-Slaby (EDCS)</a>, spanning 27 provinces of the Roman Empire.</p>
-            <p>Names were extracted automatically and grouped by individual, so you can follow a person across multiple inscriptions and sites. Each marker on the map represents one or more inscriptions from a single find-spot.</p>
+            <p>Names were extracted automatically using a language model and grouped by individual, so you can follow a person across multiple inscriptions and sites. Each marker on the map represents one or more inscriptions from a single find-spot. Extractions are unreviewed and will contain errors — treat this as a research aid, not a definitive index.</p>
             <p><strong>How to explore:</strong></p>
             <ul>
                 <li>Browse by region using the province selector, or start with All Regions</li>
@@ -218,6 +249,8 @@
             </div>
         </div>
     </div>
+
+    <button id="mobile-sidebar-toggle" title="Toggle panel" aria-label="Toggle sidebar">☰</button>
 
     <div id="app-container">
         <div id="sidebar">
@@ -369,6 +402,7 @@
         let coordToMarkerMap = {};
         let enrichmentData = {};
         let enrichmentPromise = Promise.resolve();
+        let enrichmentLoaded = false;
 
         const colors = { male: '#3498db', female: '#e91e63', mixed: '#9b59b6', unknown: '#95a5a6' };
 
@@ -404,18 +438,29 @@
 
         async function loadEnrichment(province) {
             enrichmentData = {};
+            enrichmentLoaded = false;
             try {
                 if (province === 'all') {
-                    const provKeys = Object.keys(PROVINCES).filter(k => k !== 'all');
-                    const results = await Promise.all(
-                        provKeys.map(p => fetch(`data/enrichment_${p}.json`).then(r => r.json()).catch(() => ({})))
-                    );
-                    results.forEach(d => Object.assign(enrichmentData, d));
-                } else {
-                    enrichmentData = await fetch(`data/enrichment_${province}.json`)
-                        .then(r => r.json()).catch(() => ({}));
+                    // For all regions, load lazily per-popup to avoid fetching ~50 MB upfront.
+                    // Translation search won't work until the popup for that province has been opened.
+                    enrichmentLoaded = true;
+                    return;
                 }
+                enrichmentData = await fetch(`data/enrichment_${province}.json`)
+                    .then(r => r.json()).catch(() => ({}));
+                enrichmentLoaded = true;
             } catch(e) { /* silently ignore enrichment errors */ }
+        }
+
+        // Fetch enrichment for a single inscription's province on demand (used in All Regions mode)
+        const enrichmentProvCache = new Set();
+        async function ensureEnrichmentForProvince(province) {
+            if (enrichmentProvCache.has(province)) return;
+            enrichmentProvCache.add(province);
+            try {
+                const d = await fetch(`data/enrichment_${province}.json`).then(r => r.json()).catch(() => ({}));
+                Object.assign(enrichmentData, d);
+            } catch(e) {}
         }
 
         async function loadData() {
@@ -432,6 +477,7 @@
                     results.forEach(([geo, clusters], i) => {
                         const prefix = provKeys[i] + ':';
                         geo.features.forEach(f => {
+                            f.properties.province = provKeys[i];
                             f.properties.persons.forEach(p => { if (p.cluster_id) p.cluster_id = prefix + p.cluster_id; });
                             mergedFeatures.push(f);
                         });
@@ -449,14 +495,29 @@
                 }
                 document.getElementById('summary-text').innerText = `${allData.features.length.toLocaleString()} inscriptions total.`;
                 update();
-                enrichmentPromise = loadEnrichment(currentProvince);
+                // Eagerly load enrichment for single-province views (needed for translation search/filter).
+                // All Regions loads enrichment lazily per-popup instead to avoid fetching ~100 MB upfront.
+                if (currentProvince !== 'all') {
+                    enrichmentPromise = loadEnrichment(currentProvince);
+                } else {
+                    enrichmentLoaded = true;
+                    enrichmentPromise = Promise.resolve();
+                }
             } catch (e) { console.error(e); }
         }
 
         async function switchProvince(province) {
+            if (province === 'all') {
+                const ok = confirm('Loading all regions at once requires downloading ~100 MB of data and may be slow on mobile or limited connections.\n\nFor best performance, select a specific province.\n\nContinue anyway?');
+                if (!ok) {
+                    document.getElementById('province-select').value = currentProvince;
+                    return;
+                }
+            }
             currentProvince = province;
             activeClusterId = null; activeResultId = null; activeGeoIds = null;
             enrichmentData = {};
+            enrichmentProvCache.clear();
             pushHash({ province: province !== 'all' ? province : null, inscription: null, search: null });
             document.getElementById('search-input').value = '';
             markers.clearLayers();
@@ -641,13 +702,17 @@
                 const marker = L.marker(latlng, { icon: markerIcon });
                 marker.feature = { ids: stack.ids, weight: stack.ids.length };
 
-                marker.on('click', (e) => {
+                marker.on('click', async (e) => {
                     if (stack.ids.length > 1 && !activeGeoIds) {
                         activeGeoIds = stack.ids;
                         update();
                     } else {
                         highlightResult(stack.ids[0]);
                         pushHash({ inscription: stack.ids[0] });
+                        // In All Regions mode, lazily load enrichment for this feature's province.
+                        if (currentProvince === 'all' && stack.items[0].properties.province) {
+                            await ensureEnrichmentForProvince(stack.items[0].properties.province);
+                        }
                         marker.bindPopup(getPopupHtml(stack.items[0].properties)).openPopup();
                     }
                 });
@@ -762,6 +827,23 @@
                 if (btn) { btn.textContent = location.href.length > 40 ? '…' + location.href.slice(-37) : location.href; }
             });
         }
+
+        // Mobile sidebar toggle
+        (function() {
+            const btn = document.getElementById('mobile-sidebar-toggle');
+            const sidebar = document.getElementById('sidebar');
+            btn.addEventListener('click', () => {
+                const open = sidebar.classList.toggle('mobile-open');
+                btn.textContent = open ? '✕' : '☰';
+            });
+            // Close sidebar when user taps the map on mobile
+            document.getElementById('map').addEventListener('click', () => {
+                if (window.innerWidth <= 768 && sidebar.classList.contains('mobile-open')) {
+                    sidebar.classList.remove('mobile-open');
+                    btn.textContent = '☰';
+                }
+            });
+        })();
 
         // Intro modal logic
         (function() {

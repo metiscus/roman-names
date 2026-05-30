@@ -27,14 +27,14 @@ The pipeline uses **Gemini 2.5 Flash-Lite** (thinking disabled, batch size 15, u
 - [x] Prosopographical clustering across all provinces.
 - [x] Interactive webapp with enriched popups, permalinks, and external database links.
 - [x] English translations of inscription text across all provinces.
-- [ ] Manual review of candidate discoveries list.
+- [ ] Manual review of unmatched extraction candidates.
 
 ## Evaluation Results
 
 Numbers are reported under the **corrected evaluation** (one-to-one matching + honest damage accounting; see methodology notes) against **LIRE v3.0** ground truth. Earlier figures (F1 up to 0.90) were inflated by one-to-many matching and over-generous damage exclusion.
 
-| Province | Recall (adj) | Precision (adj) | F1 (adj) | Discoveries |
-|----------|--------------|-----------------|----------|-------------|
+| Province | Recall (adj) | Precision (adj) | F1 (adj) | Unmatched in LIRE |
+|----------|--------------|-----------------|----------|-------------------|
 | Africa Proconsularis | 0.73 | 0.75 | **0.74** | 133 |
 | Apulia et Calabria | 0.85 | 0.89 | **0.87** | — |
 | Britannia | 0.70 | 0.83 | **0.76** | 72 |
@@ -50,7 +50,7 @@ Numbers are reported under the **corrected evaluation** (one-to-one matching + h
 | Pannonia inferior | 0.73 | 0.79 | **0.76** | 133 |
 | Pannonia superior | 0.73 | 0.78 | **0.75** | 161 |
 
-> Precision is a **lower bound** — genuine attestations absent from LIRE ground truth are counted as false positives ("discoveries"). Gallia Narbonensis F1 is measured against EDH ground truth (2× validation density vs LIRE for that region). Remaining provinces in the webapp have not yet been formally evaluated.
+> Precision is a **lower bound** — extractions absent from the LIRE ground truth are counted as false positives. These "unmatched" cases may reflect genuine attestations not yet in LIRE, model errors, or gaps in ground-truth coverage; they have not been manually reviewed. Gallia Narbonensis F1 is measured against EDH ground truth (2× validation density vs LIRE for that region). Remaining provinces in the webapp have not yet been formally evaluated.
 
 **Key finding:** the majority of false negatives are inscriptions where the ground-truth name is partially or fully in lacunae (`[---]`). The model cannot recover these from the raw text — an inherent limit of the text-based approach, not a model failure.
 
@@ -61,7 +61,7 @@ Several non-obvious choices in `scripts/05_evaluate_ner.py`:
 - **Praenomen expansion**: LIRE stores praenomens in abbreviated form (`Q.`, `T.`); the model expands them (`Quintus`, `Titus`). A lookup table maps abbreviations before signature comparison.
 - **One-to-one (greedy bipartite) matching**: each prediction is matched to at most one ground-truth person and vice versa, so a single shared-nomen prediction cannot score a true positive against every GT person in a dense record. Token comparison uses a 6-char prefix with a length guard (so `Victor` does not match `Victorinus`) to absorb Latin case-ending variants (`Uttedius` vs `Uttedio`).
 - **Damage accounting**: a GT name is only excluded from adjusted recall as "unrecoverable" when it is genuinely lacuna-dominated (`[---]` or >50% bracket characters), not on the presence of any single bracket.
-- **Imperial filtering**: Two-stage filter removes emperors and their family from the discoveries list — (1) `status` field keywords (`emperor`, `divus`, `caesar`, `augustus`, `imperator`); (2) inscription-level formula detection (`Imperatori Caesari...`, `Imperator Caesar...`).
+- **Imperial filtering**: Two-stage filter removes emperors and their family from the unmatched candidates — (1) `status` field keywords (`emperor`, `divus`, `caesar`, `augustus`, `imperator`); (2) inscription-level formula detection (`Imperatori Caesari...`, `Imperator Caesar...`).
 - **Damage pre-filtering** (in `06_run_full_corpus.py`): Inscriptions where >30% of characters are inside lacunae brackets (`[...]`) are skipped before sending to the API, reducing cost on records unlikely to yield clean extractions.
 
 ## Input Format: Raw `inscription` vs Interpretive Cleaned Text
@@ -98,7 +98,7 @@ See [`webapp/README.md`](webapp/README.md) for data details and instructions to 
 ## Future Directions
 
 - **Lacuna restoration**: For damaged records, an Ithaca-style model (cf. Assael et al., *Nature* 2022) could recover names in lacunae — an inherent limit of the text-based approach.
-- **Manual review**: Spot-check the candidate discoveries list against RIB, PIR, and secondary scholarship to produce a precision-of-discoveries number.
+- **Manual review**: Spot-check unmatched extraction candidates against RIB, PIR, and secondary scholarship to estimate the true positive rate among extractions absent from LIRE.
 - **Additional provinces**: The pipeline is transferable to remaining EDCS provinces not yet processed.
 
 ## Methodology
