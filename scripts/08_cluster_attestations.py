@@ -56,10 +56,16 @@ KM_THRESHOLD_HIGH_STATUS = 150.0
 PREFIX_LEN = 6
 ANTONINIANA_YEAR = 212
 
+# Substrings matched against the lowercased status field (NER prose output,
+# not abbreviated epigraphic text).  Keep entries disjoint where possible:
+# 'consul' already catches 'proconsul', so the latter is omitted.
+# 'legat' is intentionally absent — it substring-matches 'delegatus' (a
+# freedman/administrative term) and would silently misclassify those records.
 HIGH_STATUS_KEYWORDS = {
-    'legat', 'procurator', 'proconsul', 'praefect', 'hegemon',
-    'governor', 'praeses', 'consul', 'v(ir) p(erfectissimus)',
-    'v(ir) e(gregius)', 'v(ir) c(larissimus)'
+    'procurator', 'praefect', 'hegemon',
+    'governor', 'praeses', 'consul',
+    'vir clarissimus', 'vir egregius', 'vir perfectissimus',
+    'legatus',   # exact word, not bare 'legat'
 }
 
 # Praenomen spelling-variant normalization. We treat e.g. Caius and Gaius
@@ -72,14 +78,18 @@ PRAENOMEN_NORM = {
 
 
 def normalize_latin_orthography(s):
-    """Normalize common Latin epigraphic spelling variants."""
+    """Normalize common Latin epigraphic spelling variants.
+
+    Intentionally does NOT collapse qu→c: that rule merges distinct gentes
+    (e.g. Aquilius → Acilius) leaving only date/location as guards.
+    """
     if not s:
         return None
     s = str(s).lower().strip()
     s = s.replace('ae', 'e').replace('oe', 'e')
     s = s.replace('y', 'i')
     s = s.replace('ph', 'f').replace('th', 't').replace('ch', 'c')
-    s = s.replace('qu', 'c').replace('k', 'c')
+    s = s.replace('k', 'c')
     s = s.replace('v', 'u').replace('j', 'i')
     s = s.replace('h', '')
 
@@ -176,7 +186,9 @@ def compatible_location(r1, r2, require_findspot_exact=False):
     lat2, lon2 = r2.get('lat'), r2.get('lon')
     if lat1 is not None and lon1 is not None and lat2 is not None and lon2 is not None:
         dist = haversine_km(lat1, lon1, lat2, lon2)
-        threshold = KM_THRESHOLD_HIGH_STATUS if (is_high_status(r1) or is_high_status(r2)) else KM_THRESHOLD
+        # Both records must be high-status to use the relaxed threshold;
+        # one high-status + one freedman/soldier must not get the senator's window.
+        threshold = KM_THRESHOLD_HIGH_STATUS if (is_high_status(r1) and is_high_status(r2)) else KM_THRESHOLD
         return dist <= threshold
     fs1, fs2 = r1.get('findspot'), r2.get('findspot')
     if fs1 and fs2:
@@ -291,9 +303,10 @@ def assign_confidence(members):
         m['date_from_year'] is not None and m['date_from_year'] >= ANTONINIANA_YEAR
         for m in members
     )
+    # Use normalized form so epigraphic variants like 'Auraelius' are counted.
     n_aurelius = sum(
         1 for m in members
-        if m['nomen'] and m['nomen'].strip().lower() == 'aurelius'
+        if normalize_latin_orthography(m.get('nomen')) == normalize_latin_orthography('aurelius')
     )
     if post_212 and n_aurelius > len(members) / 2:
         return 'low'
