@@ -12,6 +12,16 @@
 apisa
 emerita
 
+# Venetia et Histria: figlinae (tileworks) names misextracted as persons (2026-05)
+# "Pansiana" is the name of a brick/tile workshop near Aquileia, not a personal name.
+# Appears in stamp formulae: "Ti(beri) Pansiana", "Neronis Cla(udi) Pan(siana)", etc.
+pansiana
+
+# Venetia et Histria: river/place names misextracted as persons (2026-05)
+# Timavus/Temavus = the river Timavo near Aquileia
+temavo
+timavo
+
 # Other plausible-confusable Africa Proconsularis towns
 # (left commented until we see actual FPs — broad lists invite mis-flagging
 # legitimate persons whose name token overlaps a place token)

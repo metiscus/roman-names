@@ -64,6 +64,14 @@ PROVINCES = [
     ("etruria",                "Etruria / Regio VII",     True),
     ("latium_et_campania",     "Latium et Campania / Regio I", True),
     ("apulia_et_calabria",     "Apulia et Calabria / Regio II", True),
+    ("bruttium_et_lucania",    "Bruttium et Lucania / Regio III", False),
+    ("samnium",                "Samnium / Regio IV",      False),
+    ("picenum",                "Picenum / Regio V",       False),
+    ("umbria",                 "Umbria / Regio VI",       False),
+    ("aemilia",                "Aemilia / Regio VIII",    False),
+    ("liguria",                "Liguria / Regio IX",      False),
+    ("venetia_et_histria",     "Venetia et Histria / Regio X", False),
+    ("transpadana",            "Transpadana / Regio XI",  False),
 ]
 
 PROVINCE_SLUGS = [slug for slug, _name, _has_eval in PROVINCES]

@@ -85,12 +85,29 @@ def damage_ratio(text):
     stripped = re.sub(r'\[[^\]]*\]', '', text)
     return (len(text) - len(stripped)) / len(text) if text else 1.0
 
-def load_records(province):
+def max_token_len(text):
+    """Longest alphabetic token after normalising EDCS notation.
+
+    Strips lacunae ([3], [---]), scribal-error braces ({x}), and merges
+    parenthetical expansions (P(ubli) → Publi) before tokenising. Uses
+    unicode letter matching to handle Greek inscriptions.
+    """
+    t = re.sub(r'\[[^\]]*\]', '', text)       # remove lacunae
+    t = re.sub(r'\{[^}]*\}', '', t)           # remove {scribal errors}
+    t = re.sub(r'\(([^)]*)\)', r'\1', t)      # merge expansions: P(ubli) → Publi
+    t = t.replace('/', '').replace('!', '')   # strip line-break markers and sic
+    tokens = re.findall(r'[^\W\d_]+', t, re.UNICODE)
+    return max((len(tok) for tok in tokens), default=0)
+
+MIN_TOKEN_LEN = 4  # records whose longest effective token is ≤ this are skipped (opt-in)
+
+def load_records(province, token_filter=False):
     print(f"Loading EDCS data for {province}...")
     with open(EDCS_PATH, encoding='utf-8') as f:
         data = json.load(f)
 
     records = []
+    n_damage = n_token = 0
     for r in data:
         if r.get('province') != province:
             continue
@@ -98,10 +115,22 @@ def load_records(province):
         if not text or text == '?':
             continue
         if damage_ratio(text) > DAMAGE_THRESHOLD:
+            n_damage += 1
             continue
-        records.append({'id': r['EDCS-ID'], 'text': text})
+        if token_filter and max_token_len(text) <= MIN_TOKEN_LEN:
+            n_token += 1
+            continue
+        inscr_type = r.get('inscr_type') or ''
+        records.append({
+            'id': r['EDCS-ID'],
+            'text': text,
+            'is_stamp': inscr_type == 'tituli fabricationis',
+        })
 
-    print(f"Loaded {len(records)} records for {province} after damage filtering.")
+    msg = f"Loaded {len(records)} records for {province} after damage filtering (skipped {n_damage} high-damage"
+    if token_filter:
+        msg += f", {n_token} sub-token-threshold"
+    print(msg + ").")
     return records
 
 def load_processed_ids(output_path):
@@ -126,12 +155,18 @@ def main():
                         help="Gemini model to use (default: gemini-2.5-flash-lite)")
     parser.add_argument("--workers", type=int, default=10,
                         help="Concurrent API workers (default: 10; Flash-Lite supports up to ~50)")
+    parser.add_argument("--token-filter", action="store_true", default=False,
+                        help="Skip records whose longest effective token is ≤4 chars after expanding "
+                             "EDCS abbreviations. Removes unintelligible stamps and pure fragments "
+                             "before the API call. Recommended for stamp-heavy provinces "
+                             "(e.g. Venetia et Histria). Off by default to preserve reproducibility.")
     args = parser.parse_args()
 
     province = args.province
     stop_after = args.stop_after
     model = args.model
     workers = args.workers
+    token_filter = args.token_filter
     safe_name = EDCS_NAME_TO_SLUG.get(province) or re.sub(r'[()]', '', province).lower().replace(' ', '_')
     output_path = OUTPUT_DIR / f'{safe_name}_ner_full.jsonl'
 
@@ -143,7 +178,7 @@ def main():
     client = genai.Client(api_key=api_key)
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
-    all_records = load_records(province)
+    all_records = load_records(province, token_filter=token_filter)
     processed_ids = load_processed_ids(output_path)
 
     remaining = [r for r in all_records if r['id'] not in processed_ids]

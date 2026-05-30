@@ -46,13 +46,16 @@ ALL_STAGES = ["eval_set", "ner", "export", "eval", "eval_edh", "eval_r1b1", "clu
 EVAL_ONLY_STAGES = {"eval_set", "eval"}  # skipped for provinces without a LIRE eval set
 
 
-def stage_cmd(stage, slug, edcs_name, model, workers):
+def stage_cmd(stage, slug, edcs_name, model, workers, token_filter=False):
     s = str(SCRIPTS)
     if stage == "eval_set":
         return [PY, f"{s}/03_generate_validation_set.py", "--province", edcs_name, "--slug", slug]
     if stage == "ner":
-        return [PY, f"{s}/06_run_full_corpus.py", "--province", edcs_name,
-                "--model", model, "--workers", str(workers)]
+        cmd = [PY, f"{s}/06_run_full_corpus.py", "--province", edcs_name,
+               "--model", model, "--workers", str(workers)]
+        if token_filter:
+            cmd.append("--token-filter")
+        return cmd
     if stage == "export":
         return [PY, f"{s}/06_export_to_dataset.py", "--province", slug,
                 "--province-name", edcs_name]
@@ -100,6 +103,9 @@ def main():
     ap.add_argument("--resume", action="store_true",
                     help="ner stage: append to existing output instead of a fresh "
                          "run (default: back up the old output and rerun from scratch)")
+    ap.add_argument("--token-filter", action="store_true", default=False,
+                    help="ner stage: skip records whose longest effective token is ≤4 chars. "
+                         "Recommended for stamp-heavy Italian provinces. Off by default.")
     ap.add_argument("--exclude", default="",
                     help="comma-separated slugs to skip (e.g. an already-done province)")
     ap.add_argument("--continue-on-error", action="store_true",
@@ -138,6 +144,7 @@ def main():
     print(f"  stages    : {', '.join(stages)}")
     print(f"  model     : {args.model}   workers: {args.workers}")
     print(f"  ner mode  : {'RESUME (append)' if args.resume else 'FRESH (backup + rerun)'}")
+    print(f"  token filt: {'ON (≤4-char records skipped)' if args.token_filter else 'OFF'}")
     if args.dry_run:
         print("  *** DRY RUN — nothing will execute ***")
     print("=" * 72)
@@ -156,7 +163,8 @@ def main():
                 if bak:
                     print(f"  backed up existing NER output -> {bak.name}")
 
-            cmd = stage_cmd(stage, slug, edcs_name, args.model, args.workers)
+            cmd = stage_cmd(stage, slug, edcs_name, args.model, args.workers,
+                            token_filter=args.token_filter)
             print(f"\n>>> [{slug}] {stage}\n    {shlex.join(cmd)}")
             if args.dry_run:
                 results.append((slug, stage, "dry-run", 0.0))
