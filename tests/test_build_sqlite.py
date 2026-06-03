@@ -12,6 +12,7 @@ _spec = importlib.util.spec_from_file_location(
 build_sqlite = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(build_sqlite)
 build = build_sqlite.build
+lat_lon_to_tile = build_sqlite.lat_lon_to_tile
 
 
 @pytest.fixture
@@ -71,6 +72,25 @@ def sample_geojson_dir(tmp_path):
     return tmp_path
 
 
+@pytest.fixture
+def sample_geojson_dir_with_enrichment(sample_geojson_dir):
+    """Extend the basic fixture with an enrichment file for two of the three inscriptions."""
+    enrichment = {
+        "EDCS-00000001": {
+            "translation": "To Marcus Tullius...",
+            "summary": "Funerary inscription for a senator.",
+        },
+        "EDCS-00000002": {
+            "translation": "To Lucius Brutus...",
+            "summary": None,
+        },
+    }
+    (sample_geojson_dir / "enrichment_africa_proconsularis.json").write_text(
+        json.dumps(enrichment)
+    )
+    return sample_geojson_dir
+
+
 def test_schema_created(tmp_path, sample_geojson_dir):
     db_path = tmp_path / "test.db"
     build(db_path=db_path, geojson_dir=sample_geojson_dir)
@@ -80,6 +100,7 @@ def test_schema_created(tmp_path, sample_geojson_dir):
     ).fetchall()}
     assert "inscriptions" in tables
     assert "flags" in tables
+    assert "provinces" in tables
     conn.close()
 
 
@@ -126,6 +147,38 @@ def test_upsert_preserves_overrides(tmp_path, sample_geojson_dir):
     conn.close()
 
 
+def test_enrichment_loaded(tmp_path, sample_geojson_dir_with_enrichment):
+    db_path = tmp_path / "test.db"
+    build(db_path=db_path, geojson_dir=sample_geojson_dir_with_enrichment)
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    rows = {
+        r["edcs_id"]: r
+        for r in conn.execute(
+            "SELECT edcs_id, translation, summary FROM inscriptions"
+        ).fetchall()
+    }
+    assert rows["EDCS-00000001"]["translation"] == "To Marcus Tullius..."
+    assert rows["EDCS-00000001"]["summary"] == "Funerary inscription for a senator."
+    assert rows["EDCS-00000002"]["translation"] == "To Lucius Brutus..."
+    assert rows["EDCS-00000002"]["summary"] is None
+    assert rows["EDCS-00000003"]["translation"] is None  # no enrichment for britannia
+    conn.close()
+
+
+def test_enrichment_survives_rebuild(tmp_path, sample_geojson_dir_with_enrichment):
+    """Translation/summary survive a second build run (same enrichment re-applied)."""
+    db_path = tmp_path / "test.db"
+    build(db_path=db_path, geojson_dir=sample_geojson_dir_with_enrichment)
+    build(db_path=db_path, geojson_dir=sample_geojson_dir_with_enrichment)
+    conn = sqlite3.connect(db_path)
+    row = conn.execute(
+        "SELECT translation FROM inscriptions WHERE edcs_id = ?", ("EDCS-00000001",)
+    ).fetchone()
+    assert row[0] == "To Marcus Tullius..."
+    conn.close()
+
+
 def test_province_column_set(tmp_path, sample_geojson_dir):
     db_path = tmp_path / "test.db"
     build(db_path=db_path, geojson_dir=sample_geojson_dir)
@@ -133,3 +186,33 @@ def test_province_column_set(tmp_path, sample_geojson_dir):
     provinces = {r[0] for r in conn.execute("SELECT DISTINCT province FROM inscriptions").fetchall()}
     assert provinces == {"africa_proconsularis", "britannia"}
     conn.close()
+
+
+def test_tile_coords_precomputed(tmp_path, sample_geojson_dir):
+    db_path = tmp_path / "test.db"
+    build(db_path=db_path, geojson_dir=sample_geojson_dir)
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    rows = {
+        r["edcs_id"]: (r["tile_x"], r["tile_y"])
+        for r in conn.execute("SELECT edcs_id, tile_x, tile_y FROM inscriptions").fetchall()
+    }
+    conn.close()
+    assert rows["EDCS-00000001"] == lat_lon_to_tile(36.8, 10.2)
+    assert rows["EDCS-00000002"] == lat_lon_to_tile(36.9, 10.3)
+    assert rows["EDCS-00000003"] == lat_lon_to_tile(51.5, -0.1)
+
+
+def test_provinces_table_precomputed(tmp_path, sample_geojson_dir):
+    db_path = tmp_path / "test.db"
+    build(db_path=db_path, geojson_dir=sample_geojson_dir)
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    rows = {
+        r["province"]: r
+        for r in conn.execute("SELECT * FROM provinces").fetchall()
+    }
+    conn.close()
+    assert set(rows.keys()) == {"africa_proconsularis", "britannia"}
+    assert rows["africa_proconsularis"]["count"] == 2
+    assert rows["britannia"]["count"] == 1

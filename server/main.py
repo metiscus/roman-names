@@ -1,7 +1,7 @@
-import math
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from . import db
@@ -15,20 +15,18 @@ WEBAPP_DIR = Path(__file__).parent.parent / "webapp"
 @app.middleware("http")
 async def cache_control(request: Request, call_next):
     response = await call_next(request)
-    if request.url.path.startswith("/api/"):
+    # Tile responses set their own cache header; everything else gets no-store
+    if request.url.path.startswith("/api/") and not request.url.path.startswith("/api/tiles/"):
         response.headers["Cache-Control"] = "no-store"
     return response
 
 
-@app.get("/api/markers")
-def markers(bbox: str, zoom: int):
-    try:
-        w, s, e, n = [float(x) for x in bbox.split(",")]
-    except (ValueError, AttributeError):
-        raise HTTPException(status_code=400, detail="bbox must be four comma-separated floats: w,s,e,n")
-    if not all(math.isfinite(v) for v in (w, s, e, n)):
-        raise HTTPException(status_code=400, detail="bbox values must be finite floats")
-    return db.get_markers_in_bbox(west=w, south=s, east=e, north=n, zoom=zoom)
+@app.get("/api/tiles/{z}/{x}/{y}")
+def tiles(z: int, x: int, y: int):
+    data = db.get_markers_for_tile(z, x, y)
+    response = JSONResponse(content=data)
+    response.headers["Cache-Control"] = "public, max-age=86400"
+    return response
 
 
 @app.get("/api/inscription/{edcs_id}")
