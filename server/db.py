@@ -190,6 +190,91 @@ def get_inscription(edcs_id: str) -> dict | None:
     }
 
 
+def get_flags(status: str | None = None) -> list[dict]:
+    with _conn() as conn:
+        if status:
+            rows = conn.execute(
+                "SELECT * FROM flags WHERE status = ? ORDER BY created_at DESC", (status,)
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                "SELECT * FROM flags ORDER BY created_at DESC"
+            ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def update_flag_status(flag_id: int, status: str) -> None:
+    resolved_at = datetime.now(timezone.utc).isoformat() if status == "resolved" else None
+    with _conn() as conn:
+        conn.execute(
+            "UPDATE flags SET status = ?, resolved_at = ? WHERE id = ?",
+            (status, resolved_at, flag_id),
+        )
+        conn.commit()
+
+
+def get_inscription_for_edit(edcs_id: str) -> dict | None:
+    with _conn() as conn:
+        r = conn.execute(
+            """SELECT edcs_id, findspot, raw_text, persons, overrides,
+                      translation, summary
+               FROM inscriptions WHERE edcs_id = ?""",
+            (edcs_id,),
+        ).fetchone()
+    return dict(r) if r else None
+
+
+_EDITABLE_FIELDS: dict[str, str] = {
+    "persons": "overrides",
+    "translation": "translation",
+    "summary": "summary",
+}
+
+
+def save_edit(edcs_id: str, field: str, new_value: str | None) -> None:
+    col = _EDITABLE_FIELDS.get(field)
+    if col is None:
+        raise ValueError(f"Unknown field: {field!r}")
+    now = datetime.now(timezone.utc).isoformat()
+    with _conn() as conn:
+        row = conn.execute(
+            f"SELECT {col} FROM inscriptions WHERE edcs_id = ?", (edcs_id,)
+        ).fetchone()
+        old_value = row[col] if row else None
+        conn.execute(
+            f"UPDATE inscriptions SET {col} = ?, updated_at = ? WHERE edcs_id = ?",
+            (new_value, now, edcs_id),
+        )
+        conn.execute(
+            """INSERT INTO edit_log (edcs_id, field, old_value, new_value, edited_at)
+               VALUES (?, ?, ?, ?, ?)""",
+            (edcs_id, field, old_value, new_value, now),
+        )
+        conn.commit()
+
+
+def get_edit_log(unapplied_only: bool = False) -> list[dict]:
+    with _conn() as conn:
+        if unapplied_only:
+            rows = conn.execute(
+                "SELECT * FROM edit_log WHERE applied_at IS NULL ORDER BY edited_at DESC"
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                "SELECT * FROM edit_log ORDER BY edited_at DESC"
+            ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def mark_edit_applied(edit_id: int) -> None:
+    with _conn() as conn:
+        conn.execute(
+            "UPDATE edit_log SET applied_at = ? WHERE id = ?",
+            (datetime.now(timezone.utc).isoformat(), edit_id),
+        )
+        conn.commit()
+
+
 def insert_flag(
     edcs_id: str,
     category: str,

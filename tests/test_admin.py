@@ -66,3 +66,105 @@ def test_run_migrations_raises_if_flags_table_missing(tmp_path, monkeypatch):
     from server import db
     with pytest.raises(sqlite3.OperationalError):
         db.run_migrations()
+
+
+import json
+
+
+@pytest.fixture
+def populated_db(test_db, monkeypatch):
+    """Reuse the main test_db fixture (already has inscriptions + flags schema)."""
+    return test_db
+
+
+def test_get_flags_empty(populated_db):
+    from server import db
+    assert db.get_flags() == []
+
+
+def test_get_flags_returns_inserted(populated_db):
+    import sqlite3
+    from server import db
+    conn = sqlite3.connect(populated_db)
+    conn.execute(
+        "INSERT INTO flags (edcs_id, category, comment, email, created_at, status) VALUES (?,?,?,?,?,?)",
+        ("EDCS-00000001", "people", "wrong name", "a@b.com", "2026-01-01T00:00:00+00:00", "open"),
+    )
+    conn.commit(); conn.close()
+    flags = db.get_flags()
+    assert len(flags) == 1
+    assert flags[0]["edcs_id"] == "EDCS-00000001"
+    assert flags[0]["status"] == "open"
+
+
+def test_update_flag_status(populated_db):
+    import sqlite3
+    from server import db
+    conn = sqlite3.connect(populated_db)
+    conn.execute(
+        "INSERT INTO flags (edcs_id, category, created_at, status) VALUES (?,?,?,?)",
+        ("EDCS-00000001", "other", "2026-01-01T00:00:00+00:00", "open"),
+    )
+    conn.commit()
+    flag_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
+    conn.close()
+    db.update_flag_status(flag_id, "resolved")
+    flags = db.get_flags()
+    assert flags[0]["status"] == "resolved"
+    assert flags[0]["resolved_at"] is not None
+
+
+def test_get_inscription_for_edit(populated_db):
+    from server import db
+    insc = db.get_inscription_for_edit("EDCS-00000001")
+    assert insc is not None
+    assert insc["edcs_id"] == "EDCS-00000001"
+    assert "persons" in insc
+    assert "overrides" in insc
+    assert "translation" in insc
+    assert "summary" in insc
+
+
+def test_get_inscription_for_edit_not_found(populated_db):
+    from server import db
+    assert db.get_inscription_for_edit("EDCS-NOTEXIST") is None
+
+
+def test_save_edit_translation(populated_db):
+    from server import db
+    db.save_edit("EDCS-00000001", "translation", "New translation text")
+    insc = db.get_inscription_for_edit("EDCS-00000001")
+    assert insc["translation"] == "New translation text"
+    log = db.get_edit_log()
+    assert len(log) == 1
+    assert log[0]["field"] == "translation"
+    assert log[0]["new_value"] == "New translation text"
+
+
+def test_save_edit_persons_writes_overrides(populated_db):
+    from server import db
+    new_persons = json.dumps([{"praenomen": "Gaius", "nomen": "Julius"}])
+    db.save_edit("EDCS-00000001", "persons", new_persons)
+    import sqlite3
+    conn = sqlite3.connect(populated_db)
+    row = conn.execute("SELECT overrides FROM inscriptions WHERE edcs_id='EDCS-00000001'").fetchone()
+    conn.close()
+    assert row[0] == new_persons
+
+
+def test_save_edit_unknown_field_raises(populated_db):
+    from server import db
+    with pytest.raises(ValueError):
+        db.save_edit("EDCS-00000001", "bad_field", "value")
+
+
+def test_get_edit_log_unapplied_only(populated_db):
+    from server import db
+    import sqlite3
+    db.save_edit("EDCS-00000001", "summary", "new summary")
+    # mark the log entry as applied
+    conn = sqlite3.connect(populated_db)
+    conn.execute("UPDATE edit_log SET applied_at='2026-01-01' WHERE id=1")
+    conn.commit(); conn.close()
+    unapplied = db.get_edit_log(unapplied_only=True)
+    assert all(r["applied_at"] is None for r in unapplied)
