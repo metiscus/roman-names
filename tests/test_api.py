@@ -20,12 +20,29 @@ def test_tiles_high_zoom_returns_geojson(client):
         assert f["properties"]["type"] == "inscription"
 
 
-def test_tiles_low_zoom_returns_clusters(client):
+def test_tiles_province_zoom_returns_clusters(client):
     resp = client.get("/api/tiles/4/0/0")
     assert resp.status_code == 200
     data = resp.json()
     for f in data["features"]:
         assert f["properties"]["type"] == "province_cluster"
+
+
+def test_tiles_aggregate_zoom_returns_area_clusters(client):
+    # z=7 tile (67,49) → africa area_cluster
+    resp = client.get("/api/tiles/7/67/49")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert len(data["features"]) == 1
+    p = data["features"][0]["properties"]
+    assert p["type"] == "area_cluster"
+    assert p["count"] == 2
+    assert "tile_z" in p and "tile_x" in p and "tile_y" in p
+
+
+def test_tiles_aggregate_cache_control_public(client):
+    resp = client.get("/api/tiles/7/67/49")
+    assert resp.headers.get("cache-control") == "public, max-age=86400"
 
 
 def test_tiles_exact_z10_match(client):

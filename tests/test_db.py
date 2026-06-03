@@ -27,7 +27,7 @@ def test_tile_high_zoom_exact_match(test_db):
     assert "EDCS-00000001" in ids
 
 
-def test_low_zoom_returns_province_clusters(test_db):
+def test_province_zoom_returns_clusters(test_db):
     # Zoom < 5 returns precomputed province summaries
     result = db.get_markers_for_tile(z=4, x=0, y=0)
     for feature in result["features"]:
@@ -36,10 +36,50 @@ def test_low_zoom_returns_province_clusters(test_db):
         assert "province" in feature["properties"]
 
 
-def test_low_zoom_returns_all_provinces(test_db):
+def test_province_zoom_returns_all_provinces(test_db):
     result = db.get_markers_for_tile(z=4, x=0, y=0)
     provinces = {f["properties"]["province"] for f in result["features"]}
     assert provinces == {"africa_proconsularis", "britannia"}
+
+
+def test_aggregate_zoom7_direct(test_db):
+    # z=7 tile (67,49) directly returns africa area_cluster
+    result = db.get_markers_for_tile(z=7, x=67, y=49)
+    features = result["features"]
+    assert len(features) == 1
+    p = features[0]["properties"]
+    assert p["type"] == "area_cluster"
+    assert p["count"] == 2
+    assert p["tile_z"] == 7
+    assert p["tile_x"] == 67
+    assert p["tile_y"] == 49
+
+
+def test_aggregate_zoom6_expands_to_z7(test_db):
+    # z=6 tile (33,24) covers z=7 tiles (66-67, 48-49) → contains africa
+    result = db.get_markers_for_tile(z=6, x=33, y=24)
+    types = {f["properties"]["type"] for f in result["features"]}
+    assert types == {"area_cluster"}
+    counts = [f["properties"]["count"] for f in result["features"]]
+    assert 2 in counts  # africa has count=2
+
+
+def test_aggregate_zoom5_expands_to_z7(test_db):
+    # z=5 tile (16,12) covers z=7 tiles (64-67, 48-51) → africa only
+    result = db.get_markers_for_tile(z=5, x=16, y=12)
+    assert any(f["properties"]["count"] == 2 for f in result["features"])
+
+
+def test_aggregate_empty_tile_returns_empty(test_db):
+    result = db.get_markers_for_tile(z=7, x=0, y=0)
+    assert result["features"] == []
+
+
+def test_individual_zoom_does_not_return_aggregates(test_db):
+    # z=8 and above should never return area_cluster features
+    result = db.get_markers_for_tile(z=8, x=135, y=99)
+    for f in result["features"]:
+        assert f["properties"]["type"] == "inscription"
 
 
 def test_inscription_properties_present(test_db):
