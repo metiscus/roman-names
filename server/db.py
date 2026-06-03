@@ -9,6 +9,16 @@ from typing import Generator
 ZOOM_CLUSTER_THRESHOLD = 6
 
 
+def _parse_persons(overrides: str | None, persons: str) -> list:
+    """Parse persons JSON, returning empty list on any JSON error."""
+    try:
+        if overrides:
+            return json.loads(overrides)
+        return json.loads(persons)
+    except (json.JSONDecodeError, TypeError):
+        return []
+
+
 def _db_path() -> Path:
     return Path(os.environ.get(
         "ROMAN_NAMES_DB",
@@ -18,7 +28,7 @@ def _db_path() -> Path:
 
 @contextmanager
 def _conn() -> Generator[sqlite3.Connection, None, None]:
-    conn = sqlite3.connect(_db_path())
+    conn = sqlite3.connect(_db_path(), timeout=10)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
     try:
@@ -74,7 +84,7 @@ def get_markers_in_bbox(
                         "date_from": r["date_from"],
                         "date_to": r["date_to"],
                         "edcs_url": f"https://db.edcs.eu/epigr/epi_single.php?p_edcs_id={r['edcs_id']}",
-                        "persons": json.loads(r["overrides"]) if r["overrides"] else json.loads(r["persons"]),
+                        "persons": _parse_persons(r["overrides"], r["persons"]),
                         "has_overrides": r["overrides"] is not None,
                     },
                 }
@@ -103,7 +113,7 @@ def get_inscription(edcs_id: str) -> dict | None:
         "date_from": r["date_from"],
         "date_to": r["date_to"],
         "edcs_url": f"https://db.edcs.eu/epigr/epi_single.php?p_edcs_id={r['edcs_id']}",
-        "persons": json.loads(r["overrides"]) if r["overrides"] else json.loads(r["persons"]),
+        "persons": _parse_persons(r["overrides"], r["persons"]),
         "has_overrides": r["overrides"] is not None,
     }
 
