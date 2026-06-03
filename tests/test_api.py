@@ -32,6 +32,11 @@ def test_markers_bad_bbox_returns_400(client):
     assert resp.status_code == 400
 
 
+def test_markers_nan_bbox_returns_400(client):
+    resp = client.get("/api/markers?bbox=NaN,36.0,11.0,37.5&zoom=8")
+    assert resp.status_code == 400
+
+
 def test_markers_missing_params_returns_422(client):
     resp = client.get("/api/markers")
     assert resp.status_code == 422
@@ -82,3 +87,14 @@ def test_flag_invalid_category_returns_422(client):
 def test_cache_control_on_api_routes(client):
     resp = client.get("/api/markers?bbox=10.0,36.0,11.0,37.5&zoom=8")
     assert resp.headers.get("cache-control") == "no-store"
+
+
+def test_flag_nonexistent_edcs_id_still_succeeds(client):
+    # Intentional: flags are stored even for unknown edcs_ids (future pipeline runs may load them)
+    resp = client.post("/api/flags", json={
+        "edcs_id": "EDCS-GHOST-99999",
+        "category": "other",
+        "comment": "flagged before inscription loaded",
+    })
+    assert resp.status_code == 200
+    assert resp.json() == {"ok": True}

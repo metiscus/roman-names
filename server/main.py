@@ -1,7 +1,7 @@
+import math
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from . import db
@@ -26,6 +26,8 @@ def markers(bbox: str, zoom: int):
         w, s, e, n = [float(x) for x in bbox.split(",")]
     except (ValueError, AttributeError):
         raise HTTPException(status_code=400, detail="bbox must be four comma-separated floats: w,s,e,n")
+    if not all(math.isfinite(v) for v in (w, s, e, n)):
+        raise HTTPException(status_code=400, detail="bbox values must be finite floats")
     return db.get_markers_in_bbox(west=w, south=s, east=e, north=n, zoom=zoom)
 
 
