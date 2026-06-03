@@ -1,888 +1,429 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Roman Name Attestations</title>
-    
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
-    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Roman Name Attestations</title>
 
-    <style>
-        :root {
-            --sidebar-width: 400px;
-            --primary-bg: #ffffff;
-            --secondary-bg: #f8f9fa;
-            --border-color: #dee2e6;
-            --primary-color: #2c3e50;
-            --accent-color: #e67e22;
-            --male-color: #3498db;
-            --female-color: #e91e63;
-            --mixed-color: #9b59b6;
-            --unknown-color: #95a5a6;
-        }
-        body, html {
-            margin: 0; padding: 0; height: 100%;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            overflow: hidden;
-        }
-        #app-container { display: flex; height: 100vh; width: 100vw; }
-        #map { flex: 1; height: 100%; z-index: 1; }
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css"/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css"/>
 
-        #sidebar {
-            width: var(--sidebar-width);
-            height: 100%;
-            background: var(--primary-bg);
-            border-left: 1px solid var(--border-color);
-            display: flex; gap: 0; flex-direction: column;
-            z-index: 1001;
-            box-shadow: -2px 0 10px rgba(0,0,0,0.1);
-        }
+  <style>
+    :root {
+      --sidebar-w: 380px;
+      --accent: #c0392b;
+      --bg: #ffffff;
+      --bg2: #f8f9fa;
+      --border: #dee2e6;
+      --text: #2c3e50;
+      --text2: #6c757d;
+    }
+    *, *::before, *::after { box-sizing: border-box; }
+    body, html { margin: 0; padding: 0; height: 100%; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; overflow: hidden; }
 
-        .sidebar-header {
-            padding: 20px;
-            border-bottom: 1px solid var(--border-color);
-            background: var(--secondary-bg);
-        }
-        .sidebar-header h1 { margin: 0 0 8px 0; font-size: 1.2rem; color: var(--primary-color); }
-        .sidebar-header p { margin: 0; font-size: 0.85rem; color: #666; }
-        #province-select {
-            width: 100%; padding: 6px 8px; border: 1px solid #ced4da;
-            border-radius: 5px; font-size: 0.9rem; background: white;
-            color: var(--primary-color); cursor: pointer; margin-bottom: 6px;
-        }
+    #layout { display: flex; height: 100vh; }
+    #map { flex: 1; }
 
-        .controls-area { padding: 15px; border-bottom: 1px solid var(--border-color); }
-        .search-wrapper { position: relative; width: 100%; margin-bottom: 10px; }
-        #search-input {
-            width: 100%; padding: 12px 35px 12px 12px; border: 1px solid #ced4da;
-            border-radius: 6px; box-sizing: border-box; font-size: 1rem;
-            outline: none;
-        }
-        #clear-search-btn {
-            position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
-            background: none; border: none; font-size: 1.2rem; cursor: pointer; color: #adb5bd;
-            display: none;
-        }
-        #clear-search-btn:hover { color: #495057; }
-        
-        .filter-status-banner {
-            background: #d1ecf1; color: #0c5460;
-            padding: 10px; border-radius: 6px; font-size: 0.85rem;
-            margin-bottom: 10px; border: 1px solid #bee5eb;
-            display: none; flex-direction: column; gap: 8px;
-        }
-        .banner-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-        
-        .btn-small {
-            background: var(--accent-color); color: white; border: none;
-            padding: 4px 10px; border-radius: 4px; cursor: pointer;
-            font-size: 0.75rem; font-weight: bold; white-space: nowrap;
-        }
-        .btn-small:hover { background: #d35400; }
-        .btn-outline {
-            background: transparent; border: 1px solid var(--accent-color);
-            color: var(--accent-color);
-        }
+    /* ── Stats bar ─────────────────────────────────────── */
+    #stats {
+      position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+      background: rgba(255,255,255,0.92); border: 1px solid var(--border);
+      border-radius: 20px; padding: 5px 14px; font-size: 0.8rem;
+      color: var(--text2); z-index: 1000; pointer-events: none;
+      white-space: nowrap;
+    }
 
-        .sidebar-scroll-area { flex: 1; overflow-y: auto; display: flex; flex-direction: column; }
+    /* ── Sidebar ───────────────────────────────────────── */
+    #sidebar {
+      width: var(--sidebar-w); height: 100%; background: var(--bg);
+      border-left: 1px solid var(--border); display: flex; flex-direction: column;
+      z-index: 1001; box-shadow: -2px 0 10px rgba(0,0,0,0.08);
+      overflow: hidden;
+    }
+    #sidebar[hidden] { display: none; }
 
-        #results-pane { display: none; }
-        .results-header {
-            padding: 10px 15px; background: #e9ecef; font-weight: bold;
-            font-size: 0.8rem; color: #495057; display: flex; justify-content: space-between;
-        }
-        .result-item {
-            padding: 12px 15px; border-bottom: 1px solid #eee; cursor: pointer;
-            display: flex; gap: 12px; transition: background 0.2s;
-        }
-        .result-item:hover { background: #f1f3f5; }
-        .result-item.active { background: #fff4e6; border-left: 4px solid var(--accent-color); padding-left: 11px; }
-        .result-number {
-            background: var(--primary-color); color: white;
-            width: 28px; height: 28px; border-radius: 50%;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 0.8rem; font-weight: bold; flex-shrink: 0;
-        }
-        .result-body { flex: 1; }
-        .result-name { font-weight: bold; display: block; font-size: 0.95rem; margin-bottom: 2px; }
-        .result-meta { color: #666; font-size: 0.8rem; }
+    .sb-header {
+      padding: 14px 16px 10px; border-bottom: 1px solid var(--border);
+      background: var(--bg2); flex-shrink: 0;
+    }
+    .sb-header h2 { margin: 0 0 2px; font-size: 1rem; color: var(--text); }
+    .sb-header .findspot { font-size: 0.8rem; color: var(--text2); margin: 0; }
+    .sb-close {
+      float: right; background: none; border: none; font-size: 1.3rem;
+      cursor: pointer; color: var(--text2); line-height: 1; padding: 0;
+    }
+    .sb-close:hover { color: var(--text); }
 
-        #filters-pane { padding: 15px; }
-        .filter-group { margin-bottom: 20px; }
-        .filter-group h3 { margin: 0 0 10px 0; font-size: 0.9rem; color: #495057; text-transform: uppercase; letter-spacing: 0.5px; }
-        .filter-option { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; font-size: 0.9rem; cursor: pointer; }
+    .sb-body { flex: 1; overflow-y: auto; padding: 14px 16px; }
 
-        .marker-pin {
-            width: 20px; height: 20px; border-radius: 50%;
-            border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-            display: flex; align-items: center; justify-content: center;
-            color: white; font-size: 10px; font-weight: bold;
-        }
+    .date-range { font-size: 0.8rem; color: var(--text2); margin: 0 0 12px; }
 
-        .popup-content { min-width: 260px; max-width: 340px; }
-        .persons-list { margin-bottom: 8px; }
-        .person-entry { padding: 5px 0 5px 8px; border-left: 3px solid var(--primary-color); margin-bottom: 6px; }
-        .person-entry:last-child { margin-bottom: 0; }
-        .person-name-line { font-weight: bold; font-size: 0.95rem; color: var(--primary-color); }
-        .person-date { font-weight: normal; font-size: 0.8rem; color: #888; margin-left: 4px; }
-        .person-meta { font-size: 0.78rem; color: #666; margin-top: 2px; display: flex; flex-wrap: wrap; align-items: center; gap: 5px; }
-        .gender-chip { font-size: 0.75rem; color: #555; }
-        .person-status { color: #666; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .badge { display: inline-block; padding: 1px 5px; border-radius: 3px; font-size: 0.65rem; font-weight: bold; color: white; }
-        .badge-imp { background: #c0392b; } .badge-deity { background: #8e44ad; }
-        .raw-text-area { font-family: serif; font-style: italic; font-size: 0.85rem; padding: 8px; background: #fff; border: 1px solid #ddd; border-radius: 4px; margin-top: 6px; display: none; }
-        .btn-link { color: #007bff; cursor: pointer; text-decoration: none; font-size: 0.8rem; }
+    .person-card {
+      border: 1px solid var(--border); border-radius: 6px;
+      padding: 10px 12px; margin-bottom: 10px; background: var(--bg2);
+    }
+    .person-name { font-weight: 600; font-size: 0.95rem; color: var(--text); margin: 0 0 4px; }
+    .person-meta { font-size: 0.8rem; color: var(--text2); margin: 0; }
+    .badge {
+      display: inline-block; font-size: 0.7rem; padding: 1px 6px;
+      border-radius: 10px; margin-left: 4px; vertical-align: middle;
+    }
+    .badge-deity    { background: #ffeaa7; color: #6c5a00; }
+    .badge-imperial { background: #dfe6e9; color: #2d3436; }
+    .badge-fragment { background: #fdcece; color: #6c0000; }
 
-        /* Intro / About modal */
-        #intro-modal {
-            position: fixed; inset: 0; z-index: 9999;
-            background: rgba(0,0,0,0.6); backdrop-filter: blur(3px);
-            display: flex; align-items: center; justify-content: center;
-        }
-        #intro-modal.hidden { display: none; }
-        .intro-card {
-            background: white; border-radius: 12px; padding: 32px;
-            max-width: 520px; width: 90%; box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-            max-height: 90vh; overflow-y: auto;
-        }
-        .intro-card h2 { margin: 0 0 12px 0; color: var(--primary-color); font-size: 1.4rem; }
-        .intro-card p { margin: 0 0 12px 0; font-size: 0.9rem; color: #444; line-height: 1.6; }
-        .intro-card ul { margin: 0 0 12px 0; padding-left: 20px; font-size: 0.9rem; color: #444; line-height: 1.8; }
-        .intro-sources { font-size: 0.8rem; color: #888; border-top: 1px solid #eee; padding-top: 12px; }
-        .intro-sources a { color: #888; }
-        .intro-footer { display: flex; justify-content: flex-end; margin-top: 20px; }
-        #intro-dismiss-btn {
-            background: var(--accent-color); color: white; border: none;
-            padding: 10px 24px; border-radius: 6px; cursor: pointer;
-            font-size: 1rem; font-weight: bold;
-        }
-        #intro-dismiss-btn:hover { background: #d35400; }
-        .btn-about {
-            background: none; border: 1px solid #ced4da; color: #888;
-            border-radius: 50%; width: 22px; height: 22px; cursor: pointer;
-            font-size: 0.75rem; display: inline-flex; align-items: center; justify-content: center;
-            vertical-align: middle; margin-left: 5px; flex-shrink: 0;
-        }
-        .btn-about:hover { background: #f0f0f0; color: var(--primary-color); }
+    details { margin-bottom: 12px; }
+    details summary { font-size: 0.82rem; color: var(--text2); cursor: pointer; }
+    details pre {
+      margin: 6px 0 0; font-size: 0.75rem; white-space: pre-wrap;
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: 4px; padding: 8px; max-height: 160px; overflow-y: auto;
+    }
 
-        /* Mobile layout */
-        #mobile-sidebar-toggle {
-            display: none;
-            position: fixed; bottom: 20px; right: 20px; z-index: 1002;
-            background: var(--accent-color); color: white;
-            border: none; border-radius: 50%; width: 50px; height: 50px;
-            font-size: 1.4rem; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-            align-items: center; justify-content: center;
-        }
-        @media (max-width: 768px) {
-            #sidebar {
-                position: fixed;
-                bottom: 0; left: 0; right: 0;
-                width: 100%;
-                height: 55vh;
-                border-left: none;
-                border-top: 2px solid var(--border-color);
-                transform: translateY(100%);
-                transition: transform 0.3s ease;
-                box-shadow: 0 -4px 20px rgba(0,0,0,0.15);
-            }
-            #sidebar.mobile-open {
-                transform: translateY(0);
-            }
-            #mobile-sidebar-toggle {
-                display: flex;
-            }
-            .popup-content { min-width: 220px; max-width: 90vw; }
-            .intro-card { padding: 20px; }
-        }
+    .sb-footer {
+      padding: 10px 16px; border-top: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+      flex-shrink: 0; background: var(--bg2);
+    }
+    .sb-footer a { font-size: 0.82rem; color: var(--accent); text-decoration: none; }
+    .sb-footer a:hover { text-decoration: underline; }
+    .flag-link { font-size: 0.78rem; color: var(--text2); cursor: pointer; background: none; border: none; padding: 0; }
+    .flag-link:hover { color: var(--accent); text-decoration: underline; }
 
-        /* Enhanced popup elements */
-        .inscr-type { background: #6c757d; }
-        .text-edition-area { font-size: 0.85rem; padding: 8px; background: #fff; border: 1px solid #ddd; border-radius: 4px; margin-top: 6px; line-height: 1.5; }
-        .inscription-summary { margin-bottom: 7px; font-size: 0.8rem; color: #555; font-style: italic; line-height: 1.45; }
-        .inscription-summary::before { content: 'Summary: '; font-style: normal; font-weight: 600; font-size: 0.68rem; color: #5b9bd5; text-transform: uppercase; letter-spacing: 0.04em; }
-        .translation-block { margin-bottom: 8px; padding: 7px 10px; background: #f0f7ff; border-left: 3px solid #5b9bd5; border-radius: 0 4px 4px 0; font-size: 0.85rem; line-height: 1.55; max-height: 130px; overflow-y: auto; }
-        .translation-label { font-size: 0.65rem; font-weight: 600; color: #5b9bd5; text-transform: uppercase; letter-spacing: 0.04em; display: block; margin-bottom: 3px; }
-        .popup-footer { font-size: 0.75rem; color: #777; border-top: 1px solid #eee; padding-top: 7px; margin-top: 4px; }
-        .popup-footer-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 3px; }
-        .pub-ref { font-size: 0.72rem; color: #999; font-style: italic; margin-top: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 300px; }
-        .db-links { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 5px; }
-        .db-link { font-size: 0.72rem; color: #007bff; text-decoration: none; white-space: nowrap; }
-        .db-link:hover { text-decoration: underline; }
-        .btn-copy-link {
-            background: none; border: 1px solid #ced4da; color: #888;
-            border-radius: 4px; padding: 2px 7px; cursor: pointer; font-size: 0.68rem;
-        }
-        .btn-copy-link:hover { background: #f0f0f0; color: var(--primary-color); }
-    </style>
+    /* ── Flag modal ────────────────────────────────────── */
+    #modal-backdrop {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.45);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 2000;
+    }
+    #modal-backdrop[hidden] { display: none; }
+    .modal-box {
+      background: var(--bg); border-radius: 8px; padding: 24px;
+      width: 360px; max-width: 90vw; box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+    }
+    .modal-box h3 { margin: 0 0 16px; font-size: 1rem; color: var(--text); }
+    .field { margin-bottom: 14px; }
+    .field label { display: block; font-size: 0.82rem; color: var(--text2); margin-bottom: 4px; }
+    .field select, .field textarea, .field input[type="email"] {
+      width: 100%; padding: 8px 10px; border: 1px solid var(--border);
+      border-radius: 5px; font-size: 0.9rem; font-family: inherit;
+    }
+    .field textarea { resize: vertical; min-height: 72px; }
+    .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 6px; }
+    .btn-primary {
+      background: var(--accent); color: white; border: none;
+      padding: 8px 18px; border-radius: 5px; cursor: pointer; font-size: 0.9rem;
+    }
+    .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+    .btn-cancel {
+      background: none; border: 1px solid var(--border);
+      padding: 8px 14px; border-radius: 5px; cursor: pointer; font-size: 0.9rem;
+      color: var(--text2);
+    }
+    .success-msg { text-align: center; color: #27ae60; padding: 10px 0; font-size: 0.9rem; }
+  </style>
 </head>
+
 <body>
+<div id="layout">
+  <div id="map"></div>
 
-    <!-- About modal — shown on first visit, re-opened via "?" button -->
-    <div id="intro-modal" class="hidden">
-        <div class="intro-card">
-            <h2>Roman Name Attestations</h2>
-            <p>This map shows the people named in Roman stone inscriptions — soldiers, merchants, freedwomen, magistrates, slaves — drawn from over half a million texts in the <a href="https://db.edcs.eu/" target="_blank">Epigraphic Database Clauss-Slaby (EDCS)</a>, spanning 27 provinces of the Roman Empire.</p>
-            <p>Names were extracted automatically using a language model and grouped by individual, so you can follow a person across multiple inscriptions and sites. Each marker on the map represents one or more inscriptions from a single find-spot. Extractions are unreviewed and will contain errors — treat this as a research aid, not a definitive index.</p>
-            <p><strong>How to explore:</strong></p>
-            <ul>
-                <li>Browse by region using the province selector, or start with All Regions</li>
-                <li>Search by name, translation, or inscription text</li>
-                <li>Click a marker to see the people named in that inscription</li>
-                <li>Follow "See all N attestations" to find every known appearance of a name</li>
-                <li>Use filters to narrow by gender, confidence level, or social category</li>
-            </ul>
-            <div class="intro-sources">
-                Data: <a href="https://db.edcs.eu/" target="_blank">EDCS</a>,
-                <a href="https://doi.org/10.5281/zenodo.5776109" target="_blank">LIRE v1.2</a>,
-                <a href="https://cil.bbaw.de/" target="_blank">CIL</a>,
-                <a href="https://edh.ub.uni-heidelberg.de/" target="_blank">EDH</a>,
-                <a href="https://www.trismegistos.org/" target="_blank">Trismegistos</a>,
-                <a href="https://lupa.at/" target="_blank">Ubi Erat Lupa</a>.
-                Map tiles: <a href="https://dh.gu.se/dare/" target="_blank">DARE</a>.<br>
-                Bug reports &amp; ideas: <a href="https://github.com/metiscus/roman-names/issues" target="_blank">GitHub Issues</a>
-            </div>
-            <div class="intro-footer">
-                <button id="intro-dismiss-btn">Get Started</button>
-            </div>
-        </div>
+  <div id="stats">Loading…</div>
+
+  <!-- Sidebar -->
+  <div id="sidebar" hidden>
+    <div class="sb-header">
+      <button class="sb-close" onclick="closeDetail()" title="Close">&#x2715;</button>
+      <h2 id="sb-title">—</h2>
+      <p class="findspot" id="sb-findspot"></p>
     </div>
-
-    <button id="mobile-sidebar-toggle" title="Toggle panel" aria-label="Toggle sidebar">☰</button>
-
-    <div id="app-container">
-        <div id="sidebar">
-            <div class="sidebar-header">
-                <h1 style="display:flex; align-items:center">Roman Names <button class="btn-about" id="about-btn" title="About this map">?</button></h1>
-                <select id="province-select">
-                    <option value="africa_proconsularis">Africa Proconsularis</option>
-                    <option value="all" selected>All Regions</option>
-                    <option value="numidia">Numidia</option>
-                    <option value="britannia">Britannia</option>
-                    <option value="dalmatia">Dalmatia</option>
-                    <option value="dacia">Dacia</option>
-                    <option value="noricum">Noricum</option>
-                    <option value="pannonia_inferior">Pannonia inferior</option>
-                    <option value="pannonia_superior">Pannonia superior</option>
-                    <option value="moesia_superior">Moesia superior</option>
-                    <option value="moesia_inferior">Moesia inferior</option>
-                    <option value="baetica">Baetica</option>
-                    <option value="lusitania">Lusitania</option>
-                    <option value="hispania_citerior">Hispania citerior</option>
-                    <option value="mauretania_tingitana">Mauretania Tingitana</option>
-                    <option value="mauretania_caesariensis">Mauretania Caesariensis</option>
-                    <option value="creta_et_cyrenaica">Creta et Cyrenaica</option>
-                    <option value="aegyptus">Aegyptus</option>
-                    <option value="corsica">Corsica</option>
-                    <option value="sicilia">Sicilia</option>
-                    <option value="gallia_narbonensis">Gallia Narbonensis</option>
-                    <!-- <option value="belgica">Belgica</option> -->
-                    <option value="aquitanica">Aquitanica</option>
-                    <!-- <option value="germania_superior">Germania superior</option> -->
-                    <!-- <option value="germania_inferior">Germania inferior</option> -->
-                    <option value="etruria">Etruria / Regio VII</option>
-                    <option value="latium_et_campania">Latium et Campania / Regio I</option>
-                    <option value="apulia_et_calabria">Apulia et Calabria / Regio II</option>
-                    <option value="picenum">Picenum / Regio V</option>
-                    <option value="venetia_et_histria">Venetia et Histria / Regio X</option>
-                </select>
-                <p id="summary-text">Loading...</p>
-            </div>
-
-            <div class="controls-area">
-                <div class="search-wrapper">
-                    <input type="text" id="search-input" placeholder="Search names, translations, text..." autocomplete="off" />
-                    <button id="clear-search-btn" title="Clear Search">&times;</button>
-                </div>
-                
-                <div id="filter-status-banner" class="filter-status-banner">
-                    <div class="banner-row">
-                        <span id="banner-text" style="font-weight:bold">Viewing area</span>
-                        <div style="display:flex; gap:5px">
-                            <button id="clear-geo-btn" class="btn-small btn-outline">Exit Group</button>
-                            <button id="reset-all-btn" class="btn-small">Reset Map</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="sidebar-scroll-area">
-                <div id="results-pane">
-                    <div class="results-header">
-                        <span id="results-label">RESULTS</span>
-                        <span id="results-count-label">0</span>
-                    </div>
-                    <div id="results-list"></div>
-                </div>
-
-                <div id="filters-pane">
-                    <div class="filter-group">
-                        <h3>Genders</h3>
-                        <label class="filter-option"><span style="width:12px; height:12px; border-radius:50%; background:var(--male-color)"></span><input type="checkbox" class="f-gender" value="male" checked> Male Only</label>
-                        <label class="filter-option"><span style="width:12px; height:12px; border-radius:50%; background:var(--female-color)"></span><input type="checkbox" class="f-gender" value="female" checked> Female Only</label>
-                        <label class="filter-option"><span style="width:12px; height:12px; border-radius:50%; background:var(--mixed-color)"></span><input type="checkbox" class="f-gender" value="mixed" checked> Mixed</label>
-                        <label class="filter-option"><span style="width:12px; height:12px; border-radius:50%; background:var(--unknown-color)"></span><input type="checkbox" class="f-gender" value="unknown" checked> Unknown</label>
-                    </div>
-
-                    <div class="filter-group">
-                        <h3>Inference</h3>
-                        <label class="filter-option"><input type="checkbox" class="f-conf" value="high" checked> High Confidence</label>
-                        <label class="filter-option"><input type="checkbox" class="f-conf" value="low" checked> Low Confidence</label>
-                    </div>
-
-                    <div class="filter-group">
-                        <h3>Exclude</h3>
-                        <label class="filter-option"><input type="checkbox" id="f-hide-imp"> Imperial Families</label>
-                        <label class="filter-option"><input type="checkbox" id="f-hide-deity"> Deities</label>
-                    </div>
-
-                    <div class="filter-group">
-                        <h3>Show Only</h3>
-                        <label class="filter-option"><input type="checkbox" id="f-has-translation"> Has Translation</label>
-                    </div>
-
-                    <div style="font-size: 0.8rem; color: #888; border-top: 1px solid #eee; padding-top: 15px;">
-                        Data: <a href="https://db.edcs.eu/" target="_blank" style="color:#888">EDCS</a> &amp; <a href="https://doi.org/10.5281/zenodo.5776109" target="_blank" style="color:#888">LIRE</a>. Tiles: <a href="https://dh.gu.se/dare/" target="_blank" style="color:#888">DARE</a>.<br>
-                        Click a marker to explore its contents in the sidebar.<br><br>
-                        <a href="https://github.com/metiscus/roman-names" target="_blank" style="color:#888">★ GitHub</a> — bug reports &amp; ideas welcome.
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div id="map"></div>
+    <div class="sb-body" id="sb-body"></div>
+    <div class="sb-footer">
+      <a id="sb-edcs-link" href="#" target="_blank" rel="noopener">View on EDCS ↗</a>
+      <button class="flag-link" onclick="openFlagModal()">Flag this entry</button>
     </div>
+  </div>
+</div>
 
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-    <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
+<!-- Flag modal -->
+<div id="modal-backdrop" hidden onclick="handleBackdropClick(event)">
+  <div class="modal-box">
+    <h3>Flag this entry</h3>
+    <div id="modal-body">
+      <div class="field">
+        <label for="flag-category">Category</label>
+        <select id="flag-category">
+          <option value="people">People / name extraction</option>
+          <option value="translation">Translation</option>
+          <option value="summary">Summary</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="flag-comment">Comment</label>
+        <textarea id="flag-comment" placeholder="Describe the issue…"></textarea>
+      </div>
+      <div class="field">
+        <label for="flag-email">Your email (optional — only if you want a reply)</label>
+        <input type="email" id="flag-email" placeholder="you@example.com">
+      </div>
+      <div class="modal-actions">
+        <button class="btn-cancel" onclick="closeFlagModal()">Cancel</button>
+        <button class="btn-primary" id="flag-submit-btn" onclick="submitFlag()">Submit</button>
+      </div>
+    </div>
+    <div id="modal-success" class="success-msg" hidden>
+      Thank you — flag recorded.
+    </div>
+  </div>
+</div>
 
-    <script>
-        const PROVINCES = {
-            all:                  { label: 'All Regions',          center: [43.0, 12.0],  zoom: 5 },
-            africa_proconsularis: { label: 'Africa Proconsularis', center: [34.5, 10.5], zoom: 6 },
-            numidia:              { label: 'Numidia',              center: [35.5, 6.5],  zoom: 7 },
-            britannia:            { label: 'Britannia',            center: [54.0, -2.0],  zoom: 6 },
-            dalmatia:             { label: 'Dalmatia',             center: [44.0, 16.5],  zoom: 7 },
-            dacia:                { label: 'Dacia',                center: [46.0, 23.5],  zoom: 7 },
-            noricum:              { label: 'Noricum',              center: [47.5, 14.0],  zoom: 7 },
-            pannonia_inferior:    { label: 'Pannonia inferior',    center: [46.0, 18.5],  zoom: 7 },
-            pannonia_superior:    { label: 'Pannonia superior',    center: [47.0, 18.0],  zoom: 7 },
-            moesia_superior:      { label: 'Moesia superior',      center: [44.0, 21.5],  zoom: 7 },
-            moesia_inferior:      { label: 'Moesia inferior',      center: [43.5, 26.5],  zoom: 7 },
-            baetica:              { label: 'Baetica',              center: [37.5, -5.0],  zoom: 7 },
-            lusitania:            { label: 'Lusitania',            center: [39.5, -7.5],  zoom: 7 },
-            hispania_citerior:    { label: 'Hispania citerior',   center: [41.5, -1.0],  zoom: 7 },
-            mauretania_tingitana:    { label: 'Mauretania Tingitana',    center: [34.0, -6.0],  zoom: 7 },
-            mauretania_caesariensis: { label: 'Mauretania Caesariensis', center: [36.5,  2.5],  zoom: 7 },
-            creta_et_cyrenaica:      { label: 'Creta et Cyrenaica',      center: [35.2, 24.5],  zoom: 7 },
-            aegyptus:                { label: 'Aegyptus',                 center: [28.0, 30.5],  zoom: 6 },
-            corsica:                 { label: 'Corsica',                  center: [42.1, 9.1],   zoom: 8 },
-            sicilia:                 { label: 'Sicilia',                  center: [37.5, 14.0],  zoom: 7 },
-            sardinia:                { label: 'Sardinia',                 center: [39.8, 9.0],   zoom: 8 },
-            gallia_narbonensis:      { label: 'Gallia Narbonensis',       center: [43.8, 5.0],   zoom: 7 },
-            // belgica:                 { label: 'Belgica',                  center: [49.5, 5.5],   zoom: 7 },
-            aquitanica:              { label: 'Aquitanica',               center: [44.5, 1.0],   zoom: 7 },
-            // germania_superior:       { label: 'Germania superior',        center: [48.5, 8.0],   zoom: 7 },
-            // germania_inferior:       { label: 'Germania inferior',        center: [51.5, 6.5],   zoom: 7 },
-            etruria:                 { label: 'Etruria / Regio VII',      center: [43.5, 11.2],  zoom: 7 },
-            latium_et_campania:      { label: 'Latium et Campania / Regio I', center: [41.2, 14.5], zoom: 7 },
-            apulia_et_calabria:      { label: 'Apulia et Calabria / Regio II', center: [41.0, 16.0], zoom: 7 },
-            picenum:                 { label: 'Picenum / Regio V',             center: [43.3, 13.5], zoom: 8 },
-            venetia_et_histria:      { label: 'Venetia et Histria / Regio X',  center: [45.8, 12.5], zoom: 7 },
-        };
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV/XN/WLnA=" crossorigin=""></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
 
-        let currentProvince = 'all';
-        let map, markers, allData, clustersLookup;
-        let activeClusterId = null;
-        let activeGeoIds = null;
-        let currentResults = [];
-        let activeResultId = null;
-        let coordToMarkerMap = {};
-        let enrichmentData = {};
-        let enrichmentPromise = Promise.resolve();
-        let enrichmentLoaded = false;
+<script>
+// ── State ───────────────────────────────────────────────
+let currentEdcsId = null;
+let map, clusterLayer, provinceLayer;
+let loadTimer;
 
-        const colors = { male: '#3498db', female: '#e91e63', mixed: '#9b59b6', unknown: '#95a5a6' };
+// ── Map init ────────────────────────────────────────────
+function initMap() {
+  map = L.map('map', { zoomControl: true }).setView([41.9, 12.5], 5);
 
-        function formatYear(y) {
-            if (y === 0 || y === null || y === undefined) return '';
-            return y < 0 ? Math.abs(y) + ' BC' : y + ' AD';
-        }
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    maxZoom: 18,
+  }).addTo(map);
 
-        function initMap() {
-            const prov = PROVINCES[currentProvince];
-            map = L.map('map', { center: prov.center, zoom: prov.zoom, minZoom: 4, maxZoom: 11 });
-            L.tileLayer('https://dh.gu.se/tiles/imperium/{z}/{x}/{y}.png', { 
-                attribution: '&copy; DARE', minZoom: 4, maxZoom: 11, crossOrigin: true 
-            }).addTo(map);
+  clusterLayer = L.markerClusterGroup({ chunkedLoading: true });
+  provinceLayer = L.layerGroup();
+  map.addLayer(clusterLayer);
+  map.addLayer(provinceLayer);
 
-            markers = L.markerClusterGroup({ 
-                maxClusterRadius: 40, 
-                disableClusteringAtZoom: 11,
-                spiderfyOnMaxZoom: false,
-                showCoverageOnHover: true,
-                zoomToBoundsOnClick: true,
-                iconCreateFunction: function(cluster) {
-                    let total = 0;
-                    cluster.getAllChildMarkers().forEach(m => { total += m.feature.weight || 1; });
-                    let c = ' marker-cluster-';
-                    if (total < 10) c += 'small'; else if (total < 100) c += 'medium'; else c += 'large';
-                    return new L.DivIcon({ html: '<div><span>' + total.toLocaleString() + '</span></div>', className: 'marker-cluster' + c, iconSize: new L.Point(40, 40) });
-                }
-            });
+  map.on('moveend zoomend', () => {
+    clearTimeout(loadTimer);
+    loadTimer = setTimeout(loadMarkers, 300);
+  });
 
-            map.addLayer(markers);
-        }
+  // Clicking map background (not a marker) clears selection
+  map.on('click', () => clearDetail());
 
-        async function loadEnrichment(province) {
-            enrichmentData = {};
-            enrichmentLoaded = false;
-            try {
-                if (province === 'all') {
-                    // For all regions, load lazily per-popup to avoid fetching ~50 MB upfront.
-                    // Translation search won't work until the popup for that province has been opened.
-                    enrichmentLoaded = true;
-                    return;
-                }
-                enrichmentData = await fetch(`data/enrichment_${province}.json`)
-                    .then(r => r.json()).catch(() => ({}));
-                enrichmentLoaded = true;
-            } catch(e) { /* silently ignore enrichment errors */ }
-        }
+  loadMarkers();
+}
 
-        // Fetch enrichment for a single inscription's province on demand (used in All Regions mode)
-        const enrichmentProvCache = new Set();
-        async function ensureEnrichmentForProvince(province) {
-            if (enrichmentProvCache.has(province)) return;
-            enrichmentProvCache.add(province);
-            try {
-                const d = await fetch(`data/enrichment_${province}.json`).then(r => r.json()).catch(() => ({}));
-                Object.assign(enrichmentData, d);
-            } catch(e) {}
-        }
+// ── Marker loading ──────────────────────────────────────
+async function loadMarkers() {
+  const b = map.getBounds();
+  const bbox = `${b.getWest()},${b.getSouth()},${b.getEast()},${b.getNorth()}`;
+  const zoom = map.getZoom();
 
-        async function loadData() {
-            document.getElementById('summary-text').innerText = 'Loading...';
-            try {
-                if (currentProvince === 'all') {
-                    const provKeys = Object.keys(PROVINCES).filter(k => k !== 'all');
-                    const results = await Promise.all(provKeys.map(p => Promise.all([
-                        fetch(`data/inscriptions_${p}.geojson`).then(r => r.ok ? r.json() : {type:'FeatureCollection',features:[]}),
-                        fetch(`data/clusters_${p}.json`).then(r => r.ok ? r.json() : {}),
-                    ])));
-                    const mergedFeatures = [];
-                    const mergedClusters = {};
-                    results.forEach(([geo, clusters], i) => {
-                        const prefix = provKeys[i] + ':';
-                        geo.features.forEach(f => {
-                            f.properties.province = provKeys[i];
-                            f.properties.persons.forEach(p => { if (p.cluster_id) p.cluster_id = prefix + p.cluster_id; });
-                            mergedFeatures.push(f);
-                        });
-                        Object.entries(clusters).forEach(([k, v]) => { mergedClusters[prefix + k] = v; });
-                    });
-                    allData = { type: 'FeatureCollection', features: mergedFeatures };
-                    clustersLookup = mergedClusters;
-                } else {
-                    const [g, c] = await Promise.all([
-                        fetch(`data/inscriptions_${currentProvince}.geojson`),
-                        fetch(`data/clusters_${currentProvince}.json`)
-                    ]);
-                    allData = await g.json();
-                    clustersLookup = await c.json();
-                }
-                document.getElementById('summary-text').innerText = `${allData.features.length.toLocaleString()} inscriptions total.`;
-                update();
-                // Eagerly load enrichment for single-province views (needed for translation search/filter).
-                // All Regions loads enrichment lazily per-popup instead to avoid fetching ~100 MB upfront.
-                if (currentProvince !== 'all') {
-                    enrichmentPromise = loadEnrichment(currentProvince);
-                } else {
-                    enrichmentLoaded = true;
-                    enrichmentPromise = Promise.resolve();
-                }
-            } catch (e) { console.error(e); }
-        }
+  let data;
+  try {
+    const resp = await fetch(`/api/markers?bbox=${bbox}&zoom=${zoom}`);
+    if (!resp.ok) return;
+    data = await resp.json();
+  } catch (_) { return; }
 
-        async function switchProvince(province) {
-            if (province === 'all') {
-                const ok = confirm('Loading all regions at once requires downloading ~100 MB of data and may be slow on mobile or limited connections.\n\nFor best performance, select a specific province.\n\nContinue anyway?');
-                if (!ok) {
-                    document.getElementById('province-select').value = currentProvince;
-                    return;
-                }
-            }
-            currentProvince = province;
-            activeClusterId = null; activeResultId = null; activeGeoIds = null;
-            enrichmentData = {};
-            enrichmentProvCache.clear();
-            pushHash({ province: province !== 'all' ? province : null, inscription: null, search: null });
-            document.getElementById('search-input').value = '';
-            markers.clearLayers();
-            const prov = PROVINCES[province];
-            map.setView(prov.center, prov.zoom);
-            await loadData();
-        }
+  clusterLayer.clearLayers();
+  provinceLayer.clearLayers();
 
-        function genderSymbol(g) {
-            if (g === 'male') return '♂';
-            if (g === 'female') return '♀';
-            return '';
-        }
+  const features = data.features || [];
+  document.getElementById('stats').textContent =
+    zoom < 6
+      ? `${features.length} province${features.length !== 1 ? 's' : ''} in view`
+      : `${features.length} inscription${features.length !== 1 ? 's' : ''} in view`;
 
-        function getPopupHtml(feature_props) {
-            const p = feature_props;
-            const enrich = enrichmentData[p.edcs_id] || {};
-            const dateStr = (p.date_from || p.date_to) ? ` (${formatYear(p.date_from)}–${formatYear(p.date_to)})` : '';
-            let html = `<div class="popup-content">`;
+  for (const f of features) {
+    const [lon, lat] = f.geometry.coordinates;
+    const p = f.properties;
 
-            // — Persons list (compact) —
-            html += `<div class="persons-list">`;
-            p.persons.forEach(pers => {
-                const name = [pers.praenomen, pers.nomen, pers.cognomen].filter(x => x).join(' ') || pers.raw_name;
-                const sym = genderSymbol(pers.gender);
-                const statusTxt = pers.status ? pers.status.slice(0, 50) + (pers.status.length > 50 ? '…' : '') : '';
-                html += `<div class="person-entry">`;
-                html += `<div class="person-name-line">${name}<span class="person-date">${dateStr}</span></div>`;
-                html += `<div class="person-meta">`;
-                if (sym) html += `<span class="gender-chip">${sym}</span>`;
-                if (statusTxt) html += `<span class="person-status">${escHtml(statusTxt)}</span>`;
-                if (pers.is_imperial) html += `<span class="badge badge-imp">Imperial</span>`;
-                if (pers.is_deity) html += `<span class="badge badge-deity">Deity</span>`;
-                if (pers.cluster_id) html += `<a class="btn-link" onclick="filterByCluster('${pers.cluster_id}')">↗ ${pers.cluster_size} attestations</a>`;
-                html += `</div></div>`;
-            });
-            html += `</div>`;
+    if (p.type === 'province_cluster') {
+      const marker = L.circleMarker([lat, lon], {
+        radius: 14, fillColor: '#e67e22', color: '#fff', weight: 2, fillOpacity: 0.85,
+      });
+      marker.bindTooltip(`<b>${p.province.replace(/_/g, ' ')}</b><br>${p.count} inscriptions`);
+      provinceLayer.addLayer(marker);
+    } else {
+      const persons = p.persons || [];
+      const color = markerColor(persons);
+      const marker = L.circleMarker([lat, lon], {
+        radius: 7, fillColor: color, color: '#fff', weight: 1, fillOpacity: 0.85,
+      });
+      marker.on('click', (e) => {
+        L.DomEvent.stopPropagation(e);
+        selectInscription(p.edcs_id);
+      });
+      clusterLayer.addLayer(marker);
+    }
+  }
+}
 
-            // — Summary (one-sentence overview, shown first) —
-            if (enrich.summary) {
-                html += `<div class="inscription-summary">${escHtml(enrich.summary)}</div>`;
-            }
+function markerColor(persons) {
+  if (!persons.length) return '#95a5a6';
+  const genders = [...new Set(persons.map(p => p.gender).filter(Boolean))];
+  if (genders.length > 1) return '#9b59b6';
+  if (genders[0] === 'male')   return '#3498db';
+  if (genders[0] === 'female') return '#e91e63';
+  return '#95a5a6';
+}
 
-            // — Full translation (scrollable block) —
-            if (enrich.translation) {
-                html += `<div class="translation-block"><span class="translation-label">Translation</span>${escHtml(enrich.translation)}</div>`;
-            }
+// ── Selection / deep links ──────────────────────────────
+function selectInscription(edcsId) {
+  location.hash = '#edcs_id=' + encodeURIComponent(edcsId);
+}
 
-            // — Compact footer —
-            const inscrType = enrich.inscription_type || '';
-            html += `<div class="popup-footer">`;
-            html += `<div class="popup-footer-row">`;
-            html += `<span><strong>${p.edcs_id}</strong> · ${escHtml(p.findspot)}${!p.is_individual ? ' <em>(stacked)</em>' : ''}</span>`;
-            html += `<button id="cpl-${p.edcs_id}" class="btn-copy-link" onclick="copyPermalink('${p.edcs_id}')">🔗 Copy link</button>`;
-            html += `</div>`;
-            if (inscrType) html += `<div><span class="badge inscr-type">${escHtml(inscrType)}</span></div>`;
+function clearDetail() {
+  if (location.hash) location.hash = '';
+  hideSidebar();
+}
 
-            // External links row
-            const links = [`<a href="${p.edcs_url}" target="_blank" class="db-link">EDCS ↗</a>`];
-            if (enrich.cil_ace_id) links.push(`<a href="https://cil.bbaw.de/ace/id/${enrich.cil_ace_id}" target="_blank" class="db-link">CIL ↗</a>`);
-            if (enrich.lupa_url) links.push(`<a href="${enrich.lupa_url}" target="_blank" class="db-link">Lupa ↗</a>`);
-            if (enrich.photo_url) links.push(`<a href="${enrich.photo_url}" target="_blank" class="db-link">Photo ↗</a>`);
-            if (enrich.edh_id) links.push(`<a href="https://edh.ub.uni-heidelberg.de/edh/inschrift/${enrich.edh_id}" target="_blank" class="db-link">EDH ↗</a>`);
-            if (enrich.tm_uri) links.push(`<a href="${enrich.tm_uri}" target="_blank" class="db-link">Trismegistos ↗</a>`);
-            html += `<div class="db-links">${links.join('')}</div>`;
+function closeDetail() {
+  location.hash = '';
+  hideSidebar();
+}
 
-            if (enrich.publication) {
-                const pub = enrich.publication.length > 90 ? enrich.publication.slice(0, 90) + '…' : enrich.publication;
-                html += `<div class="pub-ref" title="${escHtml(enrich.publication)}">Ref: ${escHtml(pub)}</div>`;
-            }
+window.addEventListener('hashchange', onHashChange);
 
-            // Latin text toggles
-            if (p.raw_text) html += `<br><span class="btn-link" onclick="const d=this.nextElementSibling;const s=d.style.display==='block';d.style.display=s?'none':'block';this.textContent=s?'Show raw text':'Hide raw text'">Show raw text</span><div class="raw-text-area">${escHtml(p.raw_text)}</div>`;
-            if (enrich.text_edition) html += `<br><span class="btn-link" onclick="const d=this.nextElementSibling;const s=d.style.display==='block';d.style.display=s?'none':'block';this.textContent=s?'Show interpreted text':'Hide interpreted text'">Show interpreted text</span><div class="text-edition-area" style="display:none">${escHtml(enrich.text_edition).replace(/\\n/g,'<br>').replace(/\n/g,'<br>')}</div>`;
+async function onHashChange() {
+  const match = location.hash.match(/^#edcs_id=(.+)$/);
+  if (!match) { hideSidebar(); return; }
+  const edcsId = decodeURIComponent(match[1]);
+  if (edcsId === currentEdcsId) return;
+  await loadInscription(edcsId);
+}
 
-            html += `</div></div>`;
-            return html;
-        }
+async function loadInscription(edcsId) {
+  let data;
+  try {
+    const resp = await fetch(`/api/inscription/${encodeURIComponent(edcsId)}`);
+    if (!resp.ok) { hideSidebar(); return; }
+    data = await resp.json();
+  } catch (_) { hideSidebar(); return; }
 
-        function filterByCluster(cid) {
-            activeClusterId = cid;
-            activeGeoIds = null;
-            document.getElementById('search-input').value = '';
-            update();
-            if (currentResults.length > 0) {
-                const bounds = markers.getBounds();
-                if (bounds.isValid()) map.fitBounds(bounds, { padding: [50, 50] });
-            }
-        }
+  currentEdcsId = edcsId;
+  renderSidebar(data);
+}
 
-        function update() {
-            markers.clearLayers();
-            coordToMarkerMap = {};
-            
-            const search = document.getElementById('search-input').value.toLowerCase();
-            const genders = Array.from(document.querySelectorAll('.f-gender:checked')).map(c => c.value);
-            const confs = Array.from(document.querySelectorAll('.f-conf:checked')).map(c => c.value);
-            const hideImp = document.getElementById('f-hide-imp').checked;
-            const hideDeity = document.getElementById('f-hide-deity').checked;
-            const onlyTranslated = document.getElementById('f-has-translation').checked;
+// ── Sidebar rendering ───────────────────────────────────
+function renderSidebar(data) {
+  const persons = data.persons || [];
+  const firstName = persons[0];
+  const displayName = firstName
+    ? [firstName.praenomen, firstName.nomen, firstName.cognomen].filter(Boolean).join(' ') || firstName.raw_name || data.edcs_id
+    : data.edcs_id;
 
-            const isGeoFiltered = !!activeGeoIds || !!activeClusterId;
-            const isSearchFiltered = !!search;
-            const isAnyFiltered = isGeoFiltered || isSearchFiltered;
-            
-            // Visibility logic
-            document.getElementById('filters-pane').style.display = isAnyFiltered ? 'none' : 'block';
-            document.getElementById('results-pane').style.display = isAnyFiltered ? 'block' : 'none';
-            document.getElementById('filter-status-banner').style.display = isGeoFiltered ? 'flex' : 'none';
-            document.getElementById('clear-search-btn').style.display = isSearchFiltered ? 'block' : 'none';
-            
-            let bannerText = activeClusterId ? "Viewing Person" : "Viewing Local Group";
-            document.getElementById('banner-text').innerText = bannerText;
-            
-            let resultsLabel = "RESULTS";
-            if (isGeoFiltered && isSearchFiltered) resultsLabel = "RESULTS IN GROUP";
-            document.getElementById('results-label').innerText = resultsLabel;
+  document.getElementById('sb-title').textContent = displayName;
+  document.getElementById('sb-findspot').textContent = data.findspot || '';
+  document.getElementById('sb-edcs-link').href = data.edcs_url;
 
-            // 1. Filter the full dataset
-            currentResults = allData.features.filter(f => {
-                if (activeClusterId && (!clustersLookup[activeClusterId] || !clustersLookup[activeClusterId].includes(f.properties.edcs_id))) return false;
-                if (activeGeoIds && !activeGeoIds.includes(f.properties.edcs_id)) return false;
-                if (!genders.includes(f.properties.marker_gender)) return false;
-                if (onlyTranslated) {
-                    const enrich = enrichmentData[f.properties.edcs_id];
-                    if (!enrich || !enrich.translation) return false;
-                }
+  const body = document.getElementById('sb-body');
+  body.innerHTML = '';
 
-                const match = f.properties.persons.filter(p => {
-                    if (search && !(`${p.praenomen||''} ${p.nomen||''} ${p.cognomen||''} ${p.raw_name}`.toLowerCase().includes(search))) return false;
-                    if (!confs.includes(p.cluster_confidence || 'high')) return false;
-                    if (hideImp && p.is_imperial) return false;
-                    if (hideDeity && p.is_deity) return false;
-                    return true;
-                });
-                if (match.length > 0) return true;
-                // Also search translations, summaries, and raw text
-                if (search) {
-                    const enrich = enrichmentData[f.properties.edcs_id];
-                    const haystack = `${f.properties.raw_text||''} ${enrich ? (enrich.translation||'') + ' ' + (enrich.summary||'') : ''}`.toLowerCase();
-                    if (haystack.includes(search)) return true;
-                }
-                return false;
-            });
+  if (data.date_from != null || data.date_to != null) {
+    const p = document.createElement('p');
+    p.className = 'date-range';
+    const from = data.date_from != null ? (data.date_from < 0 ? `${Math.abs(data.date_from)} BCE` : `${data.date_from} CE`) : '?';
+    const to   = data.date_to   != null ? (data.date_to   < 0 ? `${Math.abs(data.date_to)} BCE`   : `${data.date_to} CE`)   : '?';
+    p.textContent = `Date: ${from} – ${to}`;
+    body.appendChild(p);
+  }
 
-            document.getElementById('results-count-label').innerText = currentResults.length;
-            renderResults();
+  for (const person of persons) {
+    const card = document.createElement('div');
+    card.className = 'person-card';
 
-            // 2. Geographically group items
-            const geographicStacks = {};
-            currentResults.forEach(f => {
-                if (!f.geometry) return;
-                const coordKey = f.geometry.coordinates.join(',');
-                if (!geographicStacks[coordKey]) {
-                    geographicStacks[coordKey] = {
-                        coords: f.geometry.coordinates,
-                        ids: [],
-                        marker_gender: f.properties.marker_gender,
-                        items: []
-                    };
-                }
-                geographicStacks[coordKey].ids.push(f.properties.edcs_id);
-                geographicStacks[coordKey].items.push(f);
-            });
+    const nameParts = [person.praenomen, person.nomen, person.cognomen].filter(Boolean);
+    const nameEl = document.createElement('p');
+    nameEl.className = 'person-name';
+    nameEl.textContent = nameParts.join(' ') || person.raw_name || '(unnamed)';
 
-            // 3. Add deduplicated points
-            Object.values(geographicStacks).forEach(stack => {
-                const latlng = [stack.coords[1], stack.coords[0]];
-                const color = colors[stack.marker_gender] || colors.unknown;
-                let label = null;
-                if (isAnyFiltered && currentResults.length <= 150) {
-                    label = currentResults.findIndex(r => r.properties.edcs_id === stack.ids[0]) + 1;
-                } else if (stack.ids.length > 1) {
-                    label = stack.ids.length;
-                }
+    if (person.is_deity)    nameEl.innerHTML += ' <span class="badge badge-deity">deity</span>';
+    if (person.is_imperial) nameEl.innerHTML += ' <span class="badge badge-imperial">imperial</span>';
+    if (person.fragmentary) nameEl.innerHTML += ' <span class="badge badge-fragment">fragmentary</span>';
 
-                const markerIcon = L.divIcon({
-                    html: `<div class="marker-pin" style="background:${color}">${label || ''}</div>`,
-                    className: '', iconSize: [20, 20], iconAnchor: [10, 10], popupAnchor: [0, -10]
-                });
+    const meta = [];
+    if (person.gender)  meta.push(`Gender: ${person.gender}`);
+    if (person.status)  meta.push(`Status: ${person.status}`);
+    if (person.cluster_id != null) {
+      const conf = person.cluster_confidence ? ` (${person.cluster_confidence})` : '';
+      meta.push(`Cluster #${person.cluster_id} — ${person.cluster_size} attestation${person.cluster_size !== 1 ? 's' : ''}${conf}`);
+    }
 
-                const marker = L.marker(latlng, { icon: markerIcon });
-                marker.feature = { ids: stack.ids, weight: stack.ids.length };
+    const metaEl = document.createElement('p');
+    metaEl.className = 'person-meta';
+    metaEl.textContent = meta.join(' · ');
 
-                marker.on('click', async (e) => {
-                    if (stack.ids.length > 1 && !activeGeoIds) {
-                        activeGeoIds = stack.ids;
-                        update();
-                    } else {
-                        highlightResult(stack.ids[0]);
-                        pushHash({ inscription: stack.ids[0] });
-                        // In All Regions mode, lazily load enrichment for this feature's province.
-                        if (currentProvince === 'all' && stack.items[0].properties.province) {
-                            await ensureEnrichmentForProvince(stack.items[0].properties.province);
-                        }
-                        marker.bindPopup(getPopupHtml(stack.items[0].properties)).openPopup();
-                    }
-                });
+    card.appendChild(nameEl);
+    if (meta.length) card.appendChild(metaEl);
+    body.appendChild(card);
+  }
 
-                markers.addLayer(marker);
-                coordToMarkerMap[stack.coords.join(',')] = marker;
-            });
-        }
+  if (data.raw_text) {
+    const details = document.createElement('details');
+    const summary = document.createElement('summary');
+    summary.textContent = 'Raw inscription text';
+    const pre = document.createElement('pre');
+    pre.textContent = data.raw_text;
+    details.appendChild(summary);
+    details.appendChild(pre);
+    body.appendChild(details);
+  }
 
-        function renderResults() {
-            const list = document.getElementById('results-list');
-            list.innerHTML = currentResults.map((f, i) => {
-                const p = f.properties.persons[0];
-                const name = [p.praenomen, p.nomen, p.cognomen].filter(x => x).join(' ') || p.raw_name;
-                const dateRange = (f.properties.date_from || f.properties.date_to) ? 
-                    ` (${formatYear(f.properties.date_from)} - ${formatYear(f.properties.date_to)})` : '';
-                return `<div class="result-item ${!!f.geometry ? '' : 'unmapped'} ${activeResultId === f.properties.edcs_id ? 'active' : ''}" onclick="focusResult('${f.properties.edcs_id}')" id="res-${f.properties.edcs_id}"><div class="result-number">${i + 1}</div><div class="result-body"><span class="result-name">${name}${dateRange}</span><div class="result-meta">${f.properties.edcs_id} | ${f.properties.findspot}</div></div></div>`;
-            }).join('');
-        }
+  showSidebar();
+}
 
-        function focusResult(id) {
-            activeResultId = id;
-            pushHash({ inscription: id });
-            const feature = currentResults.find(f => f.properties.edcs_id === id);
-            highlightResult(id);
-            if (feature && feature.geometry) {
-                const coordKey = feature.geometry.coordinates.join(',');
-                const markerLayer = coordToMarkerMap[coordKey];
-                if (markerLayer) {
-                    markers.zoomToShowLayer(markerLayer, () => {
-                        markerLayer.bindPopup(getPopupHtml(feature.properties)).openPopup();
-                    });
-                }
-            }
-        }
+function showSidebar() { document.getElementById('sidebar').removeAttribute('hidden'); }
+function hideSidebar()  { document.getElementById('sidebar').setAttribute('hidden', ''); currentEdcsId = null; }
 
-        function openInscriptionById(edcs_id) {
-            const feature = allData.features.find(f => f.properties.edcs_id === edcs_id);
-            if (!feature || !feature.geometry) return;
-            const coordKey = feature.geometry.coordinates.join(',');
-            const markerLayer = coordToMarkerMap[coordKey];
-            if (markerLayer) {
-                markers.zoomToShowLayer(markerLayer, () => {
-                    markerLayer.bindPopup(getPopupHtml(feature.properties)).openPopup();
-                });
-            }
-        }
+// ── Flag modal ──────────────────────────────────────────
+function openFlagModal() {
+  document.getElementById('flag-category').value = 'people';
+  document.getElementById('flag-comment').value  = '';
+  document.getElementById('flag-email').value    = '';
+  document.getElementById('modal-body').removeAttribute('hidden');
+  document.getElementById('modal-success').setAttribute('hidden', '');
+  document.getElementById('modal-backdrop').removeAttribute('hidden');
+}
 
-        function highlightResult(id) {
-            activeResultId = id;
-            document.querySelectorAll('.result-item').forEach(el => el.classList.remove('active'));
-            const el = document.getElementById('res-' + id);
-            if (el) {
-                el.classList.add('active');
-                el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-            }
-        }
+function closeFlagModal() {
+  document.getElementById('modal-backdrop').setAttribute('hidden', '');
+}
 
-        // Hierarchy Controls
-        document.getElementById('search-input').addEventListener('input', debounce(() => {
-            update();
-            pushHash({ search: document.getElementById('search-input').value || null, inscription: null });
-        }, 300));
-        
-        document.getElementById('clear-search-btn').addEventListener('click', () => {
-            document.getElementById('search-input').value = '';
-            update();
-        });
+function handleBackdropClick(e) {
+  if (e.target === document.getElementById('modal-backdrop')) closeFlagModal();
+}
 
-        document.getElementById('clear-geo-btn').addEventListener('click', () => {
-            activeGeoIds = null;
-            activeClusterId = null;
-            update();
-        });
+async function submitFlag() {
+  const btn = document.getElementById('flag-submit-btn');
+  btn.disabled = true;
+  try {
+    const resp = await fetch('/api/flags', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        edcs_id:  currentEdcsId,
+        category: document.getElementById('flag-category').value,
+        comment:  document.getElementById('flag-comment').value  || null,
+        email:    document.getElementById('flag-email').value    || null,
+      }),
+    });
+    if (resp.ok) {
+      document.getElementById('modal-body').setAttribute('hidden', '');
+      document.getElementById('modal-success').removeAttribute('hidden');
+      setTimeout(closeFlagModal, 2000);
+    }
+  } finally {
+    btn.disabled = false;
+  }
+}
 
-        document.getElementById('reset-all-btn').addEventListener('click', () => {
-            activeClusterId = null; activeResultId = null; activeGeoIds = null;
-            document.getElementById('search-input').value = '';
-            pushHash({ inscription: null, search: null });
-            const prov = PROVINCES[currentProvince];
-            update(); map.setView(prov.center, prov.zoom);
-        });
-
-        document.getElementById('province-select').addEventListener('change', (e) => {
-            switchProvince(e.target.value);
-        });
-
-        document.querySelectorAll('input[type=checkbox]').forEach(c => c.addEventListener('change', update));
-
-        function debounce(f, w) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => f(...a), w); }; }
-        function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-
-        // Permalink / URL hash helpers
-        function readHash() {
-            return Object.fromEntries(new URLSearchParams(window.location.hash.slice(1)));
-        }
-        function pushHash(updates) {
-            const params = new URLSearchParams(window.location.hash.slice(1));
-            Object.entries(updates).forEach(([k, v]) => {
-                if (v != null && v !== '') params.set(k, v);
-                else params.delete(k);
-            });
-            const str = params.toString();
-            history.replaceState(null, '', str ? '#' + str : location.pathname + location.search);
-        }
-        function copyPermalink(edcs_id) {
-            pushHash({ inscription: edcs_id });
-            const btn = document.getElementById('cpl-' + edcs_id);
-            navigator.clipboard.writeText(location.href).then(() => {
-                if (btn) { btn.textContent = '✓ Copied!'; setTimeout(() => { btn.textContent = '🔗 Copy link'; }, 1800); }
-            }).catch(() => {
-                if (btn) { btn.textContent = location.href.length > 40 ? '…' + location.href.slice(-37) : location.href; }
-            });
-        }
-
-        // Mobile sidebar toggle
-        (function() {
-            const btn = document.getElementById('mobile-sidebar-toggle');
-            const sidebar = document.getElementById('sidebar');
-            btn.addEventListener('click', () => {
-                const open = sidebar.classList.toggle('mobile-open');
-                btn.textContent = open ? '✕' : '☰';
-            });
-            // Close sidebar when user taps the map on mobile
-            document.getElementById('map').addEventListener('click', () => {
-                if (window.innerWidth <= 768 && sidebar.classList.contains('mobile-open')) {
-                    sidebar.classList.remove('mobile-open');
-                    btn.textContent = '☰';
-                }
-            });
-        })();
-
-        // Intro modal logic
-        (function() {
-            const modal = document.getElementById('intro-modal');
-            if (!localStorage.getItem('intro_dismissed')) {
-                modal.classList.remove('hidden');
-            }
-            document.getElementById('intro-dismiss-btn').addEventListener('click', () => {
-                localStorage.setItem('intro_dismissed', '1');
-                modal.classList.add('hidden');
-            });
-            document.getElementById('about-btn').addEventListener('click', () => {
-                modal.classList.remove('hidden');
-            });
-            modal.addEventListener('click', (e) => {
-                if (e.target === modal) {
-                    localStorage.setItem('intro_dismissed', '1');
-                    modal.classList.add('hidden');
-                }
-            });
-        })();
-
-        // Restore state from URL hash on load
-        (async () => {
-            const hash = readHash();
-            if (hash.province && PROVINCES[hash.province]) {
-                currentProvince = hash.province;
-                document.getElementById('province-select').value = currentProvince;
-            }
-            if (hash.search) {
-                document.getElementById('search-input').value = hash.search;
-            }
-            initMap();
-            await loadData();
-            if (hash.inscription) {
-                await enrichmentPromise;
-                openInscriptionById(hash.inscription);
-            }
-        })();
-    </script>
+// ── Boot ────────────────────────────────────────────────
+initMap();
+if (location.hash) onHashChange();
+</script>
 </body>
 </html>
