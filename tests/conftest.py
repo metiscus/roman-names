@@ -60,7 +60,18 @@ def test_db(tmp_path, monkeypatch):
         CREATE TABLE flags (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             edcs_id TEXT NOT NULL, category TEXT NOT NULL,
-            comment TEXT, email TEXT, created_at TEXT NOT NULL
+            comment TEXT, email TEXT, created_at TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'open',
+            resolved_at TEXT
+        );
+        CREATE TABLE edit_log (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            edcs_id TEXT NOT NULL,
+            field TEXT NOT NULL,
+            old_value TEXT,
+            new_value TEXT,
+            edited_at TEXT NOT NULL,
+            applied_at TEXT
         );
         CREATE INDEX idx_inscriptions_tile ON inscriptions (tile_x, tile_y);
     """)

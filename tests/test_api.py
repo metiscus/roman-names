@@ -66,12 +66,19 @@ def test_tiles_different_region_excluded(client):
     assert data["features"][0]["properties"]["edcs_id"] == "EDCS-00000003"
 
 
-def test_tiles_translation_in_response(client):
+def test_tiles_has_translation_flag(client):
     resp = client.get("/api/tiles/10/541/398")
     assert resp.status_code == 200
     features = resp.json()["features"]
     feat = next(f for f in features if f["properties"]["edcs_id"] == "EDCS-00000002")
-    assert feat["properties"]["translation"] == "Translation for inscription 2"
+    assert feat["properties"]["has_translation"] is True
+
+def test_tiles_no_translation_flag_false(client):
+    resp = client.get("/api/tiles/10/541/399")
+    assert resp.status_code == 200
+    features = resp.json()["features"]
+    feat = next(f for f in features if f["properties"]["edcs_id"] == "EDCS-00000001")
+    assert feat["properties"]["has_translation"] is False
 
 
 def test_inscription_returns_detail(client):
