@@ -13,6 +13,7 @@
   <style>
     :root {
       --sidebar-w: 380px;
+      --toolbar-h: 40px;
       --accent: #c0392b;
       --bg: #ffffff;
       --bg2: #f8f9fa;
@@ -20,22 +21,66 @@
       --text: #2c3e50;
       --text2: #6c757d;
     }
-    *, *::before, *::after { box-sizing: border-box; }
-    body, html { margin: 0; padding: 0; height: 100%; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; overflow: hidden; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
 
+    /* ── Outer layout ──────────────────────────────────── */
     #layout { display: flex; height: 100vh; }
-    #map { flex: 1; }
 
-    /* ── Stats bar ─────────────────────────────────────── */
+    #map-col { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+    #map { flex: 1; height: 100%; min-height: 0; }
+
+    /* ── Toolbar ────────────────────────────────────────── */
+    #toolbar {
+      display: flex; align-items: center; gap: 8px;
+      height: var(--toolbar-h); padding: 0 10px;
+      background: var(--bg); border-bottom: 1px solid var(--border);
+      flex-shrink: 0; z-index: 1001;
+    }
+    #search-input {
+      flex: 1; height: 28px; padding: 0 10px;
+      border: 1px solid var(--border); border-radius: 14px;
+      font-size: 0.85rem; outline: none;
+    }
+    #search-input:focus { border-color: var(--accent); }
+    #filter-toggle {
+      height: 28px; padding: 0 12px; border: 1px solid var(--border);
+      border-radius: 14px; background: var(--bg2); cursor: pointer;
+      font-size: 0.82rem; color: var(--text2); white-space: nowrap;
+    }
+    #filter-toggle.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+    #about-btn {
+      height: 28px; width: 28px; border: 1px solid var(--border);
+      border-radius: 50%; background: var(--bg2); cursor: pointer;
+      font-size: 0.85rem; color: var(--text2); flex-shrink: 0;
+    }
+    #about-btn:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+    /* ── Filter panel ───────────────────────────────────── */
+    #filter-panel {
+      background: var(--bg); border-bottom: 1px solid var(--border);
+      padding: 8px 14px; display: flex; flex-wrap: wrap; gap: 14px;
+      align-items: center; font-size: 0.82rem; color: var(--text);
+      flex-shrink: 0;
+    }
+    #filter-panel[hidden] { display: none; }
+    .filter-group { display: flex; align-items: center; gap: 6px; }
+    .filter-group label { color: var(--text2); }
+    .filter-group select { font-size: 0.82rem; border: 1px solid var(--border); border-radius: 4px; padding: 1px 4px; }
+    .filter-check { display: flex; align-items: center; gap: 4px; cursor: pointer; user-select: none; }
+    .filter-check input[type=checkbox] { cursor: pointer; }
+
+    /* ── Stats pill ─────────────────────────────────────── */
     #stats {
-      position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+      position: absolute; bottom: 30px; left: 50%;
+      transform: translateX(-50%);
       background: rgba(255,255,255,0.92); border: 1px solid var(--border);
-      border-radius: 20px; padding: 5px 14px; font-size: 0.8rem;
+      border-radius: 20px; padding: 4px 14px; font-size: 0.78rem;
       color: var(--text2); z-index: 1000; pointer-events: none;
       white-space: nowrap;
     }
 
-    /* ── Sidebar ───────────────────────────────────────── */
+    /* ── Sidebar ────────────────────────────────────────── */
     #sidebar {
       width: var(--sidebar-w); height: 100%; background: var(--bg);
       border-left: 1px solid var(--border); display: flex; flex-direction: column;
@@ -45,114 +90,156 @@
     #sidebar[hidden] { display: none; }
 
     .sb-header {
-      padding: 14px 16px 10px; border-bottom: 1px solid var(--border);
+      padding: 12px 14px 10px; border-bottom: 1px solid var(--border);
       background: var(--bg2); flex-shrink: 0;
+      display: flex; align-items: flex-start; gap: 8px;
     }
-    .sb-header h2 { margin: 0 0 2px; font-size: 1rem; color: var(--text); }
-    .sb-header .findspot { font-size: 0.8rem; color: var(--text2); margin: 0; }
+    .sb-header-text { flex: 1; min-width: 0; }
+    .sb-header h2 { font-size: 1rem; color: var(--text); overflow-wrap: break-word; }
+    .sb-header .findspot { font-size: 0.8rem; color: var(--text2); margin-top: 2px; }
+    .sb-actions { display: flex; gap: 4px; flex-shrink: 0; }
+    .sb-btn {
+      background: none; border: 1px solid var(--border); border-radius: 4px;
+      cursor: pointer; font-size: 0.78rem; color: var(--text2);
+      padding: 3px 8px; white-space: nowrap;
+    }
+    .sb-btn:hover { color: var(--text); background: var(--bg); }
     .sb-close {
-      float: right; background: none; border: none; font-size: 1.3rem;
+      background: none; border: none; font-size: 1.2rem;
       cursor: pointer; color: var(--text2); line-height: 1; padding: 0;
+      flex-shrink: 0;
     }
     .sb-close:hover { color: var(--text); }
 
-    .sb-body { flex: 1; overflow-y: auto; padding: 14px 16px; }
+    .sb-body { flex: 1; overflow-y: auto; padding: 12px 14px; }
 
-    .date-range { font-size: 0.8rem; color: var(--text2); margin: 0 0 12px; }
+    .date-range { font-size: 0.8rem; color: var(--text2); margin-bottom: 10px; }
 
+    /* ── Person cards ───────────────────────────────────── */
     .person-card {
       border: 1px solid var(--border); border-radius: 6px;
-      padding: 10px 12px; margin-bottom: 10px; background: var(--bg2);
+      padding: 8px 10px; margin-bottom: 8px; background: var(--bg2);
     }
-    .person-name { font-weight: 600; font-size: 0.95rem; color: var(--text); margin: 0 0 4px; }
-    .person-meta { font-size: 0.8rem; color: var(--text2); margin: 0; }
+    .person-name { font-weight: 600; font-size: 0.92rem; color: var(--text); margin-bottom: 3px; }
+    .person-meta { font-size: 0.78rem; color: var(--text2); }
     .badge {
-      display: inline-block; font-size: 0.7rem; padding: 1px 6px;
+      display: inline-block; font-size: 0.68rem; padding: 1px 6px;
       border-radius: 10px; margin-left: 4px; vertical-align: middle;
     }
     .badge-deity    { background: #ffeaa7; color: #6c5a00; }
     .badge-imperial { background: #dfe6e9; color: #2d3436; }
     .badge-fragment { background: #fdcece; color: #6c0000; }
 
-    details { margin-bottom: 12px; }
-    details summary { font-size: 0.82rem; color: var(--text2); cursor: pointer; }
+    /* ── Translation / summary ──────────────────────────── */
+    .sb-section { margin-bottom: 12px; }
+    .sb-section-title {
+      font-size: 0.75rem; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.05em; color: var(--text2); margin-bottom: 5px;
+    }
+    .sb-section-body {
+      font-size: 0.85rem; line-height: 1.5; color: var(--text);
+    }
+
+    details { margin-bottom: 10px; }
+    details summary { font-size: 0.8rem; color: var(--text2); cursor: pointer; }
     details pre {
-      margin: 6px 0 0; font-size: 0.75rem; white-space: pre-wrap;
+      margin-top: 5px; font-size: 0.73rem; white-space: pre-wrap;
       background: var(--bg2); border: 1px solid var(--border);
-      border-radius: 4px; padding: 8px; max-height: 160px; overflow-y: auto;
+      border-radius: 4px; padding: 7px; max-height: 150px; overflow-y: auto;
     }
 
     .sb-footer {
-      padding: 10px 16px; border-top: 1px solid var(--border);
+      padding: 8px 14px; border-top: 1px solid var(--border);
       display: flex; align-items: center; justify-content: space-between;
       flex-shrink: 0; background: var(--bg2);
     }
-    .sb-footer a { font-size: 0.82rem; color: var(--accent); text-decoration: none; }
+    .sb-footer a { font-size: 0.8rem; color: var(--accent); text-decoration: none; }
     .sb-footer a:hover { text-decoration: underline; }
-    .flag-link { font-size: 0.78rem; color: var(--text2); cursor: pointer; background: none; border: none; padding: 0; }
+    .flag-link { font-size: 0.76rem; color: var(--text2); cursor: pointer; background: none; border: none; padding: 0; }
     .flag-link:hover { color: var(--accent); text-decoration: underline; }
 
-    /* ── Flag modal ────────────────────────────────────── */
-    #modal-backdrop {
-      position: fixed; inset: 0; background: rgba(0,0,0,0.45);
-      display: flex; align-items: center; justify-content: center;
-      z-index: 2000;
+    /* ── Inspection list ────────────────────────────────── */
+    .inspect-item {
+      border: 1px solid var(--border); border-radius: 6px;
+      padding: 8px 10px; margin-bottom: 8px; cursor: pointer;
+      background: var(--bg2); transition: background 0.1s;
     }
-    #modal-backdrop[hidden] { display: none; }
+    .inspect-item:hover { background: #eef2ff; border-color: #a0aec0; }
+    .inspect-title { font-size: 0.88rem; font-weight: 600; color: var(--text); margin-bottom: 2px; }
+    .inspect-meta  { font-size: 0.76rem; color: var(--text2); }
+    .inspect-more  { font-size: 0.78rem; color: var(--text2); text-align: center; padding: 6px 0; }
+
+    /* ── Flag modal ─────────────────────────────────────── */
+    .modal-backdrop {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.45);
+      display: flex; align-items: center; justify-content: center; z-index: 3000;
+    }
+    .modal-backdrop[hidden] { display: none; }
     .modal-box {
-      background: var(--bg); border-radius: 8px; padding: 24px;
+      background: var(--bg); border-radius: 8px; padding: 22px;
       width: 360px; max-width: 90vw; box-shadow: 0 8px 32px rgba(0,0,0,0.18);
     }
-    .modal-box h3 { margin: 0 0 16px; font-size: 1rem; color: var(--text); }
-    .field { margin-bottom: 14px; }
-    .field label { display: block; font-size: 0.82rem; color: var(--text2); margin-bottom: 4px; }
+    .modal-box h3 { font-size: 1rem; color: var(--text); margin-bottom: 14px; }
+    .field { margin-bottom: 12px; }
+    .field label { display: block; font-size: 0.8rem; color: var(--text2); margin-bottom: 3px; }
     .field select, .field textarea, .field input[type="email"] {
-      width: 100%; padding: 8px 10px; border: 1px solid var(--border);
-      border-radius: 5px; font-size: 0.9rem; font-family: inherit;
+      width: 100%; padding: 7px 9px; border: 1px solid var(--border);
+      border-radius: 5px; font-size: 0.88rem; font-family: inherit;
     }
-    .field textarea { resize: vertical; min-height: 72px; }
-    .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 6px; }
+    .field textarea { resize: vertical; min-height: 68px; }
+    .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 4px; }
     .btn-primary {
       background: var(--accent); color: white; border: none;
-      padding: 8px 18px; border-radius: 5px; cursor: pointer; font-size: 0.9rem;
+      padding: 7px 16px; border-radius: 5px; cursor: pointer; font-size: 0.88rem;
     }
     .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
     .btn-cancel {
       background: none; border: 1px solid var(--border);
-      padding: 8px 14px; border-radius: 5px; cursor: pointer; font-size: 0.9rem;
-      color: var(--text2);
+      padding: 7px 12px; border-radius: 5px; cursor: pointer; font-size: 0.88rem; color: var(--text2);
     }
-    .success-msg { text-align: center; color: #27ae60; padding: 10px 0; font-size: 0.9rem; }
-    .error-msg { text-align: center; color: #c0392b; padding: 10px 0; font-size: 0.9rem; }
+    .success-msg { text-align: center; color: #27ae60; padding: 8px 0; font-size: 0.88rem; }
+    .error-msg   { text-align: center; color: var(--accent); padding: 8px 0; font-size: 0.88rem; }
+
+    /* ── Intro modal ────────────────────────────────────── */
+    #intro-modal .modal-box { width: 480px; max-height: 90vh; overflow-y: auto; }
+    .intro-title { font-size: 1.2rem; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+    .intro-sub   { font-size: 0.85rem; color: var(--text2); margin-bottom: 14px; }
+    .intro-body  { font-size: 0.88rem; line-height: 1.6; color: var(--text); }
+    .intro-body p { margin-bottom: 10px; }
+    .intro-body h4 { font-size: 0.82rem; font-weight: 600; text-transform: uppercase;
+                     letter-spacing: 0.04em; color: var(--text2); margin: 12px 0 4px; }
+    .intro-body a { color: var(--accent); }
+    .intro-footer { margin-top: 16px; display: flex; justify-content: flex-end; }
   </style>
 </head>
 
 <body>
-<div id="layout">
-  <div id="map"></div>
 
-  <div id="stats">Loading…</div>
-
-  <!-- Sidebar -->
-  <div id="sidebar" hidden>
-    <div class="sb-header">
-      <button class="sb-close" onclick="closeDetail()" title="Close">&#x2715;</button>
-      <h2 id="sb-title">—</h2>
-      <p class="findspot" id="sb-findspot"></p>
+<!-- ── Intro modal ──────────────────────────────────────── -->
+<div id="intro-modal" class="modal-backdrop" hidden>
+  <div class="modal-box">
+    <p class="intro-title">Roman Name Attestations</p>
+    <p class="intro-sub">~150,000 inscriptions from across the Roman Empire, enriched with AI-extracted name data</p>
+    <div class="intro-body">
+      <p>This map visualises inscriptions from the <a href="https://db.edcs.eu" target="_blank" rel="noopener">Epigraphic Database Clauss-Slaby (EDCS)</a> that record personal names. For each inscription an AI pipeline attempts to identify individuals and extract their <em>praenomen</em>, <em>nomen</em>, <em>cognomen</em>, status, and gender.</p>
+      <h4>How to use</h4>
+      <p>Zoom in to explore individual inscriptions. Click any marker to see the people recorded on it, the inscription text, and (where available) a translation and summary. Use the search bar and filters to narrow down what you see.</p>
+      <h4>Caveats</h4>
+      <p>Name extraction is roughly 80–85% accurate. Errors are inevitable — if you spot a mistake, use the <em>Flag this entry</em> button in the detail panel to report it.</p>
+      <h4>Sources</h4>
+      <p>Inscription data: <a href="https://db.edcs.eu" target="_blank" rel="noopener">EDCS</a> · Map tiles: <a href="https://dh.gu.se/dare/" target="_blank" rel="noopener">Digital Atlas of the Roman Empire (DARE)</a></p>
     </div>
-    <div class="sb-body" id="sb-body"></div>
-    <div class="sb-footer">
-      <a id="sb-edcs-link" href="#" target="_blank" rel="noopener">View on EDCS ↗</a>
-      <button class="flag-link" onclick="openFlagModal()">Flag this entry</button>
+    <div class="intro-footer">
+      <button class="btn-primary" onclick="closeIntro()">Explore the map</button>
     </div>
   </div>
 </div>
 
-<!-- Flag modal -->
-<div id="modal-backdrop" hidden onclick="handleBackdropClick(event)">
+<!-- ── Flag modal ───────────────────────────────────────── -->
+<div id="flag-modal" class="modal-backdrop" hidden onclick="handleFlagBackdropClick(event)">
   <div class="modal-box">
     <h3>Flag this entry</h3>
-    <div id="modal-body">
+    <div id="flag-modal-body">
       <div class="field">
         <label for="flag-category">Category</label>
         <select id="flag-category">
@@ -175,11 +262,66 @@
         <button class="btn-primary" id="flag-submit-btn" onclick="submitFlag()">Submit</button>
       </div>
     </div>
-    <div id="modal-error" class="error-msg" hidden>
-      Something went wrong — please try again.
+    <div id="flag-modal-error" class="error-msg" hidden>Something went wrong — please try again.</div>
+    <div id="flag-modal-success" class="success-msg" hidden>Thank you — flag recorded.</div>
+  </div>
+</div>
+
+<!-- ── Main layout ───────────────────────────────────────── -->
+<div id="layout">
+  <div id="map-col">
+    <div id="toolbar">
+      <input id="search-input" type="search" placeholder="Search by name…" autocomplete="off">
+      <button id="filter-toggle" onclick="toggleFilters()">Filters</button>
+      <button id="about-btn" onclick="openIntro()" title="About this project">?</button>
     </div>
-    <div id="modal-success" class="success-msg" hidden>
-      Thank you — flag recorded.
+
+    <div id="filter-panel" hidden>
+      <div class="filter-group">
+        <label for="f-gender">Gender</label>
+        <select id="f-gender">
+          <option value="">All</option>
+          <option value="male">Male</option>
+          <option value="female">Female</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label for="f-confidence">Confidence</label>
+        <select id="f-confidence">
+          <option value="">All</option>
+          <option value="high">High</option>
+          <option value="low">Low</option>
+        </select>
+      </div>
+      <label class="filter-check">
+        <input type="checkbox" id="f-hide-deity"> Hide deities
+      </label>
+      <label class="filter-check">
+        <input type="checkbox" id="f-hide-imperial"> Hide imperials
+      </label>
+      <label class="filter-check">
+        <input type="checkbox" id="f-has-translation"> Has translation
+      </label>
+    </div>
+
+    <div id="map"></div>
+    <div id="stats">Loading…</div>
+  </div>
+
+  <!-- Sidebar -->
+  <div id="sidebar" hidden>
+    <div class="sb-header" id="sb-header">
+      <div class="sb-header-text">
+        <h2 id="sb-title">—</h2>
+        <p class="findspot" id="sb-findspot"></p>
+      </div>
+      <div class="sb-actions" id="sb-actions"></div>
+      <button class="sb-close" onclick="closeSidebar()" title="Close">&#x2715;</button>
+    </div>
+    <div class="sb-body" id="sb-body"></div>
+    <div class="sb-footer" id="sb-footer">
+      <a id="sb-edcs-link" href="#" target="_blank" rel="noopener">View on EDCS ↗</a>
+      <button class="flag-link" onclick="openFlagModal()">Flag this entry</button>
     </div>
   </div>
 </div>
@@ -189,14 +331,26 @@
 <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
 
 <script>
-// ── State ───────────────────────────────────────────────
-let currentEdcsId = null;
-let map, clusterLayer, provinceLayer;
-let loadTimer;
+'use strict';
 
-// ── Helpers ─────────────────────────────────────────────
+// ── Constants ────────────────────────────────────────────
+const ZOOM_THRESHOLD = 5;   // below this: province view; at/above: inscriptions
+const MAX_TILE_ZOOM  = 10;  // matches TILE_ZOOM in 10_build_sqlite.py
+const INSPECT_LIMIT  = 50;  // max items shown in inspection panel
+
+// ── State ────────────────────────────────────────────────
+let map, clusterLayer, provinceLayer;
+let activeZoom = null;
+const loadedTiles    = new Set();             // 'z/x/y' or 'province-view'
+const loadedFeatures = new Map();             // edcs_id → feature properties
+let provinceFeatures = null;                  // cached province list
+let currentEdcsId    = null;
+let inspectStack     = null;                  // feature array when in inspect mode
+let moveTimer;
+
+// ── Helpers ──────────────────────────────────────────────
 function escHtml(s) {
-  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
 function makeBadge(cls, text) {
@@ -206,90 +360,245 @@ function makeBadge(cls, text) {
   return b;
 }
 
-// ── Map init ────────────────────────────────────────────
-function initMap() {
-  map = L.map('map', { zoomControl: true }).setView([41.9, 12.5], 5);
-
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-    maxZoom: 18,
-  }).addTo(map);
-
-  clusterLayer = L.markerClusterGroup({ chunkedLoading: true });
-  provinceLayer = L.layerGroup();
-  map.addLayer(clusterLayer);
-  map.addLayer(provinceLayer);
-
-  map.on('moveend zoomend', () => {
-    clearTimeout(loadTimer);
-    loadTimer = setTimeout(loadMarkers, 300);
-  });
-
-  // Clicking map background (not a marker) clears selection
-  map.on('click', () => clearDetail());
-
-  loadMarkers();
+function fmtDate(v) {
+  if (v == null) return '?';
+  return v < 0 ? `${Math.abs(v)} BCE` : `${v} CE`;
 }
 
-// ── Marker loading ──────────────────────────────────────
-async function loadMarkers() {
-  const b = map.getBounds();
-  const bbox = `${b.getWest()},${b.getSouth()},${b.getEast()},${b.getNorth()}`;
-  const zoom = map.getZoom();
+function personDisplayName(p) {
+  return [p.praenomen, p.nomen, p.cognomen].filter(Boolean).join(' ') || p.raw_name || '(unnamed)';
+}
 
-  let data;
-  try {
-    const resp = await fetch(`/api/markers?bbox=${bbox}&zoom=${zoom}`);
-    if (!resp.ok) return;
-    data = await resp.json();
-  } catch (_) { return; }
+function markerColor(persons) {
+  if (!persons || !persons.length) return '#95a5a6';
+  const genders = [...new Set(persons.map(p => p.gender).filter(Boolean))];
+  if (genders.length > 1)       return '#9b59b6';
+  if (genders[0] === 'male')    return '#3498db';
+  if (genders[0] === 'female')  return '#e91e63';
+  return '#95a5a6';
+}
+
+// ── Tile math ─────────────────────────────────────────────
+function latLonToTile(lat, lon, zoom) {
+  const n = Math.pow(2, zoom);
+  const x = Math.floor((lon + 180) / 360 * n);
+  const lr = lat * Math.PI / 180;
+  const y = Math.floor((1 - Math.log(Math.tan(lr) + 1 / Math.cos(lr)) / Math.PI) / 2 * n);
+  return { x: Math.max(0, Math.min(n - 1, x)), y: Math.max(0, Math.min(n - 1, y)) };
+}
+
+function getVisibleTiles(zoom) {
+  const b = map.getBounds();
+  const nw = latLonToTile(b.getNorth(), b.getWest(), zoom);
+  const se = latLonToTile(b.getSouth(), b.getEast(), zoom);
+  const tiles = [];
+  for (let x = nw.x; x <= se.x; x++)
+    for (let y = nw.y; y <= se.y; y++)
+      tiles.push({ z: zoom, x, y });
+  return tiles;
+}
+
+// ── Filters ───────────────────────────────────────────────
+function getFilters() {
+  return {
+    gender:          document.getElementById('f-gender').value,
+    confidence:      document.getElementById('f-confidence').value,
+    hideDeity:       document.getElementById('f-hide-deity').checked,
+    hideImperial:    document.getElementById('f-hide-imperial').checked,
+    hasTranslation:  document.getElementById('f-has-translation').checked,
+    search:          document.getElementById('search-input').value.trim().toLowerCase(),
+  };
+}
+
+function featureMatchesFilters(props, f) {
+  if (f.hasTranslation && !props.translation) return false;
+  const persons = props.persons || [];
+
+  if (f.search) {
+    const hit = persons.some(p => {
+      const full = [p.praenomen, p.nomen, p.cognomen, p.raw_name].join(' ').toLowerCase();
+      return full.includes(f.search);
+    });
+    if (!hit) return false;
+  }
+
+  if (f.gender || f.confidence || f.hideDeity || f.hideImperial) {
+    const relevant = persons.filter(p => {
+      if (f.hideDeity && p.is_deity) return false;
+      if (f.hideImperial && p.is_imperial) return false;
+      if (f.gender && p.gender !== f.gender) return false;
+      if (f.confidence && p.cluster_confidence !== f.confidence) return false;
+      return true;
+    });
+    if (persons.length > 0 && relevant.length === 0) return false;
+  }
+  return true;
+}
+
+// ── Marker rendering ──────────────────────────────────────
+function renderMarkers() {
+  const f = getFilters();
+  const zoom = map.getZoom();
 
   clusterLayer.clearLayers();
   provinceLayer.clearLayers();
 
-  const features = data.features || [];
-  document.getElementById('stats').textContent =
-    zoom < 6
-      ? `${features.length} province${features.length !== 1 ? 's' : ''} in view`
-      : `${features.length} inscription${features.length !== 1 ? 's' : ''} in view`;
-
-  for (const f of features) {
-    const [lon, lat] = f.geometry.coordinates;
-    const p = f.properties;
-
-    if (p.type === 'province_cluster') {
-      const marker = L.circleMarker([lat, lon], {
+  if (zoom < ZOOM_THRESHOLD) {
+    const pf = provinceFeatures || [];
+    for (const p of pf) {
+      const [lon, lat] = p.geometry.coordinates;
+      const props = p.properties;
+      const label = props.province.replace(/_/g, ' ');
+      const m = L.circleMarker([lat, lon], {
         radius: 14, fillColor: '#e67e22', color: '#fff', weight: 2, fillOpacity: 0.85,
       });
-      marker.bindTooltip(`<b>${escHtml(p.province.replace(/_/g, ' '))}</b><br>${escHtml(p.count)} inscriptions`);
-      marker.on('click', (e) => L.DomEvent.stopPropagation(e));
-      provinceLayer.addLayer(marker);
-    } else {
-      const persons = p.persons || [];
-      const color = markerColor(persons);
-      const marker = L.circleMarker([lat, lon], {
-        radius: 7, fillColor: color, color: '#fff', weight: 1, fillOpacity: 0.85,
-      });
-      marker.on('click', (e) => {
-        L.DomEvent.stopPropagation(e);
-        selectInscription(p.edcs_id);
-      });
-      clusterLayer.addLayer(marker);
+      m.bindTooltip(`<b>${escHtml(label)}</b><br>${escHtml(props.count)} inscriptions`);
+      m.on('click', e => L.DomEvent.stopPropagation(e));
+      provinceLayer.addLayer(m);
     }
+    const n = pf.length;
+    document.getElementById('stats').textContent =
+      `${n} province${n !== 1 ? 's' : ''}`;
+    return;
+  }
+
+  let shown = 0;
+  for (const [, props] of loadedFeatures) {
+    if (!featureMatchesFilters(props, f)) continue;
+    const color = markerColor(props.persons);
+    const m = L.circleMarker([props._lat, props._lon], {
+      radius: 6, fillColor: color, color: '#fff', weight: 1, fillOpacity: 0.85,
+    });
+    m._featureProps = props;
+    m.on('click', e => {
+      L.DomEvent.stopPropagation(e);
+      selectInscription(props.edcs_id);
+    });
+    clusterLayer.addLayer(m);
+    shown++;
+  }
+
+  document.getElementById('stats').textContent =
+    `${shown} inscription${shown !== 1 ? 's' : ''} in view`;
+}
+
+// ── Tile loading ──────────────────────────────────────────
+async function fetchTile(z, x, y, key) {
+  try {
+    const resp = await fetch(`/api/tiles/${z}/${x}/${y}`);
+    if (!resp.ok) { loadedTiles.delete(key); return; }
+    const data = await resp.json();
+    const features = data.features || [];
+
+    if (z < ZOOM_THRESHOLD) {
+      provinceFeatures = features;
+    } else {
+      for (const feat of features) {
+        if (!loadedFeatures.has(feat.properties.edcs_id)) {
+          feat.properties._lat = feat.geometry.coordinates[1];
+          feat.properties._lon = feat.geometry.coordinates[0];
+          loadedFeatures.set(feat.properties.edcs_id, feat.properties);
+        }
+      }
+    }
+    renderMarkers();
+  } catch (_) {
+    loadedTiles.delete(key); // allow retry on network error
   }
 }
 
-function markerColor(persons) {
-  if (!persons.length) return '#95a5a6';
-  const genders = [...new Set(persons.map(p => p.gender).filter(Boolean))];
-  if (genders.length > 1) return '#9b59b6';
-  if (genders[0] === 'male')   return '#3498db';
-  if (genders[0] === 'female') return '#e91e63';
-  return '#95a5a6';
+async function loadView() {
+  const zoom = map.getZoom();
+
+  if (activeZoom !== null && zoom !== activeZoom) {
+    loadedTiles.clear();
+    loadedFeatures.clear();
+    provinceFeatures = null;
+    clusterLayer.clearLayers();
+    provinceLayer.clearLayers();
+  }
+  activeZoom = zoom;
+
+  if (zoom < ZOOM_THRESHOLD) {
+    const key = 'province-view';
+    if (!loadedTiles.has(key)) {
+      loadedTiles.add(key);
+      await fetchTile(3, 0, 0, key);
+    }
+    return;
+  }
+
+  const tileZoom = Math.min(zoom, MAX_TILE_ZOOM);
+  const tiles = getVisibleTiles(tileZoom);
+  const pending = tiles.filter(t => !loadedTiles.has(`${t.z}/${t.x}/${t.y}`));
+  if (!pending.length) return;
+
+  // Mark all as loading before firing requests (prevents duplicate fetches on fast pan)
+  for (const t of pending) loadedTiles.add(`${t.z}/${t.x}/${t.y}`);
+  await Promise.all(pending.map(t => fetchTile(t.z, t.x, t.y, `${t.z}/${t.x}/${t.y}`)));
 }
 
-// ── Selection / deep links ──────────────────────────────
+// ── Cluster inspection ────────────────────────────────────
+function handleClusterClick(e) {
+  const cluster = e.layer;
+  const bounds = cluster.getBounds();
+  const spread = (bounds.getNorth() - bounds.getSouth()) + (bounds.getEast() - bounds.getWest());
+
+  if (spread < 0.001) {
+    // All markers at the same location — show inspection panel instead of spiderfy
+    L.DomEvent.stopPropagation(e.originalEvent);
+    const markers = cluster.getAllChildMarkers();
+    const features = markers.map(m => m._featureProps).filter(Boolean);
+    showInspectionPanel(features);
+  }
+  // Otherwise default zoom-in behaviour
+}
+
+// ── Map init ──────────────────────────────────────────────
+function initMap() {
+  map = L.map('map', { zoomControl: true }).setView([41.9, 12.5], 5);
+
+  L.tileLayer('https://dh.gu.se/tiles/imperium/{z}/{x}/{y}.png', {
+    attribution: 'Map: <a href="https://dh.gu.se/dare/" target="_blank">DARE</a> | Inscriptions: <a href="https://db.edcs.eu" target="_blank">EDCS</a>',
+    minZoom: 4,
+    maxNativeZoom: 11,
+    maxZoom: 14,
+    crossOrigin: true,
+  }).addTo(map);
+
+  clusterLayer = L.markerClusterGroup({
+    chunkedLoading: true,
+    spiderfyOnMaxZoom: false,
+    showCoverageOnHover: false,
+    maxClusterRadius: 40,
+  });
+  provinceLayer = L.layerGroup();
+  map.addLayer(clusterLayer);
+  map.addLayer(provinceLayer);
+
+  clusterLayer.on('clusterclick', handleClusterClick);
+
+  map.on('moveend zoomend', () => {
+    clearTimeout(moveTimer);
+    moveTimer = setTimeout(loadView, 250);
+  });
+  map.on('click', () => {
+    if (!inspectStack) clearDetail();
+    else closeSidebar();
+  });
+
+  // Wire up filter/search changes
+  ['f-gender','f-confidence','f-hide-deity','f-hide-imperial','f-has-translation'].forEach(id => {
+    document.getElementById(id).addEventListener('change', renderMarkers);
+  });
+  document.getElementById('search-input').addEventListener('input', renderMarkers);
+
+  loadView();
+}
+
+// ── Selection / deep links ────────────────────────────────
 function selectInscription(edcsId) {
+  inspectStack = null;
   location.hash = '#edcs_id=' + encodeURIComponent(edcsId);
 }
 
@@ -298,9 +607,9 @@ function clearDetail() {
   hideSidebar();
 }
 
-function closeDetail() {
-  location.hash = '';
-  hideSidebar();
+function closeSidebar() {
+  inspectStack = null;
+  clearDetail();
 }
 
 window.addEventListener('hashchange', onHashChange);
@@ -322,20 +631,33 @@ async function loadInscription(edcsId) {
   } catch (_) { hideSidebar(); return; }
 
   currentEdcsId = edcsId;
-  renderSidebar(data);
+  renderDetailSidebar(data);
 }
 
-// ── Sidebar rendering ───────────────────────────────────
-function renderSidebar(data) {
+// ── Sidebar: detail view ──────────────────────────────────
+function renderDetailSidebar(data) {
   const persons = data.persons || [];
-  const firstName = persons[0];
-  const displayName = firstName
-    ? [firstName.praenomen, firstName.nomen, firstName.cognomen].filter(Boolean).join(' ') || firstName.raw_name || data.edcs_id
+  const first = persons[0];
+  const displayName = first
+    ? (personDisplayName(first) || data.edcs_id)
     : data.edcs_id;
 
   document.getElementById('sb-title').textContent = displayName;
   document.getElementById('sb-findspot').textContent = data.findspot || '';
+
+  // Back button when coming from inspection panel
+  const actions = document.getElementById('sb-actions');
+  actions.innerHTML = '';
+  if (inspectStack) {
+    const backBtn = document.createElement('button');
+    backBtn.className = 'sb-btn';
+    backBtn.textContent = '← Back';
+    backBtn.onclick = () => showInspectionPanel(inspectStack);
+    actions.appendChild(backBtn);
+  }
+
   document.getElementById('sb-edcs-link').href = data.edcs_url;
+  document.getElementById('sb-footer').removeAttribute('hidden');
 
   const body = document.getElementById('sb-body');
   body.innerHTML = '';
@@ -343,9 +665,7 @@ function renderSidebar(data) {
   if (data.date_from != null || data.date_to != null) {
     const p = document.createElement('p');
     p.className = 'date-range';
-    const from = data.date_from != null ? (data.date_from < 0 ? `${Math.abs(data.date_from)} BCE` : `${data.date_from} CE`) : '?';
-    const to   = data.date_to   != null ? (data.date_to   < 0 ? `${Math.abs(data.date_to)} BCE`   : `${data.date_to} CE`)   : '?';
-    p.textContent = `Date: ${from} – ${to}`;
+    p.textContent = `Date: ${fmtDate(data.date_from)} – ${fmtDate(data.date_to)}`;
     body.appendChild(p);
   }
 
@@ -353,11 +673,9 @@ function renderSidebar(data) {
     const card = document.createElement('div');
     card.className = 'person-card';
 
-    const nameParts = [person.praenomen, person.nomen, person.cognomen].filter(Boolean);
     const nameEl = document.createElement('p');
     nameEl.className = 'person-name';
-    nameEl.textContent = nameParts.join(' ') || person.raw_name || '(unnamed)';
-
+    nameEl.textContent = personDisplayName(person);
     if (person.is_deity)    nameEl.appendChild(makeBadge('badge-deity',    'deity'));
     if (person.is_imperial) nameEl.appendChild(makeBadge('badge-imperial', 'imperial'));
     if (person.fragmentary) nameEl.appendChild(makeBadge('badge-fragment', 'fragmentary'));
@@ -367,7 +685,7 @@ function renderSidebar(data) {
     if (person.status)  meta.push(`Status: ${person.status}`);
     if (person.cluster_id != null) {
       const conf = person.cluster_confidence ? ` (${person.cluster_confidence})` : '';
-      meta.push(`Cluster #${person.cluster_id} — ${person.cluster_size} attestation${person.cluster_size !== 1 ? 's' : ''}${conf}`);
+      meta.push(`Cluster #${person.cluster_id} · ${person.cluster_size} attestation${person.cluster_size !== 1 ? 's' : ''}${conf}`);
     }
 
     const metaEl = document.createElement('p');
@@ -379,45 +697,142 @@ function renderSidebar(data) {
     body.appendChild(card);
   }
 
+  if (data.translation) {
+    const sec = document.createElement('div');
+    sec.className = 'sb-section';
+    const t = document.createElement('p');
+    t.className = 'sb-section-title';
+    t.textContent = 'Translation';
+    const b = document.createElement('p');
+    b.className = 'sb-section-body';
+    b.textContent = data.translation;
+    sec.appendChild(t);
+    sec.appendChild(b);
+    body.appendChild(sec);
+  }
+
+  if (data.summary) {
+    const sec = document.createElement('div');
+    sec.className = 'sb-section';
+    const t = document.createElement('p');
+    t.className = 'sb-section-title';
+    t.textContent = 'Summary';
+    const b = document.createElement('p');
+    b.className = 'sb-section-body';
+    b.textContent = data.summary;
+    sec.appendChild(t);
+    sec.appendChild(b);
+    body.appendChild(sec);
+  }
+
   if (data.raw_text) {
-    const details = document.createElement('details');
-    const summary = document.createElement('summary');
-    summary.textContent = 'Raw inscription text';
+    const det = document.createElement('details');
+    const sum = document.createElement('summary');
+    sum.textContent = 'Raw inscription text';
     const pre = document.createElement('pre');
     pre.textContent = data.raw_text;
-    details.appendChild(summary);
-    details.appendChild(pre);
-    body.appendChild(details);
+    det.appendChild(sum);
+    det.appendChild(pre);
+    body.appendChild(det);
   }
 
   showSidebar();
 }
 
-function showSidebar() { document.getElementById('sidebar').removeAttribute('hidden'); }
-function hideSidebar()  { document.getElementById('sidebar').setAttribute('hidden', ''); currentEdcsId = null; }
+// ── Sidebar: inspection panel ─────────────────────────────
+function showInspectionPanel(features) {
+  inspectStack = features;
+  currentEdcsId = null;
+  if (location.hash) { history.replaceState(null, '', location.pathname); }
 
-// ── Flag modal ──────────────────────────────────────────
+  const loc = features[0] ? (features[0].findspot || 'this location') : 'this location';
+  document.getElementById('sb-title').textContent = `${features.length} inscription${features.length !== 1 ? 's' : ''}`;
+  document.getElementById('sb-findspot').textContent = loc;
+
+  const actions = document.getElementById('sb-actions');
+  actions.innerHTML = '';
+
+  document.getElementById('sb-footer').setAttribute('hidden', '');
+
+  const body = document.getElementById('sb-body');
+  body.innerHTML = '';
+
+  const shown = features.slice(0, INSPECT_LIMIT);
+  for (const props of shown) {
+    const item = document.createElement('div');
+    item.className = 'inspect-item';
+
+    const persons = props.persons || [];
+    const title = document.createElement('p');
+    title.className = 'inspect-title';
+    title.textContent = persons.length
+      ? persons.slice(0, 2).map(personDisplayName).join(', ') + (persons.length > 2 ? ` +${persons.length - 2}` : '')
+      : props.edcs_id;
+
+    const meta = document.createElement('p');
+    meta.className = 'inspect-meta';
+    const parts = [];
+    if (props.date_from != null || props.date_to != null)
+      parts.push(`${fmtDate(props.date_from)}–${fmtDate(props.date_to)}`);
+    if (persons.length) parts.push(`${persons.length} person${persons.length !== 1 ? 's' : ''}`);
+    if (props.translation) parts.push('has translation');
+    meta.textContent = parts.join(' · ');
+
+    item.appendChild(title);
+    item.appendChild(meta);
+    item.addEventListener('click', () => selectInscription(props.edcs_id));
+    body.appendChild(item);
+  }
+
+  if (features.length > INSPECT_LIMIT) {
+    const more = document.createElement('p');
+    more.className = 'inspect-more';
+    more.textContent = `+${features.length - INSPECT_LIMIT} more — zoom in further to narrow results`;
+    body.appendChild(more);
+  }
+
+  showSidebar();
+}
+
+// ── Sidebar visibility ────────────────────────────────────
+function showSidebar() { document.getElementById('sidebar').removeAttribute('hidden'); }
+function hideSidebar() {
+  document.getElementById('sidebar').setAttribute('hidden', '');
+  currentEdcsId = null;
+}
+
+// ── Filter toggle ─────────────────────────────────────────
+function toggleFilters() {
+  const panel = document.getElementById('filter-panel');
+  const btn   = document.getElementById('filter-toggle');
+  const hidden = panel.hasAttribute('hidden');
+  if (hidden) { panel.removeAttribute('hidden'); btn.classList.add('active'); }
+  else        { panel.setAttribute('hidden', ''); btn.classList.remove('active'); }
+}
+
+// ── Flag modal ────────────────────────────────────────────
 function openFlagModal() {
   document.getElementById('flag-category').value = 'people';
   document.getElementById('flag-comment').value  = '';
   document.getElementById('flag-email').value    = '';
-  document.getElementById('modal-body').removeAttribute('hidden');
-  document.getElementById('modal-error').setAttribute('hidden', '');
-  document.getElementById('modal-success').setAttribute('hidden', '');
-  document.getElementById('modal-backdrop').removeAttribute('hidden');
+  document.getElementById('flag-modal-body').removeAttribute('hidden');
+  document.getElementById('flag-modal-error').setAttribute('hidden', '');
+  document.getElementById('flag-modal-success').setAttribute('hidden', '');
+  document.getElementById('flag-modal').removeAttribute('hidden');
 }
 
 function closeFlagModal() {
-  document.getElementById('modal-backdrop').setAttribute('hidden', '');
+  document.getElementById('flag-modal').setAttribute('hidden', '');
 }
 
-function handleBackdropClick(e) {
-  if (e.target === document.getElementById('modal-backdrop')) closeFlagModal();
+function handleFlagBackdropClick(e) {
+  if (e.target === document.getElementById('flag-modal')) closeFlagModal();
 }
 
 async function submitFlag() {
   const btn = document.getElementById('flag-submit-btn');
   btn.disabled = true;
+  document.getElementById('flag-modal-error').setAttribute('hidden', '');
   try {
     const resp = await fetch('/api/flags', {
       method: 'POST',
@@ -430,19 +845,34 @@ async function submitFlag() {
       }),
     });
     if (resp.ok) {
-      document.getElementById('modal-body').setAttribute('hidden', '');
-      document.getElementById('modal-success').removeAttribute('hidden');
+      document.getElementById('flag-modal-body').setAttribute('hidden', '');
+      document.getElementById('flag-modal-success').removeAttribute('hidden');
       setTimeout(closeFlagModal, 2000);
     } else {
-      document.getElementById('modal-error').removeAttribute('hidden');
+      document.getElementById('flag-modal-error').removeAttribute('hidden');
     }
   } finally {
     btn.disabled = false;
   }
 }
 
-// ── Boot ────────────────────────────────────────────────
+// ── Intro modal ───────────────────────────────────────────
+function openIntro() {
+  document.getElementById('intro-modal').removeAttribute('hidden');
+}
+
+function closeIntro() {
+  document.getElementById('intro-modal').setAttribute('hidden', '');
+  try { localStorage.setItem('roman-names-intro-shown', '1'); } catch (_) {}
+}
+
+// ── Boot ──────────────────────────────────────────────────
 initMap();
+
+if (!localStorage.getItem('roman-names-intro-shown')) {
+  openIntro();
+}
+
 if (location.hash) onHashChange();
 </script>
 </body>
