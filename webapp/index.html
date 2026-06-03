@@ -123,6 +123,7 @@
       color: var(--text2);
     }
     .success-msg { text-align: center; color: #27ae60; padding: 10px 0; font-size: 0.9rem; }
+    .error-msg { text-align: center; color: #c0392b; padding: 10px 0; font-size: 0.9rem; }
   </style>
 </head>
 
@@ -174,6 +175,9 @@
         <button class="btn-primary" id="flag-submit-btn" onclick="submitFlag()">Submit</button>
       </div>
     </div>
+    <div id="modal-error" class="error-msg" hidden>
+      Something went wrong — please try again.
+    </div>
     <div id="modal-success" class="success-msg" hidden>
       Thank you — flag recorded.
     </div>
@@ -189,6 +193,18 @@
 let currentEdcsId = null;
 let map, clusterLayer, provinceLayer;
 let loadTimer;
+
+// ── Helpers ─────────────────────────────────────────────
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function makeBadge(cls, text) {
+  const b = document.createElement('span');
+  b.className = `badge ${cls}`;
+  b.textContent = text;
+  return b;
+}
 
 // ── Map init ────────────────────────────────────────────
 function initMap() {
@@ -245,7 +261,8 @@ async function loadMarkers() {
       const marker = L.circleMarker([lat, lon], {
         radius: 14, fillColor: '#e67e22', color: '#fff', weight: 2, fillOpacity: 0.85,
       });
-      marker.bindTooltip(`<b>${p.province.replace(/_/g, ' ')}</b><br>${p.count} inscriptions`);
+      marker.bindTooltip(`<b>${escHtml(p.province.replace(/_/g, ' '))}</b><br>${escHtml(p.count)} inscriptions`);
+      marker.on('click', (e) => L.DomEvent.stopPropagation(e));
       provinceLayer.addLayer(marker);
     } else {
       const persons = p.persons || [];
@@ -341,9 +358,9 @@ function renderSidebar(data) {
     nameEl.className = 'person-name';
     nameEl.textContent = nameParts.join(' ') || person.raw_name || '(unnamed)';
 
-    if (person.is_deity)    nameEl.innerHTML += ' <span class="badge badge-deity">deity</span>';
-    if (person.is_imperial) nameEl.innerHTML += ' <span class="badge badge-imperial">imperial</span>';
-    if (person.fragmentary) nameEl.innerHTML += ' <span class="badge badge-fragment">fragmentary</span>';
+    if (person.is_deity)    nameEl.appendChild(makeBadge('badge-deity',    'deity'));
+    if (person.is_imperial) nameEl.appendChild(makeBadge('badge-imperial', 'imperial'));
+    if (person.fragmentary) nameEl.appendChild(makeBadge('badge-fragment', 'fragmentary'));
 
     const meta = [];
     if (person.gender)  meta.push(`Gender: ${person.gender}`);
@@ -385,6 +402,7 @@ function openFlagModal() {
   document.getElementById('flag-comment').value  = '';
   document.getElementById('flag-email').value    = '';
   document.getElementById('modal-body').removeAttribute('hidden');
+  document.getElementById('modal-error').setAttribute('hidden', '');
   document.getElementById('modal-success').setAttribute('hidden', '');
   document.getElementById('modal-backdrop').removeAttribute('hidden');
 }
@@ -415,6 +433,8 @@ async function submitFlag() {
       document.getElementById('modal-body').setAttribute('hidden', '');
       document.getElementById('modal-success').removeAttribute('hidden');
       setTimeout(closeFlagModal, 2000);
+    } else {
+      document.getElementById('modal-error').removeAttribute('hidden');
     }
   } finally {
     btn.disabled = false;
