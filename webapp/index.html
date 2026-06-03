@@ -334,18 +334,20 @@
 'use strict';
 
 // ── Constants ────────────────────────────────────────────
-const ZOOM_THRESHOLD = 5;   // below this: province view; at/above: inscriptions
-const MAX_TILE_ZOOM  = 10;  // matches TILE_ZOOM in 10_build_sqlite.py
-const INSPECT_LIMIT  = 50;  // max items shown in inspection panel
+const ZOOM_PROVINCE   = 5;   // below: province clusters
+const ZOOM_INDIVIDUAL = 8;   // at/above: individual markers; between: grid aggregates
+const AGGREGATE_ZOOM  = 7;   // tile zoom used for intermediate aggregates
+const MAX_TILE_ZOOM   = 10;  // tile zoom for individual inscriptions
+const INSPECT_LIMIT   = 50;  // max items shown in inspection panel
 
 // ── State ────────────────────────────────────────────────
-let map, clusterLayer, provinceLayer;
-let activeZoom = null;
-const loadedTiles    = new Set();             // 'z/x/y' or 'province-view'
-const loadedFeatures = new Map();             // edcs_id → feature properties
-let provinceFeatures = null;                  // cached province list
+let map, clusterLayer, provinceLayer, aggregateLayer;
+let activeTier = null;  // 'province' | 'aggregate' | 'individual'
+const loadedTiles    = new Set();   // 'z/x/y' or 'province-view'
+const loadedFeatures = new Map();   // edcs_id → feature properties (individual tier)
+let provinceFeatures = null;        // cached, fetched once per session
 let currentEdcsId    = null;
-let inspectStack     = null;                  // feature array when in inspect mode
+let inspectStack     = null;        // feature array when in inspect mode
 let moveTimer;
 
 // ── Helpers ──────────────────────────────────────────────
@@ -435,15 +437,37 @@ function featureMatchesFilters(props, f) {
   return true;
 }
 
+// ── Tier helpers ──────────────────────────────────────────
+function getTier(zoom) {
+  if (zoom < ZOOM_PROVINCE)   return 'province';
+  if (zoom < ZOOM_INDIVIDUAL) return 'aggregate';
+  return 'individual';
+}
+
+function zoomToTile(z, x, y) {
+  const n = Math.pow(2, z);
+  const west  = x / n * 360 - 180;
+  const east  = (x + 1) / n * 360 - 180;
+  const north = Math.atan(Math.sinh(Math.PI * (1 - 2 * y / n)))       * 180 / Math.PI;
+  const south = Math.atan(Math.sinh(Math.PI * (1 - 2 * (y + 1) / n))) * 180 / Math.PI;
+  map.fitBounds([[south, west], [north, east]]);
+}
+
+function aggregateRadius(count) {
+  return Math.max(8, Math.min(28, 6 + Math.log10(count) * 7));
+}
+
 // ── Marker rendering ──────────────────────────────────────
 function renderMarkers() {
-  const f = getFilters();
+  const f    = getFilters();
   const zoom = map.getZoom();
+  const tier = getTier(zoom);
 
   clusterLayer.clearLayers();
   provinceLayer.clearLayers();
+  aggregateLayer.clearLayers();
 
-  if (zoom < ZOOM_THRESHOLD) {
+  if (tier === 'province') {
     const pf = provinceFeatures || [];
     for (const p of pf) {
       const [lon, lat] = p.geometry.coordinates;
@@ -457,11 +481,32 @@ function renderMarkers() {
       provinceLayer.addLayer(m);
     }
     const n = pf.length;
-    document.getElementById('stats').textContent =
-      `${n} province${n !== 1 ? 's' : ''}`;
+    document.getElementById('stats').textContent = `${n} province${n !== 1 ? 's' : ''}`;
     return;
   }
 
+  if (tier === 'aggregate') {
+    const cells = Array.from(loadedFeatures.values()); // reused for aggregates in this tier
+    let total = 0;
+    for (const props of cells) {
+      const m = L.circleMarker([props._lat, props._lon], {
+        radius: aggregateRadius(props.count),
+        fillColor: '#8e44ad', color: '#fff', weight: 1.5, fillOpacity: 0.75,
+      });
+      m.bindTooltip(`${escHtml(props.count)} inscriptions`);
+      m.on('click', e => {
+        L.DomEvent.stopPropagation(e);
+        zoomToTile(props.tile_z, props.tile_x, props.tile_y);
+      });
+      aggregateLayer.addLayer(m);
+      total += props.count;
+    }
+    document.getElementById('stats').textContent =
+      `${cells.length} area${cells.length !== 1 ? 's' : ''} · ${total.toLocaleString()} inscriptions`;
+    return;
+  }
+
+  // individual tier
   let shown = 0;
   for (const [, props] of loadedFeatures) {
     if (!featureMatchesFilters(props, f)) continue;
@@ -477,21 +522,30 @@ function renderMarkers() {
     clusterLayer.addLayer(m);
     shown++;
   }
-
   document.getElementById('stats').textContent =
-    `${shown} inscription${shown !== 1 ? 's' : ''} in view`;
+    `${shown.toLocaleString()} inscription${shown !== 1 ? 's' : ''} in view`;
 }
 
 // ── Tile loading ──────────────────────────────────────────
-async function fetchTile(z, x, y, key) {
+async function fetchTile(z, x, y, key, tier) {
   try {
     const resp = await fetch(`/api/tiles/${z}/${x}/${y}`);
     if (!resp.ok) { loadedTiles.delete(key); return; }
     const data = await resp.json();
     const features = data.features || [];
 
-    if (z < ZOOM_THRESHOLD) {
+    if (tier === 'province') {
       provinceFeatures = features;
+    } else if (tier === 'aggregate') {
+      for (const feat of features) {
+        const p = feat.properties;
+        const cellKey = `${p.tile_x}:${p.tile_y}`;
+        if (!loadedFeatures.has(cellKey)) {
+          p._lat = feat.geometry.coordinates[1];
+          p._lon = feat.geometry.coordinates[0];
+          loadedFeatures.set(cellKey, p);
+        }
+      }
     } else {
       for (const feat of features) {
         if (!loadedFeatures.has(feat.properties.edcs_id)) {
@@ -503,39 +557,42 @@ async function fetchTile(z, x, y, key) {
     }
     renderMarkers();
   } catch (_) {
-    loadedTiles.delete(key); // allow retry on network error
+    loadedTiles.delete(key);
   }
 }
 
 async function loadView() {
   const zoom = map.getZoom();
+  const tier = getTier(zoom);
 
-  if (activeZoom !== null && zoom !== activeZoom) {
+  // Clear state when crossing tier boundaries
+  if (activeTier !== null && tier !== activeTier) {
     loadedTiles.clear();
     loadedFeatures.clear();
-    provinceFeatures = null;
     clusterLayer.clearLayers();
     provinceLayer.clearLayers();
+    aggregateLayer.clearLayers();
   }
-  activeZoom = zoom;
+  activeTier = tier;
 
-  if (zoom < ZOOM_THRESHOLD) {
+  if (tier === 'province') {
     const key = 'province-view';
     if (!loadedTiles.has(key)) {
       loadedTiles.add(key);
-      await fetchTile(3, 0, 0, key);
+      await fetchTile(3, 0, 0, key, 'province');
     }
     return;
   }
 
-  const tileZoom = Math.min(zoom, MAX_TILE_ZOOM);
-  const tiles = getVisibleTiles(tileZoom);
+  // Aggregate tier: always request at AGGREGATE_ZOOM regardless of current zoom
+  // Individual tier: request at min(zoom, MAX_TILE_ZOOM)
+  const requestZoom = tier === 'aggregate' ? AGGREGATE_ZOOM : Math.min(zoom, MAX_TILE_ZOOM);
+  const tiles = getVisibleTiles(requestZoom);
   const pending = tiles.filter(t => !loadedTiles.has(`${t.z}/${t.x}/${t.y}`));
   if (!pending.length) return;
 
-  // Mark all as loading before firing requests (prevents duplicate fetches on fast pan)
   for (const t of pending) loadedTiles.add(`${t.z}/${t.x}/${t.y}`);
-  await Promise.all(pending.map(t => fetchTile(t.z, t.x, t.y, `${t.z}/${t.x}/${t.y}`)));
+  await Promise.all(pending.map(t => fetchTile(t.z, t.x, t.y, `${t.z}/${t.x}/${t.y}`, tier)));
 }
 
 // ── Cluster inspection ────────────────────────────────────
@@ -572,9 +629,11 @@ function initMap() {
     showCoverageOnHover: false,
     maxClusterRadius: 40,
   });
-  provinceLayer = L.layerGroup();
+  provinceLayer  = L.layerGroup();
+  aggregateLayer = L.layerGroup();
   map.addLayer(clusterLayer);
   map.addLayer(provinceLayer);
+  map.addLayer(aggregateLayer);
 
   clusterLayer.on('clusterclick', handleClusterClick);
 
@@ -582,10 +641,7 @@ function initMap() {
     clearTimeout(moveTimer);
     moveTimer = setTimeout(loadView, 250);
   });
-  map.on('click', () => {
-    if (!inspectStack) clearDetail();
-    else closeSidebar();
-  });
+  map.on('click', () => closeSidebar());
 
   // Wire up filter/search changes
   ['f-gender','f-confidence','f-hide-deity','f-hide-imperial','f-has-translation'].forEach(id => {

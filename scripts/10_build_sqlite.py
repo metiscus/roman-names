@@ -7,7 +7,8 @@ import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
 
-TILE_ZOOM = 10  # base zoom level used to pre-index inscription tiles
+TILE_ZOOM      = 10  # base zoom level used to pre-index inscription tiles
+AGGREGATE_ZOOM = 7   # precomputed grid zoom for intermediate view (5 ≤ zoom < 8)
 
 DEFAULT_DB_PATH = Path(__file__).parent.parent / "roman_names.db"
 DEFAULT_GEOJSON_DIR = Path(__file__).parent.parent / "webapp" / "data"
@@ -32,6 +33,18 @@ CREATE TABLE IF NOT EXISTS inscriptions (
     tile_x      INTEGER NOT NULL DEFAULT 0,
     tile_y      INTEGER NOT NULL DEFAULT 0,
     updated_at  TEXT NOT NULL
+)
+"""
+
+_CREATE_TILE_AGGREGATES = """
+CREATE TABLE IF NOT EXISTS tile_aggregates (
+    zoom   INTEGER NOT NULL,
+    tile_x INTEGER NOT NULL,
+    tile_y INTEGER NOT NULL,
+    lat    REAL NOT NULL,
+    lon    REAL NOT NULL,
+    count  INTEGER NOT NULL,
+    PRIMARY KEY (zoom, tile_x, tile_y)
 )
 """
 
@@ -151,6 +164,24 @@ def _load_geojson(
     return len(rows), skipped
 
 
+def _build_tile_aggregates(conn: sqlite3.Connection) -> int:
+    divisor = 2 ** (TILE_ZOOM - AGGREGATE_ZOOM)
+    conn.execute("DELETE FROM tile_aggregates")
+    conn.execute(f"""
+        INSERT INTO tile_aggregates (zoom, tile_x, tile_y, lat, lon, count)
+        SELECT {AGGREGATE_ZOOM},
+               tile_x / {divisor},
+               tile_y / {divisor},
+               AVG(lat),
+               AVG(lon),
+               COUNT(*)
+        FROM inscriptions
+        GROUP BY tile_x / {divisor}, tile_y / {divisor}
+    """)
+    conn.commit()
+    return conn.execute("SELECT COUNT(*) FROM tile_aggregates").fetchone()[0]
+
+
 def _build_provinces(conn: sqlite3.Connection) -> int:
     conn.execute("DELETE FROM provinces")
     conn.execute("""
@@ -171,6 +202,7 @@ def build(
     try:
         conn.execute("PRAGMA journal_mode=WAL")
         conn.execute(_CREATE_INSCRIPTIONS)
+        conn.execute(_CREATE_TILE_AGGREGATES)
         conn.execute(_CREATE_PROVINCES)
         conn.execute(_CREATE_FLAGS)
         for idx in _INDEXES:
@@ -190,6 +222,7 @@ def build(
             total_skipped += skipped
 
         n_provinces = _build_provinces(conn)
+        n_aggregates = _build_tile_aggregates(conn)
         enriched = sum(
             1 for v in enrichment.values()
             if v.get("translation") or v.get("summary")
@@ -200,6 +233,7 @@ def build(
 
     print(f"\nTotal: {total_loaded} inscriptions, {total_skipped} skipped")
     print(f"Provinces: {n_provinces} (precomputed)")
+    print(f"Tile aggregates: {n_aggregates} cells at zoom {AGGREGATE_ZOOM}")
     print(f"Database: {db_path}")
 
 

@@ -6,8 +6,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Generator
 
-ZOOM_CLUSTER_THRESHOLD = 5
-TILE_ZOOM = 10  # must match scripts/10_build_sqlite.py
+ZOOM_PROVINCE   = 5   # below: province clusters
+ZOOM_INDIVIDUAL = 8   # at/above: individual markers; between: grid aggregates
+AGGREGATE_ZOOM  = 7   # precomputed aggregate zoom — must match 10_build_sqlite.py
+TILE_ZOOM       = 10  # inscription tile zoom — must match 10_build_sqlite.py
 
 
 def _parse_persons(overrides: str | None, persons: str) -> list:
@@ -49,9 +51,20 @@ def _tile_range(z: int, x: int, y: int) -> tuple[int, int, int, int]:
         return sx, sx, sy, sy
 
 
+def _aggregate_tile_range(z: int, x: int, y: int) -> tuple[int, int, int, int]:
+    """Convert a tile at zoom z to a range of AGGREGATE_ZOOM tiles."""
+    if z <= AGGREGATE_ZOOM:
+        scale = 2 ** (AGGREGATE_ZOOM - z)
+        return x * scale, (x + 1) * scale - 1, y * scale, (y + 1) * scale - 1
+    else:
+        scale = 2 ** (z - AGGREGATE_ZOOM)
+        ax, ay = x // scale, y // scale
+        return ax, ax, ay, ay
+
+
 def get_markers_for_tile(z: int, x: int, y: int) -> dict:
     with _conn() as conn:
-        if z < ZOOM_CLUSTER_THRESHOLD:
+        if z < ZOOM_PROVINCE:
             rows = conn.execute("SELECT province, lat, lon, count FROM provinces").fetchall()
             features = [
                 {
@@ -65,6 +78,32 @@ def get_markers_for_tile(z: int, x: int, y: int) -> dict:
                 }
                 for r in rows
             ]
+
+        elif z < ZOOM_INDIVIDUAL:
+            ax_min, ax_max, ay_min, ay_max = _aggregate_tile_range(z, x, y)
+            rows = conn.execute(
+                """
+                SELECT tile_x, tile_y, lat, lon, count
+                FROM tile_aggregates
+                WHERE zoom = ? AND tile_x BETWEEN ? AND ? AND tile_y BETWEEN ? AND ?
+                """,
+                (AGGREGATE_ZOOM, ax_min, ax_max, ay_min, ay_max),
+            ).fetchall()
+            features = [
+                {
+                    "type": "Feature",
+                    "geometry": {"type": "Point", "coordinates": [r["lon"], r["lat"]]},
+                    "properties": {
+                        "type": "area_cluster",
+                        "count": r["count"],
+                        "tile_z": AGGREGATE_ZOOM,
+                        "tile_x": r["tile_x"],
+                        "tile_y": r["tile_y"],
+                    },
+                }
+                for r in rows
+            ]
+
         else:
             x_min, x_max, y_min, y_max = _tile_range(z, x, y)
             rows = conn.execute(
@@ -95,6 +134,7 @@ def get_markers_for_tile(z: int, x: int, y: int) -> dict:
                 }
                 for r in rows
             ]
+
     return {"type": "FeatureCollection", "features": features}
 
 

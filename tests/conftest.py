@@ -47,6 +47,11 @@ def test_db(tmp_path, monkeypatch):
             tile_y INTEGER NOT NULL DEFAULT 0,
             updated_at TEXT NOT NULL
         );
+        CREATE TABLE tile_aggregates (
+            zoom INTEGER NOT NULL, tile_x INTEGER NOT NULL, tile_y INTEGER NOT NULL,
+            lat REAL NOT NULL, lon REAL NOT NULL, count INTEGER NOT NULL,
+            PRIMARY KEY (zoom, tile_x, tile_y)
+        );
         CREATE TABLE provinces (
             province TEXT PRIMARY KEY,
             lat REAL NOT NULL, lon REAL NOT NULL,
@@ -62,6 +67,14 @@ def test_db(tmp_path, monkeypatch):
     conn.executemany(
         "INSERT INTO inscriptions VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
         _ROWS,
+    )
+    # z=7 aggregate cells: EDCS-1,2 → (67,49); EDCS-3 → (63,42)
+    conn.executemany(
+        "INSERT INTO tile_aggregates VALUES (?,?,?,?,?,?)",
+        [
+            (7, 67, 49, 36.85, 10.25, 2),
+            (7, 63, 42, 51.5, -0.1,  1),
+        ],
     )
     conn.executemany(
         "INSERT INTO provinces VALUES (?,?,?,?)",

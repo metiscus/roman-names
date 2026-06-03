@@ -13,6 +13,8 @@ build_sqlite = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(build_sqlite)
 build = build_sqlite.build
 lat_lon_to_tile = build_sqlite.lat_lon_to_tile
+AGGREGATE_ZOOM = build_sqlite.AGGREGATE_ZOOM
+TILE_ZOOM = build_sqlite.TILE_ZOOM
 
 
 @pytest.fixture
@@ -101,6 +103,7 @@ def test_schema_created(tmp_path, sample_geojson_dir):
     assert "inscriptions" in tables
     assert "flags" in tables
     assert "provinces" in tables
+    assert "tile_aggregates" in tables
     conn.close()
 
 
@@ -201,6 +204,39 @@ def test_tile_coords_precomputed(tmp_path, sample_geojson_dir):
     assert rows["EDCS-00000001"] == lat_lon_to_tile(36.8, 10.2)
     assert rows["EDCS-00000002"] == lat_lon_to_tile(36.9, 10.3)
     assert rows["EDCS-00000003"] == lat_lon_to_tile(51.5, -0.1)
+
+
+def test_tile_aggregates_precomputed(tmp_path, sample_geojson_dir):
+    db_path = tmp_path / "test.db"
+    build(db_path=db_path, geojson_dir=sample_geojson_dir)
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    divisor = 2 ** (TILE_ZOOM - AGGREGATE_ZOOM)
+
+    # Both africa inscriptions share the same z=AGGREGATE_ZOOM cell
+    tx1, ty1 = lat_lon_to_tile(36.8, 10.2)
+    tx2, ty2 = lat_lon_to_tile(36.9, 10.3)
+    assert tx1 // divisor == tx2 // divisor
+    assert ty1 // divisor == ty2 // divisor
+    agg_x, agg_y = tx1 // divisor, ty1 // divisor
+
+    row = conn.execute(
+        "SELECT count FROM tile_aggregates WHERE zoom=? AND tile_x=? AND tile_y=?",
+        (AGGREGATE_ZOOM, agg_x, agg_y),
+    ).fetchone()
+    assert row is not None
+    assert row["count"] == 2  # both africa inscriptions
+
+    # Britannia is in a different cell
+    tx3, ty3 = lat_lon_to_tile(51.5, -0.1)
+    brit_x, brit_y = tx3 // divisor, ty3 // divisor
+    brit_row = conn.execute(
+        "SELECT count FROM tile_aggregates WHERE zoom=? AND tile_x=? AND tile_y=?",
+        (AGGREGATE_ZOOM, brit_x, brit_y),
+    ).fetchone()
+    assert brit_row is not None
+    assert brit_row["count"] == 1
+    conn.close()
 
 
 def test_provinces_table_precomputed(tmp_path, sample_geojson_dir):
