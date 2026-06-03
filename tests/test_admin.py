@@ -168,3 +168,33 @@ def test_get_edit_log_unapplied_only(populated_db):
     conn.commit(); conn.close()
     unapplied = db.get_edit_log(unapplied_only=True)
     assert all(r["applied_at"] is None for r in unapplied)
+
+
+def test_mark_edit_applied(populated_db):
+    from server import db
+    db.save_edit("EDCS-00000001", "summary", "updated summary")
+    log = db.get_edit_log()
+    assert log[0]["applied_at"] is None
+    db.mark_edit_applied(log[0]["id"])
+    log = db.get_edit_log()
+    assert log[0]["applied_at"] is not None
+
+
+def test_get_flags_filters_by_status(populated_db):
+    import sqlite3
+    from server import db
+    conn = sqlite3.connect(populated_db)
+    conn.executemany(
+        "INSERT INTO flags (edcs_id, category, created_at, status) VALUES (?,?,?,?)",
+        [
+            ("EDCS-00000001", "people", "2026-01-01T00:00:00+00:00", "open"),
+            ("EDCS-00000002", "other",  "2026-01-01T00:00:00+00:00", "resolved"),
+        ]
+    )
+    conn.commit(); conn.close()
+    open_flags = db.get_flags(status="open")
+    assert len(open_flags) == 1
+    assert open_flags[0]["status"] == "open"
+    resolved_flags = db.get_flags(status="resolved")
+    assert len(resolved_flags) == 1
+    assert resolved_flags[0]["status"] == "resolved"
