@@ -40,6 +40,31 @@ def _conn() -> Generator[sqlite3.Connection, None, None]:
         conn.close()
 
 
+def run_migrations() -> None:
+    """Idempotent — call at every startup."""
+    with _conn() as conn:
+        for ddl in [
+            "ALTER TABLE flags ADD COLUMN status TEXT NOT NULL DEFAULT 'open'",
+            "ALTER TABLE flags ADD COLUMN resolved_at TEXT",
+        ]:
+            try:
+                conn.execute(ddl)
+            except sqlite3.OperationalError:
+                pass  # column already exists
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS edit_log (
+                id         INTEGER PRIMARY KEY AUTOINCREMENT,
+                edcs_id    TEXT NOT NULL,
+                field      TEXT NOT NULL,
+                old_value  TEXT,
+                new_value  TEXT,
+                edited_at  TEXT NOT NULL,
+                applied_at TEXT
+            )
+        """)
+        conn.commit()
+
+
 def _tile_range(z: int, x: int, y: int) -> tuple[int, int, int, int]:
     """Convert a tile at any zoom to a range of TILE_ZOOM tiles."""
     if z <= TILE_ZOOM:
@@ -109,7 +134,8 @@ def get_markers_for_tile(z: int, x: int, y: int) -> dict:
             rows = conn.execute(
                 """
                 SELECT edcs_id, lat, lon, findspot, date_from, date_to,
-                       persons, overrides, translation, summary
+                       persons, overrides,
+                       (translation IS NOT NULL AND translation != '') AS has_translation
                 FROM inscriptions
                 WHERE tile_x BETWEEN ? AND ? AND tile_y BETWEEN ? AND ?
                 """,
@@ -125,11 +151,9 @@ def get_markers_for_tile(z: int, x: int, y: int) -> dict:
                         "findspot": r["findspot"],
                         "date_from": r["date_from"],
                         "date_to": r["date_to"],
-                        "edcs_url": f"https://db.edcs.eu/epigr/epi_single.php?p_edcs_id={r['edcs_id']}",
+                        "edcs_url": f"https://edcs.hist.uzh.ch/en/document?edcs-id={r['edcs_id']}",
                         "persons": _parse_persons(r["overrides"], r["persons"]),
-                        "has_overrides": r["overrides"] is not None,
-                        "translation": r["translation"],
-                        "summary": r["summary"],
+                        "has_translation": bool(r["has_translation"]),
                     },
                 }
                 for r in rows
@@ -157,7 +181,7 @@ def get_inscription(edcs_id: str) -> dict | None:
         "raw_text": r["raw_text"],
         "date_from": r["date_from"],
         "date_to": r["date_to"],
-        "edcs_url": f"https://db.edcs.eu/epigr/epi_single.php?p_edcs_id={r['edcs_id']}",
+        "edcs_url": f"https://edcs.hist.uzh.ch/en/document?edcs-id={r['edcs_id']}",
         "persons": _parse_persons(r["overrides"], r["persons"]),
         "has_overrides": r["overrides"] is not None,
         "translation": r["translation"],
