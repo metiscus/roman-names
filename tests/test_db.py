@@ -4,29 +4,62 @@ import pytest
 import server.db as db
 
 
-def test_bbox_returns_inscriptions_in_view(test_db):
-    # Africa bbox — should return 2 inscriptions
-    result = db.get_markers_in_bbox(west=10.0, south=36.0, east=11.0, north=37.5, zoom=8)
+def test_tile_high_zoom_returns_inscriptions(test_db):
+    # z=8 tile (135, 99) covers both Africa inscriptions (tile_x=541,542 tile_y=398,399 at z=10
+    # → at z=8 that's 541//4=135, 398//4=99)
+    result = db.get_markers_for_tile(z=8, x=135, y=99)
     assert result["type"] == "FeatureCollection"
-    assert len(result["features"]) == 2
     ids = {f["properties"]["edcs_id"] for f in result["features"]}
     assert ids == {"EDCS-00000001", "EDCS-00000002"}
 
 
-def test_bbox_excludes_out_of_view(test_db):
-    # Britannia bbox — should not include Africa inscriptions
-    result = db.get_markers_in_bbox(west=-1.0, south=51.0, east=0.5, north=52.0, zoom=8)
+def test_tile_excludes_other_region(test_db):
+    # z=8 tile (127, 85) covers Britannia only
+    result = db.get_markers_for_tile(z=8, x=127, y=85)
     assert len(result["features"]) == 1
     assert result["features"][0]["properties"]["edcs_id"] == "EDCS-00000003"
 
 
+def test_tile_high_zoom_exact_match(test_db):
+    # Request the exact z=10 tile for EDCS-00000001 (541, 399)
+    result = db.get_markers_for_tile(z=10, x=541, y=399)
+    ids = {f["properties"]["edcs_id"] for f in result["features"]}
+    assert "EDCS-00000001" in ids
+
+
 def test_low_zoom_returns_province_clusters(test_db):
-    # Zoom < 6 over whole empire — expect province summaries, not individual inscriptions
-    result = db.get_markers_in_bbox(west=-180, south=-90, east=180, north=90, zoom=4)
+    # Zoom < 5 returns precomputed province summaries
+    result = db.get_markers_for_tile(z=4, x=0, y=0)
     for feature in result["features"]:
         assert feature["properties"]["type"] == "province_cluster"
         assert "count" in feature["properties"]
         assert "province" in feature["properties"]
+
+
+def test_low_zoom_returns_all_provinces(test_db):
+    result = db.get_markers_for_tile(z=4, x=0, y=0)
+    provinces = {f["properties"]["province"] for f in result["features"]}
+    assert provinces == {"africa_proconsularis", "britannia"}
+
+
+def test_inscription_properties_present(test_db):
+    result = db.get_markers_for_tile(z=10, x=541, y=399)
+    feat = next(f for f in result["features"] if f["properties"]["edcs_id"] == "EDCS-00000001")
+    props = feat["properties"]
+    assert props["type"] == "inscription"
+    assert "findspot" in props
+    assert "persons" in props
+    assert "edcs_url" in props
+    assert "translation" in props
+    assert "summary" in props
+
+
+def test_translation_returned_when_present(test_db):
+    # EDCS-00000002 has translation/summary in conftest
+    result = db.get_markers_for_tile(z=10, x=541, y=398)
+    feat = next(f for f in result["features"] if f["properties"]["edcs_id"] == "EDCS-00000002")
+    assert feat["properties"]["translation"] == "Translation for inscription 2"
+    assert feat["properties"]["summary"] == "Summary for inscription 2"
 
 
 def test_get_inscription_returns_full_detail(test_db):
@@ -37,6 +70,8 @@ def test_get_inscription_returns_full_detail(test_db):
     assert result["raw_text"] == "M. Tullio..."
     assert isinstance(result["persons"], list)
     assert result["has_overrides"] is False
+    assert "translation" in result
+    assert "summary" in result
 
 
 def test_get_inscription_returns_none_for_missing(test_db):
@@ -44,7 +79,6 @@ def test_get_inscription_returns_none_for_missing(test_db):
 
 
 def test_get_inscription_uses_overrides_when_set(test_db):
-    # Manually set overrides
     conn = sqlite3.connect(test_db)
     conn.execute(
         "UPDATE inscriptions SET overrides = ? WHERE edcs_id = ?",
@@ -63,9 +97,9 @@ def test_insert_flag_stores_record(test_db):
     conn = sqlite3.connect(test_db)
     row = conn.execute("SELECT * FROM flags WHERE edcs_id = ?", ("EDCS-00000001",)).fetchone()
     assert row is not None
-    assert row[2] == "translation"   # category
-    assert row[3] == "The ablative is wrong"  # comment
-    assert row[4] == "scholar@uni.edu"  # email
+    assert row[2] == "translation"
+    assert row[3] == "The ablative is wrong"
+    assert row[4] == "scholar@uni.edu"
     conn.close()
 
 

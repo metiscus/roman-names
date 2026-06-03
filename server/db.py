@@ -6,7 +6,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Generator
 
-ZOOM_CLUSTER_THRESHOLD = 6
+ZOOM_CLUSTER_THRESHOLD = 5
+TILE_ZOOM = 10  # must match scripts/10_build_sqlite.py
 
 
 def _parse_persons(overrides: str | None, persons: str) -> list:
@@ -37,20 +38,21 @@ def _conn() -> Generator[sqlite3.Connection, None, None]:
         conn.close()
 
 
-def get_markers_in_bbox(
-    west: float, south: float, east: float, north: float, zoom: int
-) -> dict:
+def _tile_range(z: int, x: int, y: int) -> tuple[int, int, int, int]:
+    """Convert a tile at any zoom to a range of TILE_ZOOM tiles."""
+    if z <= TILE_ZOOM:
+        scale = 2 ** (TILE_ZOOM - z)
+        return x * scale, (x + 1) * scale - 1, y * scale, (y + 1) * scale - 1
+    else:
+        scale = 2 ** (z - TILE_ZOOM)
+        sx, sy = x // scale, y // scale
+        return sx, sx, sy, sy
+
+
+def get_markers_for_tile(z: int, x: int, y: int) -> dict:
     with _conn() as conn:
-        if zoom < ZOOM_CLUSTER_THRESHOLD:
-            rows = conn.execute(
-                """
-                SELECT province, AVG(lat) AS lat, AVG(lon) AS lon, COUNT(*) AS count
-                FROM inscriptions
-                WHERE lat BETWEEN ? AND ? AND lon BETWEEN ? AND ?
-                GROUP BY province
-                """,
-                (south, north, west, east),
-            ).fetchall()
+        if z < ZOOM_CLUSTER_THRESHOLD:
+            rows = conn.execute("SELECT province, lat, lon, count FROM provinces").fetchall()
             features = [
                 {
                     "type": "Feature",
@@ -64,14 +66,15 @@ def get_markers_in_bbox(
                 for r in rows
             ]
         else:
+            x_min, x_max, y_min, y_max = _tile_range(z, x, y)
             rows = conn.execute(
                 """
                 SELECT edcs_id, lat, lon, findspot, date_from, date_to,
-                       persons, overrides
+                       persons, overrides, translation, summary
                 FROM inscriptions
-                WHERE lat BETWEEN ? AND ? AND lon BETWEEN ? AND ?
+                WHERE tile_x BETWEEN ? AND ? AND tile_y BETWEEN ? AND ?
                 """,
-                (south, north, west, east),
+                (x_min, x_max, y_min, y_max),
             ).fetchall()
             features = [
                 {
@@ -86,6 +89,8 @@ def get_markers_in_bbox(
                         "edcs_url": f"https://db.edcs.eu/epigr/epi_single.php?p_edcs_id={r['edcs_id']}",
                         "persons": _parse_persons(r["overrides"], r["persons"]),
                         "has_overrides": r["overrides"] is not None,
+                        "translation": r["translation"],
+                        "summary": r["summary"],
                     },
                 }
                 for r in rows
@@ -98,7 +103,7 @@ def get_inscription(edcs_id: str) -> dict | None:
         r = conn.execute(
             """
             SELECT edcs_id, province, lat, lon, findspot, raw_text,
-                   date_from, date_to, persons, overrides
+                   date_from, date_to, persons, overrides, translation, summary
             FROM inscriptions WHERE edcs_id = ?
             """,
             (edcs_id,),
@@ -115,6 +120,8 @@ def get_inscription(edcs_id: str) -> dict | None:
         "edcs_url": f"https://db.edcs.eu/epigr/epi_single.php?p_edcs_id={r['edcs_id']}",
         "persons": _parse_persons(r["overrides"], r["persons"]),
         "has_overrides": r["overrides"] is not None,
+        "translation": r["translation"],
+        "summary": r["summary"],
     }
 
 
