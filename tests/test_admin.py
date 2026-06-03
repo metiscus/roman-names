@@ -54,3 +54,15 @@ def test_run_migrations_is_idempotent(admin_db):
     from server import db
     db.run_migrations()
     db.run_migrations()  # should not raise
+
+
+def test_run_migrations_raises_if_flags_table_missing(tmp_path, monkeypatch):
+    db_path = tmp_path / "no_flags.db"
+    monkeypatch.setenv("ROMAN_NAMES_DB", str(db_path))
+    conn = sqlite3.connect(db_path)
+    conn.execute("CREATE TABLE inscriptions (edcs_id TEXT PRIMARY KEY)")
+    conn.commit()
+    conn.close()
+    from server import db
+    with pytest.raises(sqlite3.OperationalError):
+        db.run_migrations()

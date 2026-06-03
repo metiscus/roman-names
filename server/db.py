@@ -49,8 +49,9 @@ def run_migrations() -> None:
         ]:
             try:
                 conn.execute(ddl)
-            except sqlite3.OperationalError:
-                pass  # column already exists
+            except sqlite3.OperationalError as e:
+                if "duplicate column" not in str(e).lower():
+                    raise
         conn.execute("""
             CREATE TABLE IF NOT EXISTS edit_log (
                 id         INTEGER PRIMARY KEY AUTOINCREMENT,
