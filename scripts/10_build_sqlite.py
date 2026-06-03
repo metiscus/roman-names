@@ -9,6 +9,9 @@ from pathlib import Path
 DEFAULT_DB_PATH = Path(__file__).parent.parent / "roman_names.db"
 DEFAULT_GEOJSON_DIR = Path(__file__).parent.parent / "webapp" / "data"
 
+# persons and overrides both store JSON text. Always serialize with json.dumps() on
+# write and deserialize with json.loads() on read. The build script writes persons;
+# overrides is written by admin/correction tooling.
 _CREATE_INSCRIPTIONS = """
 CREATE TABLE IF NOT EXISTS inscriptions (
     edcs_id    TEXT PRIMARY KEY,
@@ -102,25 +105,27 @@ def build(
     geojson_dir: Path = DEFAULT_GEOJSON_DIR,
 ) -> None:
     conn = sqlite3.connect(db_path)
-    conn.execute("PRAGMA journal_mode=WAL")
-    conn.execute(_CREATE_INSCRIPTIONS)
-    conn.execute(_CREATE_FLAGS)
-    for idx in _INDEXES:
-        conn.execute(idx)
-    conn.commit()
+    try:
+        conn.execute("PRAGMA journal_mode=WAL")
+        conn.execute(_CREATE_INSCRIPTIONS)
+        conn.execute(_CREATE_FLAGS)
+        for idx in _INDEXES:
+            conn.execute(idx)
+        conn.commit()
 
-    geojson_files = sorted(geojson_dir.glob("inscriptions_*.geojson"))
-    now = datetime.now(timezone.utc).isoformat()
-    total_loaded = total_skipped = 0
+        geojson_files = sorted(geojson_dir.glob("inscriptions_*.geojson"))
+        now = datetime.now(timezone.utc).isoformat()
+        total_loaded = total_skipped = 0
 
-    for path in geojson_files:
-        province = path.stem.removeprefix("inscriptions_")
-        loaded, skipped = _load_geojson(path, province, conn, now)
-        print(f"  {province}: {loaded} loaded, {skipped} skipped")
-        total_loaded += loaded
-        total_skipped += skipped
+        for path in geojson_files:
+            province = path.stem.removeprefix("inscriptions_")
+            loaded, skipped = _load_geojson(path, province, conn, now)
+            print(f"  {province}: {loaded} loaded, {skipped} skipped")
+            total_loaded += loaded
+            total_skipped += skipped
+    finally:
+        conn.close()
 
-    conn.close()
     print(f"\nTotal: {total_loaded} inscriptions, {total_skipped} skipped")
     print(f"Provinces: {len(geojson_files)}")
     print(f"Database: {db_path}")
