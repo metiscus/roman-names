@@ -10,3 +10,4 @@ uvicorn[standard]
 httpx
 pytest
 pytest-asyncio
+a2wsgi
