@@ -48,3 +48,7 @@ temp_output_list.txt
 
 # Secrets
 .env
+
+# Database files
+roman_names.db
+*.db

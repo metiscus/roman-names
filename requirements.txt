@@ -5,3 +5,8 @@ python-dotenv
 requests
 tqdm
 pyarrow
+fastapi
+uvicorn[standard]
+httpx
+pytest
+pytest-asyncio
