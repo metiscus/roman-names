@@ -90,16 +90,13 @@ def test_inscription_properties_present(test_db):
     assert "findspot" in props
     assert "persons" in props
     assert "edcs_url" in props
-    assert "translation" in props
-    assert "summary" in props
+    assert "has_translation" in props
 
 
-def test_translation_returned_when_present(test_db):
-    # EDCS-00000002 has translation/summary in conftest
+def test_has_translation_flag_when_present(test_db):
     result = db.get_markers_for_tile(z=10, x=541, y=398)
     feat = next(f for f in result["features"] if f["properties"]["edcs_id"] == "EDCS-00000002")
-    assert feat["properties"]["translation"] == "Translation for inscription 2"
-    assert feat["properties"]["summary"] == "Summary for inscription 2"
+    assert feat["properties"]["has_translation"] is True
 
 
 def test_get_inscription_returns_full_detail(test_db):
