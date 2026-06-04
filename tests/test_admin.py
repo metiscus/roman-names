@@ -198,3 +198,148 @@ def test_get_flags_filters_by_status(populated_db):
     resolved_flags = db.get_flags(status="resolved")
     assert len(resolved_flags) == 1
     assert resolved_flags[0]["status"] == "resolved"
+
+
+import os
+from fastapi.testclient import TestClient
+
+
+@pytest.fixture
+def admin_client(test_db, monkeypatch):
+    monkeypatch.setenv("ADMIN_TOKEN", "test-secret-token")
+    from server.main import app
+    return TestClient(app, follow_redirects=False)
+
+
+def test_admin_login_page_loads(admin_client):
+    resp = admin_client.get("/admin/login")
+    assert resp.status_code == 200
+    assert b"Login" in resp.content
+
+
+def test_admin_flags_redirects_unauthenticated(admin_client):
+    resp = admin_client.get("/admin/flags")
+    assert resp.status_code == 303
+    assert resp.headers["location"] == "/admin/login"
+
+
+def test_admin_login_wrong_token(admin_client):
+    resp = admin_client.post("/admin/login", data={"token": "wrong"}, follow_redirects=False)
+    assert resp.status_code == 200
+    assert b"Invalid token" in resp.content
+
+
+def test_admin_login_correct_token_sets_cookie(admin_client):
+    resp = admin_client.post("/admin/login", data={"token": "test-secret-token"}, follow_redirects=False)
+    assert resp.status_code == 303
+    assert resp.headers["location"] == "/admin/flags"
+    assert "roman_admin" in resp.cookies
+
+
+@pytest.fixture
+def authed_client(admin_client):
+    admin_client.post("/admin/login", data={"token": "test-secret-token"}, follow_redirects=False)
+    return admin_client
+
+
+def test_admin_flags_page_loads_when_authed(authed_client):
+    resp = authed_client.get("/admin/flags")
+    assert resp.status_code == 200
+    assert b"Flags" in resp.content
+
+
+def test_admin_logout_clears_cookie(authed_client):
+    resp = authed_client.get("/admin/logout", follow_redirects=False)
+    assert resp.status_code == 303
+    resp2 = authed_client.get("/admin/flags", follow_redirects=False)
+    assert resp2.status_code == 303  # redirected back to login
+
+
+def test_admin_flags_export_csv(authed_client, test_db):
+    import sqlite3
+    conn = sqlite3.connect(test_db)
+    conn.execute(
+        "INSERT INTO flags (edcs_id, category, created_at, status) VALUES (?,?,?,?)",
+        ("EDCS-00000001", "people", "2026-01-01T00:00:00+00:00", "open"),
+    )
+    conn.commit(); conn.close()
+    resp = authed_client.get("/admin/flags/export")
+    assert resp.status_code == 200
+    assert "text/csv" in resp.headers["content-type"]
+    assert b"edcs_id" in resp.content
+    assert b"EDCS-00000001" in resp.content
+
+
+def test_admin_flag_status_update(authed_client, test_db):
+    import sqlite3
+    conn = sqlite3.connect(test_db)
+    conn.execute(
+        "INSERT INTO flags (edcs_id, category, created_at, status) VALUES (?,?,?,?)",
+        ("EDCS-00000001", "other", "2026-01-01T00:00:00+00:00", "open"),
+    )
+    conn.commit()
+    flag_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
+    conn.close()
+    resp = authed_client.post(f"/admin/flags/{flag_id}/status", data={"status": "resolved"}, follow_redirects=False)
+    assert resp.status_code == 303
+    conn = sqlite3.connect(test_db)
+    row = conn.execute("SELECT status FROM flags WHERE id=?", (flag_id,)).fetchone()
+    conn.close()
+    assert row[0] == "resolved"
+
+
+def test_admin_inscription_edit_page(authed_client):
+    resp = authed_client.get("/admin/inscription/EDCS-00000001")
+    assert resp.status_code == 200
+    assert b"EDCS-00000001" in resp.content
+    assert b"translation" in resp.content.lower()
+
+
+def test_admin_inscription_edit_saves(authed_client, test_db):
+    import sqlite3
+    resp = authed_client.post(
+        "/admin/inscription/EDCS-00000001/edit",
+        data={"persons": "[]", "translation": "Updated translation", "summary": "Updated summary"},
+        follow_redirects=False,
+    )
+    assert resp.status_code == 303
+    conn = sqlite3.connect(test_db)
+    row = conn.execute("SELECT translation FROM inscriptions WHERE edcs_id='EDCS-00000001'").fetchone()
+    conn.close()
+    assert row[0] == "Updated translation"
+
+
+def test_admin_inscription_edit_invalid_json(authed_client):
+    resp = authed_client.post(
+        "/admin/inscription/EDCS-00000001/edit",
+        data={"persons": "not json", "translation": "", "summary": ""},
+    )
+    assert resp.status_code == 200
+    assert b"Invalid JSON" in resp.content
+
+
+def test_admin_edit_log_page(authed_client, test_db):
+    import sqlite3
+    conn = sqlite3.connect(test_db)
+    conn.execute(
+        "INSERT INTO edit_log (edcs_id, field, old_value, new_value, edited_at) VALUES (?,?,?,?,?)",
+        ("EDCS-00000001", "translation", "old", "new", "2026-01-01T00:00:00+00:00"),
+    )
+    conn.commit(); conn.close()
+    resp = authed_client.get("/admin/edit-log")
+    assert resp.status_code == 200
+    assert b"EDCS-00000001" in resp.content
+
+
+def test_admin_edit_log_export_csv(authed_client, test_db):
+    import sqlite3
+    conn = sqlite3.connect(test_db)
+    conn.execute(
+        "INSERT INTO edit_log (edcs_id, field, old_value, new_value, edited_at) VALUES (?,?,?,?,?)",
+        ("EDCS-00000001", "summary", "old summary", "new summary", "2026-01-01T00:00:00+00:00"),
+    )
+    conn.commit(); conn.close()
+    resp = authed_client.get("/admin/edit-log/export")
+    assert resp.status_code == 200
+    assert "text/csv" in resp.headers["content-type"]
+    assert b"edcs_id" in resp.content
