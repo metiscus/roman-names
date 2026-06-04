@@ -1,3 +1,4 @@
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request
@@ -8,7 +9,14 @@ from . import db
 from .admin import router as admin_router
 from .models import FlagRequest
 
-app = FastAPI()
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    db.run_migrations()
+    yield
+
+
+app = FastAPI(lifespan=lifespan)
 app.include_router(admin_router)
 
 WEBAPP_DIR = Path(__file__).parent.parent / "webapp"
