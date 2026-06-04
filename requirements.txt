@@ -11,3 +11,4 @@ httpx
 pytest
 pytest-asyncio
 a2wsgi
+python-multipart
