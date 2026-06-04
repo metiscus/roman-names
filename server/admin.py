@@ -319,7 +319,7 @@ def inscription_edit_post(
         return _page(
             "Edit Error",
             f'<div class="flash-err">Invalid JSON in persons field.</div>'
-            f'<a href="/admin/inscription/{edcs_id}">← Back</a>',
+            f'<a href="/admin/inscription/{_e(edcs_id)}">← Back</a>',
         )
 
     # Only log fields that actually changed
