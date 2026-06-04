@@ -1,6 +1,7 @@
 import csv
 import hashlib
 import hmac
+import html as _html
 import io
 import json
 import os
@@ -20,11 +21,22 @@ _STATUS_COLORS = {
 }
 
 
+def _e(v) -> str:
+    """HTML-escape a value for safe inline rendering."""
+    return _html.escape(str(v or ""))
+
+
 # ── Session helpers ───────────────────────────────────────────────────────────
+
+_BOOT_NONCE = secrets.token_hex(8)
 
 def _session_token() -> str:
     raw = os.environ.get("ADMIN_TOKEN", "")
-    return hmac.new(raw.encode(), b"roman-names-admin", hashlib.sha256).hexdigest()
+    return hmac.new(
+        raw.encode(),
+        f"roman-names-admin:{_BOOT_NONCE}".encode(),
+        hashlib.sha256,
+    ).hexdigest()
 
 
 def _check(session: str | None) -> bool:
@@ -92,7 +104,7 @@ h1{{font-size:1.3rem;margin:0 0 16px}}
 # ── Login / logout ────────────────────────────────────────────────────────────
 
 def _login_form(error: str = "") -> str:
-    err_html = f'<div class="flash-err">{error}</div>' if error else ""
+    err_html = f'<div class="flash-err">{_e(error)}</div>' if error else ""
     return f"""
 <div class="card" style="max-width:360px;margin:60px auto">
   <h1>Login</h1>
@@ -158,22 +170,22 @@ def flags_list(session: str | None = Cookie(default=None, alias=COOKIE_NAME)):
     for f in flags:
         color = _STATUS_COLORS.get(f["status"], "#000")
         opts = "".join(
-            f'<option value="{s}"{"selected" if s == f["status"] else ""}>{s}</option>'
+            f'<option value="{_e(s)}"{"selected" if s == f["status"] else ""}>{_e(s)}</option>'
             for s in _STATUS_OPTS
         )
         rows += f"""<tr>
-  <td><a href="/admin/inscription/{f['edcs_id']}">{f['edcs_id']}</a></td>
-  <td>{f['category']}</td>
-  <td style="max-width:260px">{f.get('comment') or ''}</td>
-  <td>{f.get('email') or ''}</td>
-  <td>{f['created_at'][:10]}</td>
-  <td style="color:{color};font-weight:600">{f['status']}</td>
+  <td><a href="/admin/inscription/{_e(f['edcs_id'])}">{_e(f['edcs_id'])}</a></td>
+  <td>{_e(f['category'])}</td>
+  <td style="max-width:260px">{_e(f.get('comment') or '')}</td>
+  <td>{_e(f.get('email') or '')}</td>
+  <td>{_e(f['created_at'][:10])}</td>
+  <td style="color:{color};font-weight:600">{_e(f['status'])}</td>
   <td>
     <form class="inline" method="post" action="/admin/flags/{f['id']}/status">
       <select class="sel-inline" name="status">{opts}</select>
       <button class="btn btn-sm btn-secondary" type="submit">Set</button>
     </form>
-    <a class="btn btn-sm" href="/#edcs_id={f['edcs_id']}" target="_blank">View</a>
+    <a class="btn btn-sm" href="/#edcs_id={_e(f['edcs_id'])}" target="_blank">View</a>
   </td>
 </tr>"""
     content = f"""
@@ -227,7 +239,10 @@ def inscription_search_redirect(
     session: str | None = Cookie(default=None, alias=COOKIE_NAME),
 ):
     _require(session)
-    return RedirectResponse(f"/admin/inscription/{q.strip().upper()}", status_code=303)
+    edcs_id = q.strip().upper()
+    if not edcs_id:
+        return RedirectResponse("/admin/inscription", status_code=303)
+    return RedirectResponse(f"/admin/inscription/{edcs_id}", status_code=303)
 
 
 @router.get("/inscription/{edcs_id}", response_class=HTMLResponse)
@@ -239,7 +254,7 @@ def inscription_edit_get(
     _require(session)
     insc = db.get_inscription_for_edit(edcs_id)
     if insc is None:
-        return _page("Not Found", f'<div class="flash-err">Inscription {edcs_id} not found.</div>')
+        return _page("Not Found", f'<div class="flash-err">Inscription {_e(edcs_id)} not found.</div>')
 
     persons_raw = insc["overrides"] or insc["persons"] or "[]"
     try:
@@ -254,35 +269,35 @@ def inscription_edit_get(
             "<details style='margin-bottom:16px'>"
             "<summary style='cursor:pointer;font-size:.82rem;color:#6c757d'>Raw inscription text</summary>"
             f"<pre style='font-size:.78rem;background:#f8f9fa;padding:10px;border-radius:4px;"
-            f"white-space:pre-wrap'>{insc['raw_text']}</pre></details>"
+            f"white-space:pre-wrap'>{_e(insc['raw_text'])}</pre></details>"
         )
 
     content = f"""{flash}
 <div class="card">
-  <h1>Edit: {edcs_id}</h1>
-  <p style="color:#6c757d;font-size:.85rem;margin-bottom:12px">{insc.get('findspot') or ''}</p>
+  <h1>Edit: {_e(edcs_id)}</h1>
+  <p style="color:#6c757d;font-size:.85rem;margin-bottom:12px">{_e(insc.get('findspot') or '')}</p>
   {raw_block}
-  <form method="post" action="/admin/inscription/{edcs_id}/edit">
+  <form method="post" action="/admin/inscription/{_e(edcs_id)}/edit">
     <div style="margin-bottom:16px">
       <label style="font-weight:600;font-size:.85rem;display:block;margin-bottom:4px">
         Persons JSON (saved to overrides column)
       </label>
-      <textarea name="persons" rows="10">{persons_display}</textarea>
+      <textarea name="persons" rows="10">{_e(persons_display)}</textarea>
     </div>
     <div style="margin-bottom:16px">
       <label style="font-weight:600;font-size:.85rem;display:block;margin-bottom:4px">Translation</label>
-      <textarea name="translation" rows="4">{insc.get('translation') or ''}</textarea>
+      <textarea name="translation" rows="4">{_e(insc.get('translation') or '')}</textarea>
     </div>
     <div style="margin-bottom:16px">
       <label style="font-weight:600;font-size:.85rem;display:block;margin-bottom:4px">Summary</label>
-      <textarea name="summary" rows="3">{insc.get('summary') or ''}</textarea>
+      <textarea name="summary" rows="3">{_e(insc.get('summary') or '')}</textarea>
     </div>
     <button class="btn btn-primary" type="submit">Save changes</button>
-    <a class="btn btn-secondary" href="/#edcs_id={edcs_id}" target="_blank"
+    <a class="btn btn-secondary" href="/#edcs_id={_e(edcs_id)}" target="_blank"
        style="margin-left:8px">View on map ↗</a>
   </form>
 </div>"""
-    return _page(f"Edit {edcs_id}", content)
+    return _page(f"Edit {_e(edcs_id)}", content)
 
 
 @router.post("/inscription/{edcs_id}/edit")
@@ -348,14 +363,14 @@ def edit_log_list(session: str | None = Cookie(default=None, alias=COOKIE_NAME))
     for r in rows_data:
         applied = r.get("applied_at") or ""
         rows += f"""<tr>
-  <td><a href="/admin/inscription/{r['edcs_id']}">{r['edcs_id']}</a></td>
-  <td>{r['field']}</td>
+  <td><a href="/admin/inscription/{_e(r['edcs_id'])}">{_e(r['edcs_id'])}</a></td>
+  <td>{_e(r['field'])}</td>
   <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"
-      title="{r.get('old_value') or ''}">{(r.get('old_value') or '')[:60]}</td>
+      title="{_e((r.get('old_value') or '')[:60])}">{_e((r.get('old_value') or '')[:60])}</td>
   <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"
-      title="{r.get('new_value') or ''}">{(r.get('new_value') or '')[:60]}</td>
-  <td>{r['edited_at'][:16]}</td>
-  <td>{"✓ " + applied[:10] if applied else "—"}</td>
+      title="{_e((r.get('new_value') or '')[:60])}">{_e((r.get('new_value') or '')[:60])}</td>
+  <td>{_e(r['edited_at'][:16])}</td>
+  <td>{"✓ " + _e(applied[:10]) if applied else "—"}</td>
 </tr>"""
     content = f"""
 <div class="toolbar">
