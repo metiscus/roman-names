@@ -5,9 +5,11 @@ from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from . import db
+from .admin import router as admin_router
 from .models import FlagRequest
 
 app = FastAPI()
+app.include_router(admin_router)
 
 WEBAPP_DIR = Path(__file__).parent.parent / "webapp"
 
