@@ -88,7 +88,51 @@ def _aggregate_tile_range(z: int, x: int, y: int) -> tuple[int, int, int, int]:
         return ax, ax, ay, ay
 
 
-def get_markers_for_tile(z: int, x: int, y: int) -> dict:
+def _matches_filters(
+    persons: list,
+    gender: str | None,
+    confidence: str | None,
+    hide_deity: bool,
+    hide_imperial: bool,
+    search: str | None
+) -> bool:
+    if search:
+        search_lower = search.lower()
+        hit = False
+        for p in persons:
+            full = " ".join(filter(None, [p.get("praenomen"), p.get("nomen"), p.get("cognomen"), p.get("raw_name")])).lower()
+            if search_lower in full:
+                hit = True
+                break
+        if not hit:
+            return False
+
+    if gender or confidence or hide_deity or hide_imperial:
+        relevant = []
+        for p in persons:
+            if hide_deity and p.get("is_deity"):
+                continue
+            if hide_imperial and p.get("is_imperial"):
+                continue
+            if gender and p.get("gender") != gender:
+                continue
+            if confidence and p.get("cluster_confidence") != confidence:
+                continue
+            relevant.append(p)
+        if len(persons) > 0 and len(relevant) == 0:
+            return False
+    return True
+
+
+def get_markers_for_tile(
+    z: int, x: int, y: int,
+    gender: str | None = None,
+    confidence: str | None = None,
+    hide_deity: bool = False,
+    hide_imperial: bool = False,
+    has_translation: bool = False,
+    search: str | None = None
+) -> dict:
     with _conn() as conn:
         if z < ZOOM_PROVINCE:
             rows = conn.execute("SELECT province, lat, lon, count FROM provinces").fetchall()
@@ -132,18 +176,39 @@ def get_markers_for_tile(z: int, x: int, y: int) -> dict:
 
         else:
             x_min, x_max, y_min, y_max = _tile_range(z, x, y)
-            rows = conn.execute(
-                """
+            query = """
                 SELECT edcs_id, lat, lon, findspot, date_from, date_to,
                        persons, overrides,
                        (translation IS NOT NULL AND translation != '') AS has_translation
                 FROM inscriptions
                 WHERE tile_x BETWEEN ? AND ? AND tile_y BETWEEN ? AND ?
-                """,
-                (x_min, x_max, y_min, y_max),
-            ).fetchall()
-            features = [
-                {
+            """
+            params = [x_min, x_max, y_min, y_max]
+            if has_translation:
+                query += " AND (translation IS NOT NULL AND translation != '')"
+
+            rows = conn.execute(query, params).fetchall()
+            features = []
+            for r in rows:
+                parsed_persons = _parse_persons(r["overrides"], r["persons"])
+                if not _matches_filters(
+                    parsed_persons,
+                    gender=gender,
+                    confidence=confidence,
+                    hide_deity=hide_deity,
+                    hide_imperial=hide_imperial,
+                    search=search
+                ):
+                    continue
+
+                genders = list(set(p.get("gender") for p in parsed_persons if p.get("gender")))
+                person_names = []
+                for p in parsed_persons[:2]:
+                    name = " ".join(filter(None, [p.get("praenomen"), p.get("nomen"), p.get("cognomen")]))
+                    display_name = name if name else (p.get("raw_name") or "(unnamed)")
+                    person_names.append(display_name)
+
+                features.append({
                     "type": "Feature",
                     "geometry": {"type": "Point", "coordinates": [r["lon"], r["lat"]]},
                     "properties": {
@@ -153,16 +218,14 @@ def get_markers_for_tile(z: int, x: int, y: int) -> dict:
                         "date_from": r["date_from"],
                         "date_to": r["date_to"],
                         "edcs_url": f"https://edcs.hist.uzh.ch/en/document?edcs-id={r['edcs_id']}",
-                        "persons": _parse_persons(r["overrides"], r["persons"]),
+                        "genders": genders,
+                        "person_names": person_names,
+                        "person_count": len(parsed_persons),
                         "has_translation": bool(r["has_translation"]),
                     },
-                }
-                for r in rows
-            ]
+                })
 
     return {"type": "FeatureCollection", "features": features}
-
-
 def get_inscription(edcs_id: str) -> dict | None:
     with _conn() as conn:
         r = conn.execute(

@@ -138,3 +138,27 @@ def test_flag_nonexistent_edcs_id_still_succeeds(client):
 def test_inscription_cache_control_no_store(client):
     resp = client.get("/api/inscription/EDCS-00000001")
     assert resp.headers.get("cache-control") == "no-store"
+
+def test_tiles_with_gender_filter(client):
+    # EDCS-00000002 has male person, EDCS-00000001 has no gender info (not matching 'male')
+    resp = client.get("/api/tiles/10/541/398?gender=male")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert len(data["features"]) == 1
+    assert data["features"][0]["properties"]["edcs_id"] == "EDCS-00000002"
+    # Under active filter, Cache-Control should be no-store
+    assert resp.headers.get("cache-control") == "no-store"
+
+
+def test_tiles_with_search_filter(client):
+    # "Marcus" in sample persons matches
+    resp = client.get("/api/tiles/10/541/398?search=mar")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert len(data["features"]) == 1
+    assert data["features"][0]["properties"]["edcs_id"] == "EDCS-00000002"
+
+    # Non-existent search query returns nothing
+    resp_none = client.get("/api/tiles/10/541/398?search=nonsense_name")
+    assert resp_none.status_code == 200
+    assert len(resp_none.json()["features"]) == 0
