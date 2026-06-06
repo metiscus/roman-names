@@ -345,11 +345,12 @@ let map, clusterLayer, provinceLayer, aggregateLayer;
 let activeTier = null;  // 'province' | 'aggregate' | 'individual'
 const loadedTiles    = new Set();   // 'z/x/y' or 'province-view'
 const loadedFeatures = new Map();   // edcs_id → feature properties (individual tier)
+const tileFeaturesMap = new Map();  // 'z/x/y' → Set of edcs_id (for eviction)
+const renderedMarkersMap = new Map(); // edcs_id → marker reference (for eviction)
 let provinceFeatures = null;        // cached, fetched once per session
 let currentEdcsId    = null;
 let inspectStack     = null;        // feature array when in inspect mode
 let moveTimer;
-
 // ── Helpers ──────────────────────────────────────────────
 function escHtml(s) {
   return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -363,7 +364,7 @@ function makeBadge(cls, text) {
 }
 
 function fmtDate(v) {
-  if (v == null) return '?';
+  if (v == null || v === 0) return '?';
   return v < 0 ? `${Math.abs(v)} BCE` : `${v} CE`;
 }
 
@@ -371,9 +372,8 @@ function personDisplayName(p) {
   return [p.praenomen, p.nomen, p.cognomen].filter(Boolean).join(' ') || p.raw_name || '(unnamed)';
 }
 
-function markerColor(persons) {
-  if (!persons || !persons.length) return '#95a5a6';
-  const genders = [...new Set(persons.map(p => p.gender).filter(Boolean))];
+function markerColor(genders) {
+  if (!genders || !genders.length) return '#95a5a6';
   if (genders.length > 1)       return '#9b59b6';
   if (genders[0] === 'male')    return '#3498db';
   if (genders[0] === 'female')  return '#e91e63';
@@ -412,29 +412,17 @@ function getFilters() {
   };
 }
 
-function featureMatchesFilters(props, f) {
-  if (f.hasTranslation && !props.translation) return false;
-  const persons = props.persons || [];
-
-  if (f.search) {
-    const hit = persons.some(p => {
-      const full = [p.praenomen, p.nomen, p.cognomen, p.raw_name].join(' ').toLowerCase();
-      return full.includes(f.search);
-    });
-    if (!hit) return false;
-  }
-
-  if (f.gender || f.confidence || f.hideDeity || f.hideImperial) {
-    const relevant = persons.filter(p => {
-      if (f.hideDeity && p.is_deity) return false;
-      if (f.hideImperial && p.is_imperial) return false;
-      if (f.gender && p.gender !== f.gender) return false;
-      if (f.confidence && p.cluster_confidence !== f.confidence) return false;
-      return true;
-    });
-    if (persons.length > 0 && relevant.length === 0) return false;
-  }
-  return true;
+function getQueryString() {
+  const f = getFilters();
+  const params = new URLSearchParams();
+  if (f.gender) params.set('gender', f.gender);
+  if (f.confidence) params.set('confidence', f.confidence);
+  if (f.hideDeity) params.set('hide_deity', 'true');
+  if (f.hideImperial) params.set('hide_imperial', 'true');
+  if (f.hasTranslation) params.set('has_translation', 'true');
+  if (f.search) params.set('search', f.search);
+  const s = params.toString();
+  return s ? '?' + s : '';
 }
 
 // ── Tier helpers ──────────────────────────────────────────
@@ -459,15 +447,14 @@ function aggregateRadius(count) {
 
 // ── Marker rendering ──────────────────────────────────────
 function renderMarkers() {
-  const f    = getFilters();
   const zoom = map.getZoom();
   const tier = getTier(zoom);
 
-  clusterLayer.clearLayers();
-  provinceLayer.clearLayers();
-  aggregateLayer.clearLayers();
-
   if (tier === 'province') {
+    clusterLayer.clearLayers();
+    provinceLayer.clearLayers();
+    aggregateLayer.clearLayers();
+
     const pf = provinceFeatures || [];
     for (const p of pf) {
       const [lon, lat] = p.geometry.coordinates;
@@ -486,6 +473,10 @@ function renderMarkers() {
   }
 
   if (tier === 'aggregate') {
+    clusterLayer.clearLayers();
+    provinceLayer.clearLayers();
+    aggregateLayer.clearLayers();
+
     const cells = Array.from(loadedFeatures.values()); // reused for aggregates in this tier
     let total = 0;
     for (const props of cells) {
@@ -507,29 +498,15 @@ function renderMarkers() {
   }
 
   // individual tier
-  let shown = 0;
-  for (const [, props] of loadedFeatures) {
-    if (!featureMatchesFilters(props, f)) continue;
-    const color = markerColor(props.persons);
-    const m = L.circleMarker([props._lat, props._lon], {
-      radius: 6, fillColor: color, color: '#fff', weight: 1, fillOpacity: 0.85,
-    });
-    m._featureProps = props;
-    m.on('click', e => {
-      L.DomEvent.stopPropagation(e);
-      selectInscription(props.edcs_id);
-    });
-    clusterLayer.addLayer(m);
-    shown++;
-  }
+  const total = clusterLayer.getLayers().length;
   document.getElementById('stats').textContent =
-    `${shown.toLocaleString()} inscription${shown !== 1 ? 's' : ''} in view`;
+    `${total.toLocaleString()} inscription${total !== 1 ? 's' : ''} in view`;
 }
 
 // ── Tile loading ──────────────────────────────────────────
-async function fetchTile(z, x, y, key, tier) {
+async function fetchTile(z, x, y, key, tier, queryString = '') {
   try {
-    const resp = await fetch(`/api/tiles/${z}/${x}/${y}`);
+    const resp = await fetch(`/api/tiles/${z}/${x}/${y}${queryString}`);
     if (!resp.ok) { loadedTiles.delete(key); return; }
     const data = await resp.json();
     const features = data.features || [];
@@ -547,12 +524,32 @@ async function fetchTile(z, x, y, key, tier) {
         }
       }
     } else {
+      const markersToAdd = [];
+      const featureSet = new Set();
       for (const feat of features) {
-        if (!loadedFeatures.has(feat.properties.edcs_id)) {
+        const id = feat.properties.edcs_id;
+        featureSet.add(id);
+        if (!loadedFeatures.has(id)) {
           feat.properties._lat = feat.geometry.coordinates[1];
           feat.properties._lon = feat.geometry.coordinates[0];
-          loadedFeatures.set(feat.properties.edcs_id, feat.properties);
+          loadedFeatures.set(id, feat.properties);
+
+          const color = markerColor(feat.properties.genders);
+          const m = L.circleMarker([feat.properties._lat, feat.properties._lon], {
+            radius: 6, fillColor: color, color: '#fff', weight: 1, fillOpacity: 0.85,
+          });
+          m._featureProps = feat.properties;
+          m.on('click', e => {
+            L.DomEvent.stopPropagation(e);
+            selectInscription(id);
+          });
+          renderedMarkersMap.set(id, m);
+          markersToAdd.push(m);
         }
+      }
+      tileFeaturesMap.set(key, featureSet);
+      if (markersToAdd.length) {
+        clusterLayer.addLayers(markersToAdd);
       }
     }
     renderMarkers();
@@ -569,6 +566,8 @@ async function loadView() {
   if (activeTier !== null && tier !== activeTier) {
     loadedTiles.clear();
     loadedFeatures.clear();
+    tileFeaturesMap.clear();
+    renderedMarkersMap.clear();
     clusterLayer.clearLayers();
     provinceLayer.clearLayers();
     aggregateLayer.clearLayers();
@@ -588,11 +587,54 @@ async function loadView() {
   // Individual tier: request at min(zoom, MAX_TILE_ZOOM)
   const requestZoom = tier === 'aggregate' ? AGGREGATE_ZOOM : Math.min(zoom, MAX_TILE_ZOOM);
   const tiles = getVisibleTiles(requestZoom);
-  const pending = tiles.filter(t => !loadedTiles.has(`${t.z}/${t.x}/${t.y}`));
-  if (!pending.length) return;
 
+  // Viewport-based cache eviction
+  const visible = new Set();
+  for (const t of tiles) {
+    // Keep visible tiles plus their 1-tile neighbors as a safety buffer
+    for (let dx = -1; dx <= 1; dx++) {
+      for (let dy = -1; dy <= 1; dy++) {
+        visible.add(`${t.z}/${t.x + dx}/${t.y + dy}`);
+      }
+    }
+  }
+
+  // Evict loaded tiles that are no longer in our visible/buffer set
+  for (const loadedKey of Array.from(loadedTiles)) {
+    if (loadedKey === 'province-view') continue;
+    if (!visible.has(loadedKey)) {
+      const featureIds = tileFeaturesMap.get(loadedKey);
+      if (featureIds) {
+        for (const id of featureIds) {
+          const marker = renderedMarkersMap.get(id);
+          if (marker) {
+            clusterLayer.removeLayer(marker);
+            renderedMarkersMap.delete(id);
+          }
+          loadedFeatures.delete(id);
+        }
+        tileFeaturesMap.delete(loadedKey);
+      }
+      loadedTiles.delete(loadedKey);
+    }
+  }
+
+  const pending = tiles.filter(t => !loadedTiles.has(`${t.z}/${t.x}/${t.y}`));
+  if (!pending.length) {
+    renderMarkers();
+    return;
+  }
+
+  // Sort center-out so the browser queues the most visible tiles first
+  const center = latLonToTile(map.getCenter().lat, map.getCenter().lng, requestZoom);
+  pending.sort((a, b) =>
+    Math.hypot(a.x - center.x, a.y - center.y) -
+    Math.hypot(b.x - center.x, b.y - center.y)
+  );
+
+  const queryString = getQueryString();
   for (const t of pending) loadedTiles.add(`${t.z}/${t.x}/${t.y}`);
-  await Promise.all(pending.map(t => fetchTile(t.z, t.x, t.y, `${t.z}/${t.x}/${t.y}`, tier)));
+  await Promise.all(pending.map(t => fetchTile(t.z, t.x, t.y, `${t.z}/${t.x}/${t.y}`, tier, queryString)));
 }
 
 // ── Cluster inspection ────────────────────────────────────
@@ -611,9 +653,20 @@ function handleClusterClick(e) {
   // Otherwise default zoom-in behaviour
 }
 
+function handleFilterChange() {
+  loadedTiles.clear();
+  loadedFeatures.clear();
+  tileFeaturesMap.clear();
+  renderedMarkersMap.clear();
+  clusterLayer.clearLayers();
+  provinceLayer.clearLayers();
+  aggregateLayer.clearLayers();
+  loadView();
+}
+
 // ── Map init ──────────────────────────────────────────────
 function initMap() {
-  map = L.map('map', { zoomControl: true }).setView([41.9, 12.5], 5);
+  map = L.map('map', { zoomControl: true, preferCanvas: true }).setView([41.9, 12.5], 5);
 
   L.tileLayer('https://dh.gu.se/tiles/imperium/{z}/{x}/{y}.png', {
     attribution: 'Map: <a href="https://dh.gu.se/dare/" target="_blank">DARE</a> | Inscriptions: <a href="https://db.edcs.eu" target="_blank">EDCS</a>',
@@ -645,16 +698,15 @@ function initMap() {
 
   // Wire up filter/search changes
   ['f-gender','f-confidence','f-hide-deity','f-hide-imperial','f-has-translation'].forEach(id => {
-    document.getElementById(id).addEventListener('change', renderMarkers);
+    document.getElementById(id).addEventListener('change', handleFilterChange);
   });
-  document.getElementById('search-input').addEventListener('input', renderMarkers);
-
+  document.getElementById('search-input').addEventListener('input', handleFilterChange);
   loadView();
 }
 
 // ── Selection / deep links ────────────────────────────────
-function selectInscription(edcsId) {
-  inspectStack = null;
+function selectInscription(edcsId, preserveStack = false) {
+  if (!preserveStack) inspectStack = null;
   location.hash = '#edcs_id=' + encodeURIComponent(edcsId);
 }
 
@@ -818,11 +870,12 @@ function showInspectionPanel(features) {
     const item = document.createElement('div');
     item.className = 'inspect-item';
 
-    const persons = props.persons || [];
+    const count = props.person_count || 0;
+    const names = props.person_names || [];
     const title = document.createElement('p');
     title.className = 'inspect-title';
-    title.textContent = persons.length
-      ? persons.slice(0, 2).map(personDisplayName).join(', ') + (persons.length > 2 ? ` +${persons.length - 2}` : '')
+    title.textContent = count
+      ? names.join(', ') + (count > 2 ? ` +${count - 2}` : '')
       : props.edcs_id;
 
     const meta = document.createElement('p');
@@ -830,13 +883,13 @@ function showInspectionPanel(features) {
     const parts = [];
     if (props.date_from != null || props.date_to != null)
       parts.push(`${fmtDate(props.date_from)}–${fmtDate(props.date_to)}`);
-    if (persons.length) parts.push(`${persons.length} person${persons.length !== 1 ? 's' : ''}`);
-    if (props.translation) parts.push('has translation');
+    if (count) parts.push(`${count} person${count !== 1 ? 's' : ''}`);
+    if (props.has_translation) parts.push('has translation');
     meta.textContent = parts.join(' · ');
 
     item.appendChild(title);
     item.appendChild(meta);
-    item.addEventListener('click', () => selectInscription(props.edcs_id));
+    item.addEventListener('click', () => selectInscription(props.edcs_id, true));
     body.appendChild(item);
   }
 

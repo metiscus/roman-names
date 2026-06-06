@@ -32,10 +32,29 @@ async def cache_control(request: Request, call_next):
 
 
 @app.get("/api/tiles/{z}/{x}/{y}")
-def tiles(z: int, x: int, y: int):
-    data = db.get_markers_for_tile(z, x, y)
+def tiles(
+    z: int, x: int, y: int,
+    gender: str | None = None,
+    confidence: str | None = None,
+    hide_deity: bool = False,
+    hide_imperial: bool = False,
+    has_translation: bool = False,
+    search: str | None = None
+):
+    data = db.get_markers_for_tile(
+        z, x, y,
+        gender=gender,
+        confidence=confidence,
+        hide_deity=hide_deity,
+        hide_imperial=hide_imperial,
+        has_translation=has_translation,
+        search=search
+    )
     response = JSONResponse(content=data)
-    response.headers["Cache-Control"] = "public, max-age=86400"
+    if gender or confidence or hide_deity or hide_imperial or has_translation or search:
+        response.headers["Cache-Control"] = "no-store"
+    else:
+        response.headers["Cache-Control"] = "public, max-age=86400"
     return response
 
 

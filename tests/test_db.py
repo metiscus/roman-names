@@ -88,9 +88,28 @@ def test_inscription_properties_present(test_db):
     props = feat["properties"]
     assert props["type"] == "inscription"
     assert "findspot" in props
-    assert "persons" in props
+    assert "person_names" in props
+    assert "person_count" in props
+    assert "genders" in props
     assert "edcs_url" in props
     assert "has_translation" in props
+
+
+def test_get_markers_with_filters(test_db):
+    # Test gender filter: EDCS-00000001 has persons of unknown gender, EDCS-00000002 has a male person
+    res = db.get_markers_for_tile(z=10, x=541, y=398, gender="male")
+    ids = {f["properties"]["edcs_id"] for f in res["features"]}
+    assert "EDCS-00000002" in ids
+
+    res_female = db.get_markers_for_tile(z=10, x=541, y=398, gender="female")
+    assert len(res_female["features"]) == 0
+
+    # Test search filter
+    res_search = db.get_markers_for_tile(z=10, x=541, y=398, search="mar")
+    ids_search = {f["properties"]["edcs_id"] for f in res_search["features"]}
+    assert "EDCS-00000002" in ids_search # Marcus Tullius Cicero
+    res_search_none = db.get_markers_for_tile(z=10, x=541, y=398, search="caesar")
+    assert len(res_search_none["features"]) == 0
 
 
 def test_has_translation_flag_when_present(test_db):
