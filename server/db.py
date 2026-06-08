@@ -46,6 +46,8 @@ def run_migrations() -> None:
         for ddl in [
             "ALTER TABLE flags ADD COLUMN status TEXT NOT NULL DEFAULT 'open'",
             "ALTER TABLE flags ADD COLUMN resolved_at TEXT",
+            "ALTER TABLE inscriptions ADD COLUMN edh_id TEXT",
+            "ALTER TABLE inscriptions ADD COLUMN tm_uri TEXT",
         ]:
             try:
                 conn.execute(ddl)
@@ -63,6 +65,25 @@ def run_migrations() -> None:
                 applied_at TEXT
             )
         """)
+
+        # Backfill edh_id / tm_uri from enrichment JSONs if not yet populated
+        populated = conn.execute(
+            "SELECT 1 FROM inscriptions WHERE edh_id IS NOT NULL LIMIT 1"
+        ).fetchone()
+        if not populated:
+            enrich_dir = Path(__file__).parent.parent / "webapp" / "data"
+            for f in sorted(enrich_dir.glob("enrichment_*.json")):
+                with open(f) as fh:
+                    data = json.load(fh)
+                for edcs_id, fields in data.items():
+                    edh_id = fields.get("edh_id")
+                    tm_uri = fields.get("tm_uri")
+                    if edh_id or tm_uri:
+                        conn.execute(
+                            "UPDATE inscriptions SET edh_id=?, tm_uri=? WHERE edcs_id=?",
+                            (edh_id, tm_uri, edcs_id),
+                        )
+
         conn.commit()
 
 
@@ -134,6 +155,7 @@ def get_markers_for_tile(
     search: str | None = None,
     date_from: int | None = None,
     date_to: int | None = None,
+    exclude_undated: bool = False,
 ) -> dict:
     with _conn() as conn:
         if z < ZOOM_PROVINCE:
@@ -194,6 +216,8 @@ def get_markers_for_tile(
             if date_to is not None:
                 query += " AND (date_from IS NULL OR date_from <= ?)"
                 params.append(date_to)
+            if exclude_undated:
+                query += " AND date_from IS NOT NULL AND date_to IS NOT NULL"
 
             rows = conn.execute(query, params).fetchall()
             features = []
@@ -239,7 +263,8 @@ def get_inscription(edcs_id: str) -> dict | None:
         r = conn.execute(
             """
             SELECT edcs_id, province, lat, lon, findspot, raw_text,
-                   date_from, date_to, persons, overrides, translation, summary
+                   date_from, date_to, persons, overrides, translation, summary,
+                   edh_id, tm_uri
             FROM inscriptions WHERE edcs_id = ?
             """,
             (edcs_id,),
@@ -258,6 +283,8 @@ def get_inscription(edcs_id: str) -> dict | None:
         "has_overrides": r["overrides"] is not None,
         "translation": r["translation"],
         "summary": r["summary"],
+        "edh_id": r["edh_id"],
+        "tm_uri": r["tm_uri"],
     }
 
 
