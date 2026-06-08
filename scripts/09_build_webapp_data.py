@@ -13,7 +13,7 @@ from config import LIRE_ENRICHMENT_PATH
 
 # Paths resolved at runtime from --province arg (see __main__)
 
-def safe_int(val, default=0):
+def safe_int(val, default=None):
     if pd.isna(val) or val == '':
         return default
     try:

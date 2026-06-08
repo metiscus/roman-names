@@ -39,7 +39,9 @@ def tiles(
     hide_deity: bool = False,
     hide_imperial: bool = False,
     has_translation: bool = False,
-    search: str | None = None
+    search: str | None = None,
+    date_from: int | None = None,
+    date_to: int | None = None,
 ):
     data = db.get_markers_for_tile(
         z, x, y,
@@ -48,10 +50,13 @@ def tiles(
         hide_deity=hide_deity,
         hide_imperial=hide_imperial,
         has_translation=has_translation,
-        search=search
+        search=search,
+        date_from=date_from,
+        date_to=date_to,
     )
     response = JSONResponse(content=data)
-    if gender or confidence or hide_deity or hide_imperial or has_translation or search:
+    if gender or confidence or hide_deity or hide_imperial or has_translation or search \
+            or date_from is not None or date_to is not None:
         response.headers["Cache-Control"] = "no-store"
     else:
         response.headers["Cache-Control"] = "public, max-age=86400"

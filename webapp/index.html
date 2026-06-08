@@ -17,6 +17,8 @@
       --accent: #c0392b;
       --bg: #ffffff;
       --bg2: #f8f9fa;
+      --sidebar-head-bg: #faf4ef;
+      --sidebar-accent-border: #c0392b;
       --border: #dee2e6;
       --text: #2c3e50;
       --text2: #6c757d;
@@ -69,6 +71,12 @@
     .filter-group select { font-size: 0.82rem; border: 1px solid var(--border); border-radius: 4px; padding: 1px 4px; }
     .filter-check { display: flex; align-items: center; gap: 4px; cursor: pointer; user-select: none; }
     .filter-check input[type=checkbox] { cursor: pointer; }
+    .filter-date { display: flex; align-items: center; gap: 4px; }
+    .filter-date label { color: var(--text2); }
+    .filter-date input[type=number] {
+      width: 72px; font-size: 0.82rem; border: 1px solid var(--border);
+      border-radius: 4px; padding: 1px 5px; font-family: inherit;
+    }
 
     /* ── Stats pill ─────────────────────────────────────── */
     #stats {
@@ -83,20 +91,22 @@
     /* ── Sidebar ────────────────────────────────────────── */
     #sidebar {
       width: var(--sidebar-w); height: 100%; background: var(--bg);
-      border-left: 1px solid var(--border); display: flex; flex-direction: column;
-      z-index: 1001; box-shadow: -2px 0 10px rgba(0,0,0,0.08);
+      border-right: 3px solid var(--sidebar-accent-border);
+      display: flex; flex-direction: column;
+      z-index: 1001; box-shadow: 2px 0 14px rgba(0,0,0,0.10);
       overflow: hidden;
     }
     #sidebar[hidden] { display: none; }
 
     .sb-header {
       padding: 12px 14px 10px; border-bottom: 1px solid var(--border);
-      background: var(--bg2); flex-shrink: 0;
+      background: var(--sidebar-head-bg); flex-shrink: 0;
       display: flex; align-items: flex-start; gap: 8px;
     }
     .sb-header-text { flex: 1; min-width: 0; }
     .sb-header h2 { font-size: 1rem; color: var(--text); overflow-wrap: break-word; }
     .sb-header .findspot { font-size: 0.8rem; color: var(--text2); margin-top: 2px; }
+    .sb-header .findspot:not(:empty)::before { content: "Found at · "; }
     .sb-actions { display: flex; gap: 4px; flex-shrink: 0; }
     .sb-btn {
       background: none; border: 1px solid var(--border); border-radius: 4px;
@@ -151,8 +161,18 @@
     .sb-footer {
       padding: 8px 14px; border-top: 1px solid var(--border);
       display: flex; align-items: center; justify-content: space-between;
-      flex-shrink: 0; background: var(--bg2);
+      flex-shrink: 0; background: var(--sidebar-head-bg);
     }
+
+    /* ── Back button (in body, not header) ──────────────── */
+    .back-btn {
+      display: inline-flex; align-items: center; gap: 4px;
+      font-size: 0.8rem; color: var(--accent);
+      background: transparent; border: 1px solid var(--accent);
+      border-radius: 4px; padding: 3px 10px; cursor: pointer;
+      margin-bottom: 12px; font-family: inherit; opacity: 0.85;
+    }
+    .back-btn:hover { opacity: 1; background: rgba(192, 57, 43, 0.06); }
     .sb-footer a { font-size: 0.8rem; color: var(--accent); text-decoration: none; }
     .sb-footer a:hover { text-decoration: underline; }
     .flag-link { font-size: 0.76rem; color: var(--text2); cursor: pointer; background: none; border: none; padding: 0; }
@@ -269,6 +289,23 @@
 
 <!-- ── Main layout ───────────────────────────────────────── -->
 <div id="layout">
+  <!-- Sidebar (left) -->
+  <div id="sidebar" hidden>
+    <div class="sb-header" id="sb-header">
+      <div class="sb-header-text">
+        <h2 id="sb-title">—</h2>
+        <p class="findspot" id="sb-findspot"></p>
+      </div>
+      <div class="sb-actions" id="sb-actions"></div>
+      <button class="sb-close" onclick="closeSidebar()" title="Close">&#x2715;</button>
+    </div>
+    <div class="sb-body" id="sb-body"></div>
+    <div class="sb-footer" id="sb-footer">
+      <a id="sb-edcs-link" href="#" target="_blank" rel="noopener">View on EDCS ↗</a>
+      <button class="flag-link" onclick="openFlagModal()">Flag this entry</button>
+    </div>
+  </div>
+
   <div id="map-col">
     <div id="toolbar">
       <input id="search-input" type="search" placeholder="Search by name…" autocomplete="off">
@@ -302,27 +339,17 @@
       <label class="filter-check">
         <input type="checkbox" id="f-has-translation"> Has translation
       </label>
+      <div class="filter-date">
+        <label>Date</label>
+        <input type="number" id="f-date-from" placeholder="from" title="Year (negative = BCE)">
+        <span style="color:var(--text2)">–</span>
+        <input type="number" id="f-date-to" placeholder="to" title="Year (negative = BCE)">
+        <span style="color:var(--text2);font-size:0.78rem">CE/BCE</span>
+      </div>
     </div>
 
     <div id="map"></div>
     <div id="stats">Loading…</div>
-  </div>
-
-  <!-- Sidebar -->
-  <div id="sidebar" hidden>
-    <div class="sb-header" id="sb-header">
-      <div class="sb-header-text">
-        <h2 id="sb-title">—</h2>
-        <p class="findspot" id="sb-findspot"></p>
-      </div>
-      <div class="sb-actions" id="sb-actions"></div>
-      <button class="sb-close" onclick="closeSidebar()" title="Close">&#x2715;</button>
-    </div>
-    <div class="sb-body" id="sb-body"></div>
-    <div class="sb-footer" id="sb-footer">
-      <a id="sb-edcs-link" href="#" target="_blank" rel="noopener">View on EDCS ↗</a>
-      <button class="flag-link" onclick="openFlagModal()">Flag this entry</button>
-    </div>
   </div>
 </div>
 
@@ -402,6 +429,8 @@ function getVisibleTiles(zoom) {
 
 // ── Filters ───────────────────────────────────────────────
 function getFilters() {
+  const dfRaw = document.getElementById('f-date-from').value;
+  const dtRaw = document.getElementById('f-date-to').value;
   return {
     gender:          document.getElementById('f-gender').value,
     confidence:      document.getElementById('f-confidence').value,
@@ -409,6 +438,8 @@ function getFilters() {
     hideImperial:    document.getElementById('f-hide-imperial').checked,
     hasTranslation:  document.getElementById('f-has-translation').checked,
     search:          document.getElementById('search-input').value.trim().toLowerCase(),
+    dateFrom:        dfRaw !== '' ? parseInt(dfRaw, 10) : null,
+    dateTo:          dtRaw !== '' ? parseInt(dtRaw, 10) : null,
   };
 }
 
@@ -421,6 +452,8 @@ function getQueryString() {
   if (f.hideImperial) params.set('hide_imperial', 'true');
   if (f.hasTranslation) params.set('has_translation', 'true');
   if (f.search) params.set('search', f.search);
+  if (f.dateFrom != null) params.set('date_from', f.dateFrom);
+  if (f.dateTo   != null) params.set('date_to',   f.dateTo);
   const s = params.toString();
   return s ? '?' + s : '';
 }
@@ -701,6 +734,8 @@ function initMap() {
     document.getElementById(id).addEventListener('change', handleFilterChange);
   });
   document.getElementById('search-input').addEventListener('input', handleFilterChange);
+  document.getElementById('f-date-from').addEventListener('input', handleFilterChange);
+  document.getElementById('f-date-to').addEventListener('input', handleFilterChange);
   loadView();
 }
 
@@ -753,22 +788,22 @@ function renderDetailSidebar(data) {
   document.getElementById('sb-title').textContent = displayName;
   document.getElementById('sb-findspot').textContent = data.findspot || '';
 
-  // Back button when coming from inspection panel
-  const actions = document.getElementById('sb-actions');
-  actions.innerHTML = '';
-  if (inspectStack) {
-    const backBtn = document.createElement('button');
-    backBtn.className = 'sb-btn';
-    backBtn.textContent = '← Back';
-    backBtn.onclick = () => showInspectionPanel(inspectStack);
-    actions.appendChild(backBtn);
-  }
+  document.getElementById('sb-actions').innerHTML = '';
 
   document.getElementById('sb-edcs-link').href = data.edcs_url;
   document.getElementById('sb-footer').removeAttribute('hidden');
 
   const body = document.getElementById('sb-body');
   body.innerHTML = '';
+
+  // Back button at top of content area when coming from inspection panel
+  if (inspectStack) {
+    const backBtn = document.createElement('button');
+    backBtn.className = 'back-btn';
+    backBtn.textContent = '← Back to list';
+    backBtn.onclick = () => showInspectionPanel(inspectStack);
+    body.appendChild(backBtn);
+  }
 
   if (data.date_from != null || data.date_to != null) {
     const p = document.createElement('p');
