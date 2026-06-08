@@ -43,6 +43,15 @@ repository-only reference.
   references, external identifiers, and structured `people` data used for
   validation.
 
+### Digital Prosopography of the Roman Republic (DPRR)
+
+- Dataset: Digital Prosopography of the Roman Republic (DPRR)
+- Source: http://romanrepublic.ac.uk/rdf/repositories/dprr
+- License: CC BY-NC 4.0 (Creative Commons Attribution-NonCommercial 4.0 International License)
+- Project lead: King's College London
+- Used for canonical name whitelists (Nomina and Cognomina) and tribal variant detection.
+- Note: This project's use of DPRR data is for academic research and follows the NonCommercial restriction.
+
 LIRE aggregates material from EDCS and the Epigraphic Database Heidelberg
 (EDH). LIRE's own disclaimer notes that original data is provided by the
 third-party source indicated in its metadata and recommends checking accuracy

@@ -87,8 +87,9 @@ def generate_validation_set(province, slug=None):
     if len(pool) < 550:
         print(f"Warning: Pool size {len(pool)} is less than the requested 550. Sampling all available.")
         random.shuffle(pool)
-        dev_set = pool[:min(50, len(pool))]
-        eval_set = pool[min(50, len(pool)):]
+        dev_n = min(50, len(pool) // 10) if len(pool) <= 100 else 50
+        dev_set = pool[:dev_n]
+        eval_set = pool[dev_n:]
     else:
         # Shuffle and sample
         random.seed(42) # Reproducibility

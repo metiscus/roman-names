@@ -15,7 +15,7 @@ The pipeline uses **Gemini 2.5 Flash-Lite** (thinking disabled, batch size 15, u
 - `data/` — Raw datasets (EDCS, LIRE) and intermediate build artifacts.
 - `scripts/` — Python pipeline: data acquisition, NER extraction, clustering, evaluation, webapp build.
 - `scripts/prompts/` — Versioned NER prompts.
-- `scripts/lookup/` — Curated text-file lookup tables (praenomina, deities, emperor signatures, etc.).
+- `scripts/lookup/` — Curated text-file lookup tables (praenomina, deities, emperor signatures, etc., enriched with data from the **Digital Prosopography of the Roman Republic**).
 - `webapp/` — Static Leaflet map visualization. See [`webapp/README.md`](webapp/README.md).
 
 ## Current Status
@@ -108,7 +108,7 @@ Full research plan: [roman_ner_research_plan.md](roman_ner_research_plan.md).
 
 Code is licensed under the MIT License. See [`LICENSE`](LICENSE).
 
-Derived data artifacts are released under CC BY 4.0, matching the Zenodo
-license metadata for the EDCS 2022 and LIRE v3.0 source datasets used here.
+Derived data artifacts are primarily released under CC BY 4.0, matching the source datasets (EDCS 2022 and LIRE v3.0). Components derived from the **Digital Prosopography of the Roman Republic (DPRR)**, specifically the lookup whitelists for Nomina and Cognomina, are subject to the **CC BY-NC 4.0** (Attribution-NonCommercial) license.
+
 See [`DATA_LICENSE.md`](DATA_LICENSE.md) and [`ATTRIBUTION.md`](ATTRIBUTION.md)
 for source citations, reuse terms, and attribution guidance.

@@ -8,6 +8,10 @@ This includes generated name-attestation datasets, NER outputs, clustering
 outputs, webapp GeoJSON/JSON data, generated summaries, and generated English
 translations.
 
+## Exceptions
+
+- **DPRR-derived whitelists**: Lookup tables for Roman family names (Nomina) and surnames (Cognomina) located in `scripts/lookup/nomina_canonical.txt` and `scripts/lookup/cognomina_canonical.txt` are derived from the **Digital Prosopography of the Roman Republic (DPRR)** and are released under the **Creative Commons Attribution-NonCommercial 4.0 International License (CC BY-NC 4.0)**: https://creativecommons.org/licenses/by-nc/4.0/
+
 ## Source data
 
 The derived datasets depend on third-party source data. Reusers must preserve

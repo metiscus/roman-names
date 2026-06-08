@@ -108,8 +108,8 @@ def create_final_dataset(province_slug='africa_proconsularis', province_name='Af
                 'findspot': props.get('place'),
                 'latitude': props.get('Latitude'),
                 'longitude': props.get('Longitude'),
-                'date_from': props.get('dating from'),
-                'date_to': props.get('dating to'),
+                'date_from': props.get('not_before'),
+                'date_to': props.get('not_after'),
                 'inscription_type': props.get('inscr_type'),
                 'raw_text': props.get('inscription')
             }

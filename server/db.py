@@ -131,7 +131,9 @@ def get_markers_for_tile(
     hide_deity: bool = False,
     hide_imperial: bool = False,
     has_translation: bool = False,
-    search: str | None = None
+    search: str | None = None,
+    date_from: int | None = None,
+    date_to: int | None = None,
 ) -> dict:
     with _conn() as conn:
         if z < ZOOM_PROVINCE:
@@ -186,6 +188,12 @@ def get_markers_for_tile(
             params = [x_min, x_max, y_min, y_max]
             if has_translation:
                 query += " AND (translation IS NOT NULL AND translation != '')"
+            if date_from is not None:
+                query += " AND (date_to IS NULL OR date_to >= ?)"
+                params.append(date_from)
+            if date_to is not None:
+                query += " AND (date_from IS NULL OR date_from <= ?)"
+                params.append(date_to)
 
             rows = conn.execute(query, params).fetchall()
             features = []

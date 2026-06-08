@@ -1009,6 +1009,37 @@ def get_system_prompt(province):
   ]}]
 }"""
 
+    elif province.lower() in ('bruttium et lucania / regio iii', 'bruttium_et_lucania', 'bruttium et lucania'):
+        extra_examples = """
+**BRUTTIUM ET LUCANIA / REGIO III RULES:**
+1. MAGISTRATE ABBREVIATIONS: In long Greek lists (e.g., from Heraclea), you will see 3-letter abbreviations indicating civic subdivisions, phratries, or tribes (e.g., Τιω, Τηλ, Κοβ, Ψαθ, Σκι, Πυρ, Προ, Θρα, Γαψ, Γαγ, Φαω, Μνα, Λακ, Δυσ, Βοω, Αστ, Αλχ, Αγφ, Αγκ, Ευρ, Τυν, Σκα, Λογ, Σωτ, Ομβ). These are NOT personal names. Do NOT extract them.
+2. MINIMUM FRAGMENT THRESHOLD: Do NOT extract a person when every visible token is a single letter or entirely fragmentary abbreviations like "C.", "L.", "M()", "P()", or just a filiation "C. f.". A raw_name consisting only of a praenomen initial or fragmentary string is NOT a person — return persons: [].
+3. TRIBE (TRIBUS) VS. NOMEN: Do not confuse a tribe (like `Hor(atia)`, `Pom(ptina)`, `Maec(ia)`, `Fab(ia)`) with a nomen or a second person. "Gresio C(ai) f(ilio) Hor(atia) Liboni" is ONE person: nomen=Gresius, cognomen=Libo, status includes "filius Caii, tribus Horatia". Do not extract "Horatius" or "Caius" as separate persons.
+4. FILIATION GENDER: When you see `Aemiliae C(ai) f(iliae) Bassae`, this is a female name (Aemilia Bassa) whose father is Caius. Do NOT extract `Caius` as her praenomen, and do NOT make her male. Praenomen=null, nomen=Aemilia, cognomen=Bassa, gender=female, status=filia Caii.
+5. DEITY NAMES VS. HUMAN NAMES: Votive inscriptions to deities (e.g. "Iunoni", "Ment(i) Bon(ae)") should NOT have the deity extracted as a person.
+6. AVOID SPLITTING NAMES: "C(aius) Nervilius Iustus" is one person. Do not extract it twice.
+**Input:** "Aemiliae C(ai) f(iliae) Bassae / Q(uinto) Insteio Q(uinti) f(ilio) Pom(ptina) Cimbro / Gresio C(ai) f(ilio) Hor(atia) Liboni"
+**Output:**
+{
+  "results": [{"id": "BL2", "persons": [
+    {"praenomen": null, "nomen": "Aemilia", "cognomen": "Bassa", "gender": "female", "status": "filia Caii", "raw_name": "Aemiliae C(ai) f(iliae) Bassae", "fragmentary": false},
+    {"praenomen": "Q.", "nomen": "Insteius", "cognomen": "Cimber", "gender": "male", "status": "filius Quinti, tribus Pomptina", "raw_name": "Q(uinto) Insteio Q(uinti) f(ilio) Pom(ptina) Cimbro", "fragmentary": false},
+    {"praenomen": null, "nomen": "Gresius", "cognomen": "Libo", "gender": "male", "status": "filius Caii, tribus Horatia", "raw_name": "Gresio C(ai) f(ilio) Hor(atia) Liboni", "fragmentary": false}
+  ]}]
+}
+**Input:** "Ομβ ἐπὶ Σωσίππω ἱερομναμονε/όντων ἐπὶ θησαυρῶι Ψαθ / Σωσάνδρω Βοω Φιλωνίδα Στρ / Σωσίππω προβώλων Γαψ / Ἀγαθοκλέος Δυσ Μεγακλέος / Φαω Ἀρχέλα"
+**Output:**
+{
+  "results": [{"id": "BL1", "persons": [
+    {"praenomen": null, "nomen": null, "cognomen": "Sosippus", "gender": "male", "status": "hieromnemon", "raw_name": "Σωσίππω", "fragmentary": false},
+    {"praenomen": null, "nomen": null, "cognomen": "Sosander", "gender": "male", "status": null, "raw_name": "Σωσάνδρω", "fragmentary": false},
+    {"praenomen": null, "nomen": null, "cognomen": "Philonidas", "gender": "male", "status": null, "raw_name": "Φιλωνίδα", "fragmentary": false},
+    {"praenomen": null, "nomen": null, "cognomen": "Sosippus", "gender": "male", "status": "probulos", "raw_name": "Σωσίππω", "fragmentary": false},
+    {"praenomen": null, "nomen": null, "cognomen": "Agathocles", "gender": "male", "status": null, "raw_name": "Ἀγαθοκλέος", "fragmentary": false},
+    {"praenomen": null, "nomen": null, "cognomen": "Megacles", "gender": "male", "status": null, "raw_name": "Μεγακλέος", "fragmentary": false},
+    {"praenomen": null, "nomen": null, "cognomen": "Archelaus", "gender": "male", "status": null, "raw_name": "Ἀρχέλα", "fragmentary": false}
+  ]}]
+}"""
     elif province.lower() in ('venetia et histria / regio x', 'venetia_et_histria', 'venetia et histria'):
         extra_examples = """
 **VENETIA ET HISTRIA / REGIO X RULES:**

@@ -275,24 +275,19 @@ python3 scripts/11_translate_inscriptions.py --province {{PROVINCE_SLUG}} --incl
 
 The dry run shows how many records will be translated and estimated batches. The full run costs a few cents per province. The `--include-raw` flag translates non-LIRE inscriptions using EDCS raw text (epigraphic notation with parenthesised expansions), which typically brings translation coverage from ~50% to ~99%. Without this flag, only inscriptions with LIRE `text_edition` are translated. Translations are written directly into `webapp/data/enrichment_{{PROVINCE_SLUG}}.json` and displayed in popup cards. The script is interruptible — re-run without `--force` to resume.
 
-### 4g. Add province to the webapp selector
+### 4g. Add province to the database
 
-Edit `webapp/index.html`. Find the `<select id="province-select">` block and add:
+The webapp was rewritten to use a SQLite backend for all provinces at once instead of separate GeoJSON files per province. You do NOT need to edit `webapp/index.html` anymore.
 
-```html
-<option value="{{PROVINCE_SLUG}}">{{PROVINCE_NAME}}</option>
+Instead, rebuild the SQLite database:
+
+```bash
+python3 scripts/10_build_sqlite.py
 ```
 
-Find the `PROVINCES` JavaScript config object and add:
-
-```javascript
-{{PROVINCE_SLUG}}: { label: '{{PROVINCE_NAME}}', center: [LAT, LON], zoom: 7 },
-```
-
-Use an appropriate center coordinate for the province (e.g. Dalmatia: `[44.0, 16.5]`, Noricum: `[47.5, 14.0]`, Pannonia: `[47.0, 18.0]`, Dacia: `[46.0, 23.5]`).
+This step incorporates the newly exported Parquet files, clusters, and translations into the `roman_names.db` database.
 
 ---
-
 ## Step 5: Final Spot Check
 
 Run a final quality check on the full corpus output:

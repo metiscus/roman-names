@@ -64,7 +64,7 @@ PROVINCES = [
     ("etruria",                "Etruria / Regio VII",     True),
     ("latium_et_campania",     "Latium et Campania / Regio I", True),
     ("apulia_et_calabria",     "Apulia et Calabria / Regio II", True),
-    ("bruttium_et_lucania",    "Bruttium et Lucania / Regio III", False),
+    ("bruttium_et_lucania",    "Bruttium et Lucania / Regio III", True),
     ("samnium",                "Samnium / Regio IV",      False),
     ("picenum",                "Picenum / Regio V",       True),
     ("umbria",                 "Umbria / Regio VI",       False),
