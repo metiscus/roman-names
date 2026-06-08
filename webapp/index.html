@@ -178,6 +178,15 @@
     .flag-link { font-size: 0.76rem; color: var(--text2); cursor: pointer; background: none; border: none; padding: 0; }
     .flag-link:hover { color: var(--accent); text-decoration: underline; }
 
+    /* ── External DB links ──────────────────────────────── */
+    .db-links { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+    .db-link {
+      font-size: 0.76rem; color: var(--text2); text-decoration: none;
+      border: 1px solid var(--border); border-radius: 10px;
+      padding: 2px 8px; white-space: nowrap;
+    }
+    .db-link:hover { color: var(--accent); border-color: var(--accent); }
+
     /* ── Inspection list ────────────────────────────────── */
     .inspect-item {
       border: 1px solid var(--border); border-radius: 6px;
@@ -247,7 +256,7 @@
       <h4>Caveats</h4>
       <p>Name extraction is roughly 80–85% accurate. Errors are inevitable — if you spot a mistake, use the <em>Flag this entry</em> button in the detail panel to report it.</p>
       <h4>Sources</h4>
-      <p>Inscription data: <a href="https://db.edcs.eu" target="_blank" rel="noopener">EDCS</a> · Map tiles: <a href="https://dh.gu.se/dare/" target="_blank" rel="noopener">Digital Atlas of the Roman Empire (DARE)</a></p>
+      <p>Inscription data: <a href="https://db.edcs.eu" target="_blank" rel="noopener">EDCS</a> · Linked cross-references: <a href="https://doi.org/10.5281/zenodo.5776109" target="_blank" rel="noopener">LIRE</a>, <a href="https://edh.ub.uni-heidelberg.de/" target="_blank" rel="noopener">EDH</a>, <a href="https://www.trismegistos.org/" target="_blank" rel="noopener">Trismegistos</a> · Map tiles: <a href="https://dh.gu.se/dare/" target="_blank" rel="noopener">DARE</a></p>
     </div>
     <div class="intro-footer">
       <button class="btn-primary" onclick="closeIntro()">Explore the map</button>
@@ -346,6 +355,9 @@
         <input type="number" id="f-date-to" placeholder="to" title="Year (negative = BCE)">
         <span style="color:var(--text2);font-size:0.78rem">CE/BCE</span>
       </div>
+      <label class="filter-check" id="f-exclude-undated-wrap" hidden>
+        <input type="checkbox" id="f-exclude-undated"> Exclude undated
+      </label>
     </div>
 
     <div id="map"></div>
@@ -440,6 +452,7 @@ function getFilters() {
     search:          document.getElementById('search-input').value.trim().toLowerCase(),
     dateFrom:        dfRaw !== '' ? parseInt(dfRaw, 10) : null,
     dateTo:          dtRaw !== '' ? parseInt(dtRaw, 10) : null,
+    excludeUndated:  document.getElementById('f-exclude-undated').checked,
   };
 }
 
@@ -454,6 +467,7 @@ function getQueryString() {
   if (f.search) params.set('search', f.search);
   if (f.dateFrom != null) params.set('date_from', f.dateFrom);
   if (f.dateTo   != null) params.set('date_to',   f.dateTo);
+  if (f.excludeUndated)  params.set('exclude_undated', 'true');
   const s = params.toString();
   return s ? '?' + s : '';
 }
@@ -734,8 +748,17 @@ function initMap() {
     document.getElementById(id).addEventListener('change', handleFilterChange);
   });
   document.getElementById('search-input').addEventListener('input', handleFilterChange);
-  document.getElementById('f-date-from').addEventListener('input', handleFilterChange);
-  document.getElementById('f-date-to').addEventListener('input', handleFilterChange);
+  ['f-date-from', 'f-date-to'].forEach(id => {
+    document.getElementById(id).addEventListener('input', () => {
+      const df = document.getElementById('f-date-from').value;
+      const dt = document.getElementById('f-date-to').value;
+      const wrap = document.getElementById('f-exclude-undated-wrap');
+      if (df || dt) wrap.removeAttribute('hidden');
+      else          wrap.setAttribute('hidden', '');
+      handleFilterChange();
+    });
+  });
+  document.getElementById('f-exclude-undated').addEventListener('change', handleFilterChange);
   loadView();
 }
 
@@ -866,6 +889,25 @@ function renderDetailSidebar(data) {
     sec.appendChild(t);
     sec.appendChild(b);
     body.appendChild(sec);
+  }
+
+  // External database links
+  const extLinks = [];
+  if (data.edh_id) extLinks.push({ label: 'EDH ↗', href: `https://edh.ub.uni-heidelberg.de/edh/inschrift/${escHtml(data.edh_id)}` });
+  if (data.tm_uri) extLinks.push({ label: 'Trismegistos ↗', href: data.tm_uri });
+  if (extLinks.length) {
+    const wrap = document.createElement('div');
+    wrap.className = 'db-links';
+    for (const lk of extLinks) {
+      const a = document.createElement('a');
+      a.className = 'db-link';
+      a.href = lk.href;
+      a.target = '_blank';
+      a.rel = 'noopener';
+      a.textContent = lk.label;
+      wrap.appendChild(a);
+    }
+    body.appendChild(wrap);
   }
 
   if (data.raw_text) {
