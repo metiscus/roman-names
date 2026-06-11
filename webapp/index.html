@@ -817,6 +817,33 @@ async function loadInscription(edcsId) {
   }
 }
 
+async function showGlobalClusterPanel(globalClusterId, personName) {
+  const originId = currentEdcsId;
+  let data;
+  try {
+    const resp = await fetch(`/api/global-cluster/${globalClusterId}`);
+    if (!resp.ok) return;
+    data = await resp.json();
+  } catch (_) { return; }
+
+  showInspectionPanel(data.inscriptions);
+
+  const provLabel = data.province_count > 1
+    ? ` across ${data.province_count} provinces`
+    : '';
+  document.getElementById('sb-title').textContent =
+    `${data.count} attestation${data.count !== 1 ? 's' : ''} of ${personName}${provLabel}`;
+  document.getElementById('sb-findspot').textContent = data.provinces.join(', ');
+
+  if (originId) {
+    const backBtn = document.createElement('button');
+    backBtn.className = 'back-btn';
+    backBtn.textContent = '← Back to inscription';
+    backBtn.onclick = () => selectInscription(originId, false);
+    document.getElementById('sb-body').prepend(backBtn);
+  }
+}
+
 async function showClusterPanel(clusterId, personName, province) {
   const originId = currentEdcsId;
   let data;
@@ -900,7 +927,16 @@ function renderDetailSidebar(data) {
     card.appendChild(nameEl);
     if (meta.length) card.appendChild(metaEl);
 
-    if (person.cluster_id != null && person.cluster_size > 1) {
+    if (person.global_cluster_id != null) {
+      const btn = document.createElement('button');
+      btn.className = 'cluster-link';
+      const pLabel = person.global_province_count > 1
+        ? ` (${person.global_province_count} provinces)`
+        : '';
+      btn.textContent = `↗ ${person.global_cluster_size} attestations${pLabel}`;
+      btn.onclick = () => showGlobalClusterPanel(person.global_cluster_id, personDisplayName(person));
+      card.appendChild(btn);
+    } else if (person.cluster_id != null && person.cluster_size > 1) {
       const btn = document.createElement('button');
       btn.className = 'cluster-link';
       btn.textContent = `↗ ${person.cluster_size} attestations`;

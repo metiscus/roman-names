@@ -329,6 +329,40 @@ def get_cluster_inscriptions(cluster_id: int, province: str) -> list[dict]:
     return result
 
 
+def get_global_cluster_inscriptions(global_cluster_id: int) -> list[dict]:
+    """Return all inscriptions whose persons contain the given global_cluster_id."""
+    with _conn() as conn:
+        rows = conn.execute(
+            """
+            SELECT DISTINCT i.edcs_id, i.province, i.findspot, i.date_from, i.date_to,
+                   COALESCE(i.overrides, i.persons) AS persons_json,
+                   (i.translation IS NOT NULL AND i.translation != '') AS has_translation
+            FROM inscriptions i, json_each(COALESCE(i.overrides, i.persons)) p
+            WHERE json_extract(p.value, '$.global_cluster_id') = ?
+            ORDER BY i.province, i.date_from
+            """,
+            (global_cluster_id,),
+        ).fetchall()
+    result = []
+    for r in rows:
+        parsed = _parse_persons(None, r["persons_json"])
+        names = []
+        for p in parsed[:2]:
+            name = " ".join(filter(None, [p.get("praenomen"), p.get("nomen"), p.get("cognomen")]))
+            names.append(name if name else (p.get("raw_name") or "(unnamed)"))
+        result.append({
+            "edcs_id": r["edcs_id"],
+            "province": r["province"],
+            "findspot": r["findspot"],
+            "date_from": r["date_from"],
+            "date_to": r["date_to"],
+            "person_count": len(parsed),
+            "person_names": names,
+            "has_translation": bool(r["has_translation"]),
+        })
+    return result
+
+
 def get_flags(status: str | None = None) -> list[dict]:
     with _conn() as conn:
         if status:
