@@ -388,7 +388,7 @@ const MAX_TILE_ZOOM   = 10;  // tile zoom for individual inscriptions
 const INSPECT_LIMIT   = 50;  // max items shown in inspection panel
 
 // ── State ────────────────────────────────────────────────
-let map, clusterLayer, provinceLayer, aggregateLayer;
+let map, clusterLayer, provinceLayer, aggregateLayer, highlightLayer;
 let activeTier = null;  // 'province' | 'aggregate' | 'individual'
 const loadedTiles    = new Set();   // 'z/x/y' or 'province-view'
 const loadedFeatures = new Map();   // edcs_id → feature properties (individual tier)
@@ -739,9 +739,11 @@ function initMap() {
   });
   provinceLayer  = L.layerGroup();
   aggregateLayer = L.layerGroup();
+  highlightLayer = L.layerGroup();
   map.addLayer(clusterLayer);
   map.addLayer(provinceLayer);
   map.addLayer(aggregateLayer);
+  map.addLayer(highlightLayer);
 
   clusterLayer.on('clusterclick', handleClusterClick);
 
@@ -783,7 +785,37 @@ function clearDetail() {
 
 function closeSidebar() {
   inspectStack = null;
+  clearHighlights();
   clearDetail();
+}
+
+function showHighlights(inscriptions) {
+  highlightLayer.clearLayers();
+  const points = [];
+  for (const ins of inscriptions) {
+    if (ins.lat == null || ins.lon == null) continue;
+    L.circleMarker([ins.lat, ins.lon], {
+      radius: 9,
+      color: '#ff6600',
+      weight: 2,
+      fillColor: '#ff9944',
+      fillOpacity: 0.85,
+      pane: 'markerPane',
+    }).bindTooltip(ins.findspot || ins.edcs_id, { direction: 'top' })
+      .on('click', (e) => { L.DomEvent.stopPropagation(e); selectInscription(ins.edcs_id, true); })
+      .addTo(highlightLayer);
+    points.push([ins.lat, ins.lon]);
+  }
+  if (points.length === 1) {
+    if (map.getZoom() < ZOOM_INDIVIDUAL) map.flyTo(points[0], ZOOM_INDIVIDUAL);
+    else map.panTo(points[0]);
+  } else if (points.length > 1) {
+    map.fitBounds(L.latLngBounds(points), { padding: [60, 60], maxZoom: 13 });
+  }
+}
+
+function clearHighlights() {
+  if (highlightLayer) highlightLayer.clearLayers();
 }
 
 window.addEventListener('hashchange', onHashChange);
@@ -805,6 +837,7 @@ async function loadInscription(edcsId) {
   } catch (_) { hideSidebar(); return; }
 
   currentEdcsId = edcsId;
+  clearHighlights();
   renderDetailSidebar(data);
 
   if (data.lat != null && data.lon != null) {
@@ -826,6 +859,7 @@ async function showGlobalClusterPanel(globalClusterId, personName) {
     data = await resp.json();
   } catch (_) { return; }
 
+  showHighlights(data.inscriptions);
   showInspectionPanel(data.inscriptions);
 
   const provLabel = data.province_count > 1
@@ -839,7 +873,7 @@ async function showGlobalClusterPanel(globalClusterId, personName) {
     const backBtn = document.createElement('button');
     backBtn.className = 'back-btn';
     backBtn.textContent = '← Back to inscription';
-    backBtn.onclick = () => selectInscription(originId, false);
+    backBtn.onclick = () => { clearHighlights(); selectInscription(originId, false); };
     document.getElementById('sb-body').prepend(backBtn);
   }
 }
@@ -853,19 +887,18 @@ async function showClusterPanel(clusterId, personName, province) {
     data = await resp.json();
   } catch (_) { return; }
 
+  showHighlights(data.inscriptions);
   showInspectionPanel(data.inscriptions);
 
-  // Override generic "N inscriptions" header with person-specific context
   document.getElementById('sb-title').textContent =
     `${data.count} attestation${data.count !== 1 ? 's' : ''} of ${personName}`;
   document.getElementById('sb-findspot').textContent = '';
 
-  // Add back button to origin inscription if we came from one
   if (originId) {
     const backBtn = document.createElement('button');
     backBtn.className = 'back-btn';
     backBtn.textContent = '← Back to inscription';
-    backBtn.onclick = () => selectInscription(originId, false);
+    backBtn.onclick = () => { clearHighlights(); selectInscription(originId, false); };
     document.getElementById('sb-body').prepend(backBtn);
   }
 }
