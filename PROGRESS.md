@@ -854,3 +854,58 @@ Additional rules added: FEMININE NOMEN NORMALIZATION (genitive -ae → nominativ
 | Attestations exported | 144,309 |
 | Clusters formed | 73,423 |
 | Webapp features | 77,930 |
+
+---
+
+## Germania Superior Run (June 2026)
+
+### Status: Complete
+
+**Goal:** Run full NER pipeline for Germania Superior — 17,423 EDCS records (20,472 total; 3,049 high-damage filtered out).
+
+### Accomplishments
+
+**Full Corpus Run:**
+- 17,418 records processed (after 30%-lacuna damage filter)
+- **11,772 name attestations extracted**
+- 45 `is_deity`, 156 `is_imperial`, 15 `is_bare_epithet`, 2 `is_place`, 1,961 `fragmentary`
+- 6 praenomen reclassifications (off-whitelist → nomen), 1 nomen nominalization
+- 91.3% of inscriptions mappable (8,217 / 9,001 features with coordinates)
+- 9,148 unique clusters (1,118 multi-member; largest: 35 × Vitalis, common cognomen)
+- **5,469 English translations** (6 errors from transient failures; $0.20 total)
+- Total NER cost: **~$0.05** (gemini-flash-lite-latest, 0 API errors across 17,418 records)
+
+**Model:** `gemini-flash-lite-latest` throughout (better model used per user request, targeting <2% error rate).
+
+**Prompt:** No changes needed. The existing `elif province.lower() in ('gallia narbonensis', 'belgica', 'aquitani(c)a', 'germania superior', 'germania inferior')` branch in `prompt_utils.py` handled all naming patterns correctly from the first 100 records:
+- Celtic/Germanic single-name peregrini extracted as cognomen-only ✓
+- Rhine legion names (Legio XI Claudia, XXII Primigenia, XXX Ulpia Victrix, etc.) excluded ✓
+- Indigenous deities (Nehalennia, Matres/Matronae, Epona, Sucellus, Nehalennia, Nemeton) excluded ✓
+- Celtic filiation (`Blandus Vindaolucon(is)` → Blandus + Vindaluco pater) handled ✓
+- Post-citizenship Romanization (`Iulia Bricca`, `M. Aurelius Acceptus`) handled ✓
+
+**Lookup File Changes:** None.
+
+**Evaluation Results:**
+
+| Metric | Value |
+|--------|-------|
+| F1 (adjusted) | **0.77** |
+| Recall (adj, excl. damage) | 0.78 |
+| Precision (adj, excl. non-persons) | 0.76 |
+| Eval records scored | 406 / 500 (94 damage-filtered) |
+| True Positives | 592 |
+| Candidate Discoveries | 185 |
+| FP — Deity | 0 |
+| FP — Imperial | 5 |
+| FP — Place name | 0 |
+
+F1 0.77 is consistent with the province's naming complexity (mix of Celtic single-name peregrini, Roman tria nomina, pottery stamps, and heavy military inscription stock). The 185 candidate discoveries are predominantly pottery workshop stamps and votive dedicants absent from LIRE's coverage of this province.
+
+**Known borderline cases (not systematic):**
+- `veteranus` extracted as a cognomen from a headless tombstone fragment (EDCS-10800675) — no personal name visible in the fragment; isolated occurrence.
+- `Muria` (EDCS-48900616, "Mur(ia) / L(ixitana?)") — ambiguous between fish-sauce product label and personal name; EDCS editorial note also uncertain.
+
+### Webapp
+- Province added to SQLite database (`roman_names.db`) with 8,217 inscriptions.
+- Webapp data files: `inscriptions_germania_superior.geojson`, `clusters_germania_superior.json`, `enrichment_germania_superior.json`
