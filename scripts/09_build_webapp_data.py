@@ -226,8 +226,7 @@ def build_webapp_data(province='africa_proconsularis'):
             val = lire_rec.get(key)
             if val:
                 enrich[key] = val
-        if enrich:
-            enrichment_map[source_id] = enrich
+        enrichment_map[source_id] = enrich
 
     clusters_json = {str(k): list(v) for k, v in clusters_map.items()}
 
