@@ -1043,7 +1043,7 @@ function renderDetailSidebar(data) {
     const sum = document.createElement('summary');
     sum.textContent = 'Interpreted text';
     const pre = document.createElement('pre');
-    pre.textContent = data.text_edition;
+    pre.textContent = data.text_edition.replace(/\\n/g, '\n');
     det.appendChild(sum);
     det.appendChild(pre);
     body.appendChild(det);
@@ -1052,7 +1052,7 @@ function renderDetailSidebar(data) {
   if (data.inscription_type) {
     const p = document.createElement('p');
     p.className = 'date-range';
-    p.textContent = data.inscription_type;
+    p.textContent = `Type: ${data.inscription_type}`;
     body.appendChild(p);
   }
 
