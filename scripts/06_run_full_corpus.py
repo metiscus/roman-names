@@ -155,6 +155,8 @@ def main():
                         help="Gemini model to use (default: gemini-2.5-flash-lite)")
     parser.add_argument("--workers", type=int, default=10,
                         help="Concurrent API workers (default: 10; Flash-Lite supports up to ~50)")
+    parser.add_argument("--batch-size", type=int, default=BATCH_SIZE,
+                        help=f"Records per API call (default: {BATCH_SIZE}; smaller=better accuracy, more API calls)")
     parser.add_argument("--token-filter", action="store_true", default=False,
                         help="Skip records whose longest effective token is ≤4 chars after expanding "
                              "EDCS abbreviations. Removes unintelligible stamps and pure fragments "
@@ -166,6 +168,7 @@ def main():
     stop_after = args.stop_after
     model = args.model
     workers = args.workers
+    batch_size = args.batch_size
     token_filter = args.token_filter
     safe_name = EDCS_NAME_TO_SLUG.get(province) or re.sub(r'[()]', '', province).lower().replace(' ', '_')
     output_path = OUTPUT_DIR / f'{safe_name}_ner_full.jsonl'
@@ -193,8 +196,8 @@ def main():
         return
 
     system_prompt = get_system_prompt(province)
-    batches = [remaining[i:i + BATCH_SIZE] for i in range(0, len(remaining), BATCH_SIZE)]
-    print(f"Workers: {workers} | Batches: {len(batches)} | Model: {model}")
+    batches = [remaining[i:i + batch_size] for i in range(0, len(remaining), batch_size)]
+    print(f"Workers: {workers} | Batch size: {batch_size} | Batches: {len(batches)} | Model: {model}")
 
     rates = PRICING.get(model, PRICING["gemini-2.5-flash-lite"])
     write_lock = threading.Lock()
@@ -264,7 +267,7 @@ def main():
     print(f"\nThis run: {counters['new']} new records | Total: {total_now} / {len(all_records)} | "
           f"Errors: {counters['errors']} | Cost: ${counters['cost']:.4f}")
     if err_types:
-        print(f"Error breakdown (each failed batch ~{BATCH_SIZE} records):")
+        print(f"Error breakdown (each failed batch ~{batch_size} records):")
         for label, count in err_types.most_common():
             print(f"  {count:5d} x {label}")
         print("  Re-run the same command to retry — resume skips already-written IDs.")

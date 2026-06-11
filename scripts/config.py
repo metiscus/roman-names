@@ -72,6 +72,7 @@ PROVINCES = [
     ("liguria",                "Liguria / Regio IX",      False),
     ("venetia_et_histria",     "Venetia et Histria / Regio X", False),
     ("transpadana",            "Transpadana / Regio XI",  False),
+    ("roma",                   "Roma",                    True),
 ]
 
 PROVINCE_SLUGS = [slug for slug, _name, _has_eval in PROVINCES]

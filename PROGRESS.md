@@ -807,3 +807,50 @@ F1 0.85 is well above the 0.72 acceptable threshold, consistent with other North
 - Complete `--include-raw` translation run across all provinces.
 - Rebuild webapp data for all provinces to include new translations.
 - Continue Italian peninsula expansion (Regio III–XI).
+
+---
+
+## Roma Run (June 2026)
+
+### Status: Complete
+
+**Goal:** Run the full NER pipeline for Roma — the largest province at 121,470 records (95,464 after 30% damage filter).
+
+### Accomplishments
+
+**Full Corpus Run:**
+- 95,453 records processed, **147,814 persons** extracted, **144,309 attestations** exported.
+- Model: `gemini-flash-lite-latest` (Gemini 3.5 Flash Lite), batch size 8, 35 workers.
+- Total cost: **$14.14**. Zero API errors.
+
+**Prompt Engineering (Roma-specific branch):**
+Roma required a dedicated `elif province.lower() in ('roma',):` branch in `prompt_utils.py` with 7 Roma-specific rules (RA1–RA7) plus concrete few-shot examples:
+- **RA1** Ecclesiastical honorifics not names (`beatissimus`, `sanctissimus` → `persons: []`)
+- **RA2** No invented nomen from `-ianus` cognomen (`Aeliani` → `nomen=null, cognomen=Aelianus`)
+- **RA3** Paired names + explicit relational word = one person (`Urbicio Respecto patri` → one person)
+- **RA4/RA4g** Ownership genitives = separate persons; Greek libertus with `-ianus` cognomen
+- **RA5** Age qualifiers in status, not as cognomen (`Fa[usti] v.c. Iunioris` → `status='consul, iunior'`)
+- **RA6** Dating formula: `Libone Iuniore co(n)s(ulibus)` = ONE consul, iunior in status (not two persons)
+- **RA7** Feminine nomen normalization: `Caniniae Primitivae` → `nomen=Caninia, cognomen=Primitiva` (not `Caninius`/`Primitivus`)
+
+Additional rules added: FEMININE NOMEN NORMALIZATION (genitive -ae → nominative -a, never -ius for females; inferred nomina also use feminine form), GREEK ETHNIC ADJECTIVES ARE NOT PEOPLE, GREEK GENDER, GREEK COGNOMINA IN -IS.
+
+**Iterative spot-checking (conservative approach):**
+- 4 prompt fix cycles on first 100 records; then 3× 1000-record spot checks before full send.
+- Error rate progression: ~4% → ~1% → ~0.2% → **0 flagged in final 2×1000 checks**.
+- Final full-corpus scan: **68 errors in 95,453 records (0.07%)** — all FEM-IUS-NOMEN edge cases (inferred nomen) or isolated Iunior-as-cognomen; accepted without patch.
+
+**Pipeline additions:**
+- `--batch-size N` CLI flag added to `06_run_full_corpus.py` (default 15; used 8 for Roma to improve per-record accuracy with complex mixed-script inscriptions).
+- `roma` added to `PROVINCES` registry in `config.py` (has_eval=True).
+
+**Evaluation Results:**
+
+| Metric | Value |
+|--------|-------|
+| F1 (adjusted) | 0.87 |
+| Recall (adj) | 0.86 |
+| Precision (adj) | 0.88 |
+| Attestations exported | 144,309 |
+| Clusters formed | 73,423 |
+| Webapp features | 77,930 |
