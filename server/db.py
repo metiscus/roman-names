@@ -296,7 +296,7 @@ def get_inscription(edcs_id: str) -> dict | None:
     }
 
 
-def get_cluster_inscriptions(cluster_id: int) -> list[dict]:
+def get_cluster_inscriptions(cluster_id: int, province: str) -> list[dict]:
     with _conn() as conn:
         rows = conn.execute(
             """
@@ -305,9 +305,10 @@ def get_cluster_inscriptions(cluster_id: int) -> list[dict]:
                    (i.translation IS NOT NULL AND i.translation != '') AS has_translation
             FROM inscriptions i, json_each(COALESCE(i.overrides, i.persons)) p
             WHERE json_extract(p.value, '$.cluster_id') = ?
+              AND i.province = ?
             ORDER BY i.date_from
             """,
-            (cluster_id,),
+            (cluster_id, province),
         ).fetchall()
     result = []
     for r in rows:

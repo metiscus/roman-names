@@ -74,8 +74,8 @@ def inscription(edcs_id: str):
 
 
 @app.get("/api/cluster/{cluster_id}")
-def cluster_inscriptions(cluster_id: int):
-    rows = db.get_cluster_inscriptions(cluster_id)
+def cluster_inscriptions(cluster_id: int, province: str):
+    rows = db.get_cluster_inscriptions(cluster_id, province)
     if not rows:
         raise HTTPException(status_code=404, detail="Cluster not found")
     return {"cluster_id": cluster_id, "count": len(rows), "inscriptions": rows}
