@@ -135,8 +135,8 @@ def create_final_dataset(province_slug='africa_proconsularis', province_name='Af
             if not meta.get('findspot'):
                 meta['findspot'] = edcs_r.get('place')
             if not meta.get('raw_text'):
-                meta['raw_text'] = (edcs_r.get('clean_text_interpretive_word')
-                                    or edcs_r.get('inscription'))
+                meta['raw_text'] = (edcs_r.get('inscription')
+                                    or edcs_r.get('clean_text_interpretive_word'))
 
         persons = record.get('persons', [])
         for i, person in enumerate(persons):
