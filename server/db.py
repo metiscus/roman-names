@@ -300,7 +300,7 @@ def get_cluster_inscriptions(cluster_id: int, province: str) -> list[dict]:
     with _conn() as conn:
         rows = conn.execute(
             """
-            SELECT DISTINCT i.edcs_id, i.findspot, i.date_from, i.date_to,
+            SELECT DISTINCT i.edcs_id, i.lat, i.lon, i.findspot, i.date_from, i.date_to,
                    COALESCE(i.overrides, i.persons) AS persons_json,
                    (i.translation IS NOT NULL AND i.translation != '') AS has_translation
             FROM inscriptions i, json_each(COALESCE(i.overrides, i.persons)) p
@@ -319,6 +319,8 @@ def get_cluster_inscriptions(cluster_id: int, province: str) -> list[dict]:
             names.append(name if name else (p.get("raw_name") or "(unnamed)"))
         result.append({
             "edcs_id": r["edcs_id"],
+            "lat": r["lat"],
+            "lon": r["lon"],
             "findspot": r["findspot"],
             "date_from": r["date_from"],
             "date_to": r["date_to"],
@@ -334,7 +336,8 @@ def get_global_cluster_inscriptions(global_cluster_id: int) -> list[dict]:
     with _conn() as conn:
         rows = conn.execute(
             """
-            SELECT DISTINCT i.edcs_id, i.province, i.findspot, i.date_from, i.date_to,
+            SELECT DISTINCT i.edcs_id, i.province, i.lat, i.lon, i.findspot,
+                   i.date_from, i.date_to,
                    COALESCE(i.overrides, i.persons) AS persons_json,
                    (i.translation IS NOT NULL AND i.translation != '') AS has_translation
             FROM inscriptions i, json_each(COALESCE(i.overrides, i.persons)) p
@@ -353,6 +356,8 @@ def get_global_cluster_inscriptions(global_cluster_id: int) -> list[dict]:
         result.append({
             "edcs_id": r["edcs_id"],
             "province": r["province"],
+            "lat": r["lat"],
+            "lon": r["lon"],
             "findspot": r["findspot"],
             "date_from": r["date_from"],
             "date_to": r["date_to"],
