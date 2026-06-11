@@ -1204,8 +1204,195 @@ def get_system_prompt(province):
 {
   "results": [{"id": "D8", "persons": []}]
 }"""
+    elif province.lower() in ('roma',):
+        # Roma-specific rules + generic examples.
+        # Roma has: opus doliare (brick stamps), catacomb inscriptions (Christian, Jewish, pagan),
+        # Greek-language inscriptions, senatorial polyonymy, imperial freedmen.
+        extra_examples = """
+ROMA-SPECIFIC RULES:
+- ECCLESIASTICAL HONORIFICS ARE NOT NAMES: 'beatissimus', 'beatissima', 'sanctissimus',
+  'sanctissima', 'reverendissimus', 'piissimus' are superlative honorific titles for bishops,
+  priests and clergy, NOT personal names. When they appear without a distinct name token, return
+  persons: []. Example: "Beatis[simo] / presby[tero" -> persons: []
+- DO NOT INVENT NOMEN FROM COGNOMEN: A cognomen ending in '-ianus' (Iulianus, Aelianus,
+  Valerianus, Maximianus, Severianus, etc.) does NOT imply a corresponding '-ius' nomen. If the
+  nomen is not explicitly present in the text, set nomen=null.
+  WRONG: "Aeliani" -> nomen='Aelius', cognomen='Aelianus'
+  RIGHT: "Aeliani" -> nomen=null, cognomen='Aelianus'
+- PAIRED NAMES + EXPLICIT RELATIONAL WORD = ONE PERSON: When two consecutive name tokens are
+  IMMEDIATELY followed by an explicit relational word (patri, matri, coniugi, uxori, fratri),
+  treat them as ONE person. Example: "Urbicio Respecto patri suo" -> ONE person: nomen='Urbicius',
+  cognomen='Respectus', status='pater'. DO NOT apply this rule to genitive sequences in ownership
+  or dedication contexts like "ex pr(aediis) Lucillae Veri" - those are TWO SEPARATE PEOPLE.
+- AGE QUALIFIERS ARE NOT NAMES: 'Iunior' (younger) and 'Senior' (older), in any inflected form
+  (Iunioris, Iuniori, Iuniore, Seniori, etc.), are descriptive adjectives, NOT personal names.
+  Record them in status only. ESPECIALLY IN DATING FORMULAS: "Libone Iuniore co(n)s(ulibus)"
+  means ONE consul named Libo with the epithet 'iunior' — NOT two people 'Libo' and 'Iunior'.
+  'Iuniore' is the ablative of the adjective iunior modifying Libone. NEVER create a separate
+  person entry whose only content is an inflected form of iunior/senior — instead, attach the
+  qualifier to the adjacent named person's status. See RA6 example below.
+- CASE NORMALIZATION REMINDER: Dative -o nominalized to -us ALWAYS. "Paetin(o)" -> "Paetinus",
+  never "Paetinua" or any other form. The nominative suffix -us is invariant for 2nd declension.
+- GREEK ETHNIC ADJECTIVES ARE NOT PEOPLE: In Greek inscriptions, an adjective of geographic
+  origin following a personal name (e.g. Ἠλεῖος = "from Elis", Ἀργεῖος = "from Argos",
+  Ἀθηναῖος = "Athenian") belongs to the SAME PERSON as an origin epithet in status, not a
+  separate person. "Πυθοκλῆς Ἠλεῖος" -> ONE person: cognomen='Pythocles', status='Eleius'.
+  Similarly, "πένταθλος" (pentathlete) is a status/title, not a cognomen.
+- GREEK GENDER: Greek feminine names ending in -α or -η (Μαρία, Σωφρονία, Χρυσή) are FEMALE.
+  Normalize to Latin with feminine -a/-e ending (Maria, Sophronia, Chryse), never masculine -us.
+- FEMININE NOMEN NORMALIZATION — CRITICAL: When a person is FEMALE, her nomen ALWAYS ends in
+  -a (feminine). NEVER write a masculine -ius/-ius nomen for a female person. The feminine is
+  formed by dropping -ius → -ia: Pomponius/Pomponia, Livius/Livia, Manilius/Manilia,
+  Caninius/Caninia, Fossius/Fossia, Lepidius/Lepidia, Fulvius/Fulvia, Speius/Speia, etc.
+  Genitive/dative: "Pomponiae" → nom. "Pomponia" (NOT "Pomponius"). "Liviae" → "Livia".
+  Nominative: "Caninia Primitiva" → nomen="Caninia", cognomen="Primitiva" — do NOT convert a
+  nominative feminine -ia to masculine -ius. If you see -ia/-a in a female's name token, that IS
+  already the correct nominative form. NEVER "correct" a feminine nominative to add -us.
+  INFERRED NOMINA: If you infer a nomen for a female from context (e.g., surrounding Claudii
+  freedpeople → she is a Claudia too), use the feminine -a form: "Claudia", not "Claudius".
+- GREEK COGNOMINA IN -IS: Greek-origin cognomina ending in -is (Sporis, Charis, Alexis, Chryseis)
+  are FEMININE NOMINATIVES, not genitives of a masculine name. "Iulia Sporis" = ONE female person:
+  nomen='Iulia', cognomen='Sporis'. Do NOT split into Iulia (female) + Sporus (male).
+
+**Input:** "Beatis[simo 3] / presby[tero"
+**Output:**
+{
+  "results": [{"id": "RA1", "persons": []}]
+}
+
+**Input:** "Opus doliar(e) ex fig(linis) Publilianis / pr(aediis) Flacc(i) Aeliani clarissimi pueri"
+**Output:**
+{
+  "results": [{"id": "RA2", "persons": [
+    {"praenomen": null, "nomen": null, "cognomen": "Flaccus Aelianus", "gender": "male", "status": "clarissimus puer", "raw_name": "Flacc(i) Aeliani"}
+  ]}]
+}
+
+**Input:** "D(is) M(anibus) / Xenara Respec{c}to / co(n)iugi suo bene merenti fecit Urbicio / Respec{c}to patri suo bene merenti fecit"
+**Output:**
+{
+  "results": [{"id": "RA3", "persons": [
+    {"praenomen": null, "nomen": null, "cognomen": "Xenara", "gender": "female", "status": null, "raw_name": "Xenara"},
+    {"praenomen": null, "nomen": null, "cognomen": "Respectus", "gender": "male", "status": "coniunx", "raw_name": "Respecto"},
+    {"praenomen": null, "nomen": "Urbicius", "cognomen": "Respectus", "gender": "male", "status": "pater", "raw_name": "Urbicio Respecto"}
+  ]}]
+}
+
+**Input:** "θεῷ Νεοχάρ[ης] / [Σ]εβαστο[ῦ ἀπ]ελ[εύ]/[θ]ερος Ἰουλιαν[ός]"
+**Output:**
+{
+  "results": [{"id": "RA4g", "persons": [
+    {"praenomen": null, "nomen": null, "cognomen": "Neochares", "gender": "male", "status": "libertus Augusti", "raw_name": "Νεοχάρ[ης] [Σ]εβαστο[ῦ ἀπ]ελ[εύ]/[θ]ερος", "fragmentary": true},
+    {"praenomen": null, "nomen": null, "cognomen": "Iulianus", "gender": "male", "status": null, "raw_name": "Ἰουλιαν[ός]", "fragmentary": true}
+  ]}]
+}
+
+**Input:** "Opus dol(iare) ex pr(aediis) Lucil(lae) Ver(i) ab Ulp(io) Anic(eto) / Commod(o) et Lateran(o) co(n)s(ulatu)"
+**Output:**
+{
+  "results": [{"id": "RA4", "persons": [
+    {"praenomen": null, "nomen": null, "cognomen": "Lucilla", "gender": "female", "status": null, "raw_name": "Lucil(lae)"},
+    {"praenomen": null, "nomen": null, "cognomen": "Verus", "gender": "male", "status": null, "raw_name": "Ver(i)"},
+    {"praenomen": null, "nomen": "Ulpius", "cognomen": "Anicetus", "gender": "male", "status": null, "raw_name": "Ulp(io) Anic(eto)"},
+    {"praenomen": null, "nomen": null, "cognomen": "Commodus", "gender": "male", "status": "consul", "raw_name": "Commod(o)"},
+    {"praenomen": null, "nomen": null, "cognomen": "Lateranus", "gender": "male", "status": "consul", "raw_name": "Lateran(o)"}
+  ]}]
+}
+
+**Input:** "[Tho]mas cum Agnete / [se vi]vo comparaverunt / cons(ulatu) Fa[usti] / v(iri) c(larissimi) Iunioris"
+**Output:**
+{
+  "results": [{"id": "RA5", "persons": [
+    {"praenomen": null, "nomen": null, "cognomen": "Thomas", "gender": "male", "status": null, "raw_name": "[Tho]mas", "fragmentary": true},
+    {"praenomen": null, "nomen": null, "cognomen": "Agnes", "gender": "female", "status": null, "raw_name": "Agnete"},
+    {"praenomen": null, "nomen": null, "cognomen": "Faustus", "gender": "male", "status": "consul, vir clarissimus, iunior", "raw_name": "Fa[usti] v. c.", "fragmentary": true}
+  ]}]
+}
+
+**Input:** "factum / Libone Iuniore et / Agricola co(n)s(ulibus)"
+**Output:**
+{
+  "results": [{"id": "RA6", "persons": [
+    {"praenomen": null, "nomen": null, "cognomen": "Libo", "gender": "male", "status": "consul, iunior", "raw_name": "Libone Iuniore"},
+    {"praenomen": null, "nomen": null, "cognomen": "Agricola", "gender": "male", "status": "consul", "raw_name": "Agricola"}
+  ]}]
+}
+
+**Input:** "D(is) M(anibus) / Q(uinto) Paconio Eupori / pat(ri) / Caniniae Primitivae / mat(ri) / Vitali(oni) fil(io)"
+**Output:**
+{
+  "results": [{"id": "RA7", "persons": [
+    {"praenomen": "Quintus", "nomen": "Paconius", "cognomen": "Eupor", "gender": "male", "status": "pater", "raw_name": "Q. Paconio Eupori"},
+    {"praenomen": null, "nomen": "Caninia", "cognomen": "Primitiva", "gender": "female", "status": "mater", "raw_name": "Caniniae Primitivae"},
+    {"praenomen": null, "nomen": null, "cognomen": "Vitalio", "gender": "male", "status": "filius", "raw_name": "Vitali(oni)"}
+  ]}]
+}
+
+**Input:** "T(ito) Statilio T(iti) l(iberto) Apro / Statilia T(iti) l(iberta) Tyche / patrono optimo"
+**Output:**
+{
+  "results": [{"id": "G1", "persons": [
+    {"praenomen": "Titus", "nomen": "Statilius", "cognomen": "Aper", "gender": "male", "status": "libertus Titi", "raw_name": "T. Statilio T. l. Apro"},
+    {"praenomen": null, "nomen": "Statilia", "cognomen": "Tyche", "gender": "female", "status": "liberta Titi", "raw_name": "Statilia T. l. Tyche"}
+  ]}]
+}
+
+**Input:** "D(is) M(anibus) / L(ucio) Caecilio L(uci) f(ilio) / Volt(inia) Metello / IIvir(o) quinq(uennali)"
+**Output:**
+{
+  "results": [{"id": "G2", "persons": [
+    {"praenomen": "Lucius", "nomen": "Caecilius", "cognomen": "Metellus", "gender": "male", "status": "tribus: Voltinia, IIvir quinquennalis", "raw_name": "L. Caecilio L. f. Volt. Metello"}
+  ]}]
+}
+
+**Input:** "Iovi O(ptimo) M(aximo) / pro salute / Philargyri / Caesaris ser(vi)"
+**Output:**
+{
+  "results": [{"id": "G3", "persons": [
+    {"praenomen": null, "nomen": null, "cognomen": "Philargyrus", "gender": "male", "status": "servus Caesaris", "raw_name": "Philargyri"}
+  ]}]
+}
+
+**Input:** "C(aio) Aelio C(ai) f(ilio) Turpioni / mater"
+**Output:**
+{
+  "results": [{"id": "G4", "persons": [
+    {"praenomen": "Gaius", "nomen": "Aelius", "cognomen": "Turpio", "gender": "male", "status": null, "raw_name": "C. Aelio C. f. Turpioni"}
+  ]}]
+}
+
+**Input:** "ann(orum) XIII / pia in suis / h(ic) s(ita) e(st) s(it) t(ibi) t(erra) l(evis)"
+**Output:**
+{
+  "results": [{"id": "G5", "persons": []}]
+}
+
+**Input:** "Imp(eratori) Caes(ari) M(arco) Aurelio / Antonino Pio / Felici Aug(usto)"
+**Output:**
+{
+  "results": [{"id": "G6", "persons": [
+    {"praenomen": "Marcus", "nomen": "Aurelius", "cognomen": "Antoninus", "gender": "male", "status": "Imperator Caesar, Pius, Felix, Augustus", "raw_name": "Imp. Caes. M. Aurelio Antonino Pio Felici Aug."}
+  ]}]
+}
+
+**Input:** "D(is) M(anibus) / Felici C(ai) Iuli / ser(vo) / vix(it) ann(os) XX"
+**Output:**
+{
+  "results": [{"id": "G7", "persons": [
+    {"praenomen": null, "nomen": null, "cognomen": "Felix", "gender": "male", "status": "servus", "raw_name": "Felici"},
+    {"praenomen": "Gaius", "nomen": "Iulius", "cognomen": null, "gender": "male", "status": "dominus", "raw_name": "C. Iuli"}
+  ]}]
+}
+
+**Input:** "Q(uintus) Pompeius Senecio / Roscius Murena / Coelius / legatus Aug(usti)"
+**Output:**
+{
+  "results": [{"id": "G8", "persons": [
+    {"praenomen": "Quintus", "nomen": "Pompeius", "cognomen": "Senecio Roscius Murena Coelius", "gender": "male", "status": "legatus Augusti", "raw_name": "Q. Pompeius Senecio Roscius Murena Coelius"}
+  ]}]
+}"""
     else:
-        # Generic examples for Roma, Italia, Hispania, Gallia, Germania, and all other provinces.
+        # Generic examples for Italia, Hispania, Gallia, Germania, and all remaining provinces.
         # These cover freedman naming, senatorial tria nomina, and single-name slaves/peregrini.
         extra_examples = """
 **Input:** "T(ito) Statilio T(iti) l(iberto) Apro / Statilia T(iti) l(iberta) Tyche / patrono optimo"
