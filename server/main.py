@@ -81,6 +81,21 @@ def cluster_inscriptions(cluster_id: int, province: str):
     return {"cluster_id": cluster_id, "count": len(rows), "inscriptions": rows}
 
 
+@app.get("/api/global-cluster/{global_cluster_id}")
+def global_cluster_inscriptions(global_cluster_id: int):
+    rows = db.get_global_cluster_inscriptions(global_cluster_id)
+    if not rows:
+        raise HTTPException(status_code=404, detail="Global cluster not found")
+    provinces = sorted({r["province"] for r in rows})
+    return {
+        "global_cluster_id": global_cluster_id,
+        "count": len(rows),
+        "province_count": len(provinces),
+        "provinces": provinces,
+        "inscriptions": rows,
+    }
+
+
 @app.post("/api/flags")
 def flag(req: FlagRequest):
     db.insert_flag(req.edcs_id, req.category, req.comment, req.email)

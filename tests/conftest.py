@@ -7,6 +7,7 @@ _SAMPLE_PERSONS = json.dumps([{
     "praenomen": "Marcus", "nomen": "Tullius", "cognomen": "Cicero",
     "gender": "male", "status": "senator",
     "cluster_id": 1, "cluster_size": 2, "cluster_confidence": "high",
+    "global_cluster_id": 42, "global_cluster_size": 5, "global_province_count": 2,
 }])
 
 # Pre-computed tile coords at z=10 for the three test inscriptions:

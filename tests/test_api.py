@@ -150,6 +150,33 @@ def test_tiles_with_gender_filter(client):
     assert resp.headers.get("cache-control") == "no-store"
 
 
+def test_cluster_endpoint_returns_inscriptions(client):
+    resp = client.get("/api/cluster/1?province=africa_proconsularis")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["count"] == 2  # 2 africa sample inscriptions have cluster_id=1
+    assert all("edcs_id" in i for i in data["inscriptions"])
+
+
+def test_cluster_endpoint_wrong_province_returns_404(client):
+    resp = client.get("/api/cluster/1?province=britannia_wrong")
+    assert resp.status_code == 404
+
+
+def test_global_cluster_endpoint_returns_inscriptions(client):
+    resp = client.get("/api/global-cluster/42")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["count"] == 3  # all sample inscriptions have global_cluster_id=42
+    assert data["province_count"] >= 1
+    assert all("edcs_id" in i for i in data["inscriptions"])
+
+
+def test_global_cluster_endpoint_not_found(client):
+    resp = client.get("/api/global-cluster/99999")
+    assert resp.status_code == 404
+
+
 def test_tiles_with_search_filter(client):
     # "Marcus" in sample persons matches
     resp = client.get("/api/tiles/10/541/398?search=mar")

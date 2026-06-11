@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Load all per-province GeoJSON files into roman_names.db."""
 
+import csv
 import json
 import math
 import sqlite3
@@ -113,6 +114,26 @@ def lat_lon_to_tile(lat: float, lon: float, zoom: int = TILE_ZOOM) -> tuple[int,
     return max(0, min(n - 1, x)), max(0, min(n - 1, y))
 
 
+def _load_global_cluster_map(data_dir: Path) -> dict[tuple, dict]:
+    """Load data/global_cluster_map.csv → {(province, local_cluster_id): {...}}."""
+    path = data_dir / "global_cluster_map.csv"
+    if not path.exists():
+        return {}
+    result: dict[tuple, dict] = {}
+    with open(path) as f:
+        for row in csv.DictReader(f):
+            try:
+                key = (row["province"], int(row["local_cluster_id"]))
+                result[key] = {
+                    "global_cluster_id": int(row["global_cluster_id"]),
+                    "global_cluster_size": int(row["global_cluster_size"]),
+                    "global_province_count": int(row["global_province_count"]),
+                }
+            except (KeyError, ValueError):
+                continue
+    return result
+
+
 def _load_enrichment(geojson_dir: Path) -> dict[str, dict]:
     enrichment: dict[str, dict] = {}
     # Load LIRE first (lower priority)
@@ -138,6 +159,7 @@ def _load_geojson(
     conn: sqlite3.Connection,
     now: str,
     enrichment: dict[str, dict],
+    global_clusters: dict[tuple, dict] | None = None,
 ) -> tuple[int, int]:
     with open(path) as f:
         data = json.load(f)
@@ -162,6 +184,23 @@ def _load_geojson(
         lat, lon = float(lat), float(lon)
         tile_x, tile_y = lat_lon_to_tile(lat, lon)
         enr = enrichment.get(edcs_id, {})
+
+        persons_raw = props.get("persons") or []
+        if global_clusters:
+            persons_out = []
+            for p in persons_raw:
+                p = dict(p)
+                cid = p.get("cluster_id")
+                if cid is not None:
+                    gcinfo = global_clusters.get((province, int(cid)))
+                    if gcinfo:
+                        p["global_cluster_id"] = gcinfo["global_cluster_id"]
+                        p["global_cluster_size"] = gcinfo["global_cluster_size"]
+                        p["global_province_count"] = gcinfo["global_province_count"]
+                persons_out.append(p)
+        else:
+            persons_out = persons_raw
+
         rows.append((
             edcs_id,
             province,
@@ -171,7 +210,7 @@ def _load_geojson(
             props.get("raw_text"),
             props.get("date_from"),
             props.get("date_to"),
-            json.dumps(props.get("persons", [])),
+            json.dumps(persons_out),
             enr.get("translation"),
             enr.get("summary"),
             enr.get("edh_id"),
@@ -235,12 +274,16 @@ def build(
 
         geojson_files = sorted(geojson_dir.glob("inscriptions_*.geojson"))
         enrichment = _load_enrichment(geojson_dir)
+        data_dir = geojson_dir.parent.parent / "data"
+        global_clusters = _load_global_cluster_map(data_dir)
+        if global_clusters:
+            print(f"Global cluster map: {len(global_clusters)} local-cluster entries loaded")
         now = datetime.now(timezone.utc).isoformat()
         total_loaded = total_skipped = 0
 
         for path in geojson_files:
             province = path.stem.removeprefix("inscriptions_")
-            loaded, skipped = _load_geojson(path, province, conn, now, enrichment)
+            loaded, skipped = _load_geojson(path, province, conn, now, enrichment, global_clusters)
             print(f"  {province}: {loaded} loaded, {skipped} skipped")
             total_loaded += loaded
             total_skipped += skipped
