@@ -48,6 +48,8 @@ def run_migrations() -> None:
             "ALTER TABLE flags ADD COLUMN resolved_at TEXT",
             "ALTER TABLE inscriptions ADD COLUMN edh_id TEXT",
             "ALTER TABLE inscriptions ADD COLUMN tm_uri TEXT",
+            "ALTER TABLE inscriptions ADD COLUMN text_edition TEXT",
+            "ALTER TABLE inscriptions ADD COLUMN inscription_type TEXT",
         ]:
             try:
                 conn.execute(ddl)
@@ -264,7 +266,7 @@ def get_inscription(edcs_id: str) -> dict | None:
             """
             SELECT edcs_id, province, lat, lon, findspot, raw_text,
                    date_from, date_to, persons, overrides, translation, summary,
-                   edh_id, tm_uri
+                   edh_id, tm_uri, text_edition, inscription_type
             FROM inscriptions WHERE edcs_id = ?
             """,
             (edcs_id,),
@@ -283,9 +285,45 @@ def get_inscription(edcs_id: str) -> dict | None:
         "has_overrides": r["overrides"] is not None,
         "translation": r["translation"],
         "summary": r["summary"],
+        "lat": r["lat"],
+        "lon": r["lon"],
         "edh_id": r["edh_id"],
         "tm_uri": r["tm_uri"],
+        "text_edition": r["text_edition"],
+        "inscription_type": r["inscription_type"],
     }
+
+
+def get_cluster_inscriptions(cluster_id: int) -> list[dict]:
+    with _conn() as conn:
+        rows = conn.execute(
+            """
+            SELECT i.edcs_id, i.findspot, i.date_from, i.date_to,
+                   COALESCE(i.overrides, i.persons) AS persons_json,
+                   (i.translation IS NOT NULL AND i.translation != '') AS has_translation
+            FROM inscriptions i, json_each(COALESCE(i.overrides, i.persons)) p
+            WHERE json_extract(p.value, '$.cluster_id') = ?
+            ORDER BY i.date_from
+            """,
+            (cluster_id,),
+        ).fetchall()
+    result = []
+    for r in rows:
+        parsed = _parse_persons(None, r["persons_json"])
+        names = []
+        for p in parsed[:2]:
+            name = " ".join(filter(None, [p.get("praenomen"), p.get("nomen"), p.get("cognomen")]))
+            names.append(name if name else (p.get("raw_name") or "(unnamed)"))
+        result.append({
+            "edcs_id": r["edcs_id"],
+            "findspot": r["findspot"],
+            "date_from": r["date_from"],
+            "date_to": r["date_to"],
+            "person_count": len(parsed),
+            "person_names": names,
+            "has_translation": bool(r["has_translation"]),
+        })
+    return result
 
 
 def get_flags(status: str | None = None) -> list[dict]:
