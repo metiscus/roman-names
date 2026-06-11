@@ -73,6 +73,12 @@ def inscription(edcs_id: str):
     return result
 
 
+@app.get("/api/cluster/{cluster_id}")
+def cluster_inscriptions(cluster_id: int):
+    rows = db.get_cluster_inscriptions(cluster_id)
+    return {"cluster_id": cluster_id, "count": len(rows), "inscriptions": rows}
+
+
 @app.post("/api/flags")
 def flag(req: FlagRequest):
     db.insert_flag(req.edcs_id, req.category, req.comment, req.email)
