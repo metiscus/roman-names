@@ -260,6 +260,8 @@ def get_markers_for_tile(
                 })
 
     return {"type": "FeatureCollection", "features": features}
+
+
 def get_inscription(edcs_id: str) -> dict | None:
     with _conn() as conn:
         r = conn.execute(
@@ -298,7 +300,7 @@ def get_cluster_inscriptions(cluster_id: int) -> list[dict]:
     with _conn() as conn:
         rows = conn.execute(
             """
-            SELECT i.edcs_id, i.findspot, i.date_from, i.date_to,
+            SELECT DISTINCT i.edcs_id, i.findspot, i.date_from, i.date_to,
                    COALESCE(i.overrides, i.persons) AS persons_json,
                    (i.translation IS NOT NULL AND i.translation != '') AS has_translation
             FROM inscriptions i, json_each(COALESCE(i.overrides, i.persons)) p
