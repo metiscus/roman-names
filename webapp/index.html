@@ -173,6 +173,14 @@
       margin-bottom: 12px; font-family: inherit; opacity: 0.85;
     }
     .back-btn:hover { opacity: 1; background: rgba(192, 57, 43, 0.06); }
+    .cluster-link {
+      display: inline-flex; align-items: center; gap: 4px;
+      font-size: 0.8rem; color: var(--accent);
+      background: transparent; border: 1px solid var(--accent);
+      border-radius: 4px; padding: 3px 10px; cursor: pointer;
+      margin-top: 4px; font-family: inherit; opacity: 0.85;
+    }
+    .cluster-link:hover { opacity: 1; background: rgba(192, 57, 43, 0.06); }
     .sb-footer a { font-size: 0.8rem; color: var(--accent); text-decoration: none; }
     .sb-footer a:hover { text-decoration: underline; }
     .flag-link { font-size: 0.76rem; color: var(--text2); cursor: pointer; background: none; border: none; padding: 0; }
@@ -798,6 +806,25 @@ async function loadInscription(edcsId) {
 
   currentEdcsId = edcsId;
   renderDetailSidebar(data);
+
+  if (data.lat != null && data.lon != null) {
+    const z = map.getZoom();
+    if (z < ZOOM_INDIVIDUAL) {
+      map.flyTo([data.lat, data.lon], ZOOM_INDIVIDUAL);
+    } else if (!map.getBounds().contains([data.lat, data.lon])) {
+      map.panTo([data.lat, data.lon]);
+    }
+  }
+}
+
+async function showClusterPanel(clusterId) {
+  let data;
+  try {
+    const resp = await fetch(`/api/cluster/${clusterId}`);
+    if (!resp.ok) return;
+    data = await resp.json();
+  } catch (_) { return; }
+  showInspectionPanel(data.inscriptions);
 }
 
 // ── Sidebar: detail view ──────────────────────────────────
@@ -849,10 +876,6 @@ function renderDetailSidebar(data) {
     const meta = [];
     if (person.gender)  meta.push(`Gender: ${person.gender}`);
     if (person.status)  meta.push(`Status: ${person.status}`);
-    if (person.cluster_id != null) {
-      const conf = person.cluster_confidence ? ` (${person.cluster_confidence})` : '';
-      meta.push(`Cluster #${person.cluster_id} · ${person.cluster_size} attestation${person.cluster_size !== 1 ? 's' : ''}${conf}`);
-    }
 
     const metaEl = document.createElement('p');
     metaEl.className = 'person-meta';
@@ -860,6 +883,15 @@ function renderDetailSidebar(data) {
 
     card.appendChild(nameEl);
     if (meta.length) card.appendChild(metaEl);
+
+    if (person.cluster_id != null && person.cluster_size > 1) {
+      const btn = document.createElement('button');
+      btn.className = 'cluster-link';
+      btn.textContent = `↗ ${person.cluster_size} attestation${person.cluster_size !== 1 ? 's' : ''}`;
+      btn.onclick = () => showClusterPanel(person.cluster_id);
+      card.appendChild(btn);
+    }
+
     body.appendChild(card);
   }
 
@@ -919,6 +951,24 @@ function renderDetailSidebar(data) {
     det.appendChild(sum);
     det.appendChild(pre);
     body.appendChild(det);
+  }
+
+  if (data.text_edition) {
+    const det = document.createElement('details');
+    const sum = document.createElement('summary');
+    sum.textContent = 'Interpreted text';
+    const pre = document.createElement('pre');
+    pre.textContent = data.text_edition;
+    det.appendChild(sum);
+    det.appendChild(pre);
+    body.appendChild(det);
+  }
+
+  if (data.inscription_type) {
+    const p = document.createElement('p');
+    p.className = 'date-range';
+    p.textContent = data.inscription_type;
+    body.appendChild(p);
   }
 
   showSidebar();
