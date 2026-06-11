@@ -887,7 +887,7 @@ function renderDetailSidebar(data) {
     if (person.cluster_id != null && person.cluster_size > 1) {
       const btn = document.createElement('button');
       btn.className = 'cluster-link';
-      btn.textContent = `↗ ${person.cluster_size} attestation${person.cluster_size !== 1 ? 's' : ''}`;
+      btn.textContent = `↗ ${person.cluster_size} attestations`;
       btn.onclick = () => showClusterPanel(person.cluster_id);
       card.appendChild(btn);
     }
