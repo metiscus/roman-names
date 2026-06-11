@@ -817,14 +817,30 @@ async function loadInscription(edcsId) {
   }
 }
 
-async function showClusterPanel(clusterId) {
+async function showClusterPanel(clusterId, personName, province) {
+  const originId = currentEdcsId;
   let data;
   try {
-    const resp = await fetch(`/api/cluster/${clusterId}`);
+    const resp = await fetch(`/api/cluster/${clusterId}?province=${encodeURIComponent(province)}`);
     if (!resp.ok) return;
     data = await resp.json();
   } catch (_) { return; }
+
   showInspectionPanel(data.inscriptions);
+
+  // Override generic "N inscriptions" header with person-specific context
+  document.getElementById('sb-title').textContent =
+    `${data.count} attestation${data.count !== 1 ? 's' : ''} of ${personName}`;
+  document.getElementById('sb-findspot').textContent = '';
+
+  // Add back button to origin inscription if we came from one
+  if (originId) {
+    const backBtn = document.createElement('button');
+    backBtn.className = 'back-btn';
+    backBtn.textContent = '← Back to inscription';
+    backBtn.onclick = () => selectInscription(originId, false);
+    document.getElementById('sb-body').prepend(backBtn);
+  }
 }
 
 // ── Sidebar: detail view ──────────────────────────────────
@@ -888,7 +904,7 @@ function renderDetailSidebar(data) {
       const btn = document.createElement('button');
       btn.className = 'cluster-link';
       btn.textContent = `↗ ${person.cluster_size} attestations`;
-      btn.onclick = () => showClusterPanel(person.cluster_id);
+      btn.onclick = () => showClusterPanel(person.cluster_id, personDisplayName(person), data.province);
       card.appendChild(btn);
     }
 
