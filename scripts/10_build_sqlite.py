@@ -18,21 +18,25 @@ DEFAULT_GEOJSON_DIR = Path(__file__).parent.parent / "webapp" / "data"
 # overrides is written by admin/correction tooling.
 _CREATE_INSCRIPTIONS = """
 CREATE TABLE IF NOT EXISTS inscriptions (
-    edcs_id     TEXT PRIMARY KEY,
-    province    TEXT NOT NULL,
-    lat         REAL NOT NULL,
-    lon         REAL NOT NULL,
-    findspot    TEXT,
-    raw_text    TEXT,
-    date_from   INTEGER,
-    date_to     INTEGER,
-    persons     TEXT NOT NULL,
-    overrides   TEXT,
-    translation TEXT,
-    summary     TEXT,
-    tile_x      INTEGER NOT NULL DEFAULT 0,
-    tile_y      INTEGER NOT NULL DEFAULT 0,
-    updated_at  TEXT NOT NULL
+    edcs_id          TEXT PRIMARY KEY,
+    province         TEXT NOT NULL,
+    lat              REAL NOT NULL,
+    lon              REAL NOT NULL,
+    findspot         TEXT,
+    raw_text         TEXT,
+    date_from        INTEGER,
+    date_to          INTEGER,
+    persons          TEXT NOT NULL,
+    overrides        TEXT,
+    translation      TEXT,
+    summary          TEXT,
+    edh_id           TEXT,
+    tm_uri           TEXT,
+    text_edition     TEXT,
+    inscription_type TEXT,
+    tile_x           INTEGER NOT NULL DEFAULT 0,
+    tile_y           INTEGER NOT NULL DEFAULT 0,
+    updated_at       TEXT NOT NULL
 )
 """
 
@@ -76,22 +80,27 @@ _INDEXES = [
 _UPSERT = """
 INSERT INTO inscriptions
     (edcs_id, province, lat, lon, findspot, raw_text, date_from, date_to,
-     persons, translation, summary, tile_x, tile_y, updated_at)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+     persons, translation, summary, edh_id, tm_uri, text_edition, inscription_type,
+     tile_x, tile_y, updated_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(edcs_id) DO UPDATE SET
-    province    = excluded.province,
-    lat         = excluded.lat,
-    lon         = excluded.lon,
-    findspot    = excluded.findspot,
-    raw_text    = excluded.raw_text,
-    date_from   = excluded.date_from,
-    date_to     = excluded.date_to,
-    persons     = excluded.persons,
-    translation = excluded.translation,
-    summary     = excluded.summary,
-    tile_x      = excluded.tile_x,
-    tile_y      = excluded.tile_y,
-    updated_at  = excluded.updated_at
+    province         = excluded.province,
+    lat              = excluded.lat,
+    lon              = excluded.lon,
+    findspot         = excluded.findspot,
+    raw_text         = excluded.raw_text,
+    date_from        = excluded.date_from,
+    date_to          = excluded.date_to,
+    persons          = excluded.persons,
+    translation      = excluded.translation,
+    summary          = excluded.summary,
+    edh_id           = excluded.edh_id,
+    tm_uri           = excluded.tm_uri,
+    text_edition     = excluded.text_edition,
+    inscription_type = excluded.inscription_type,
+    tile_x           = excluded.tile_x,
+    tile_y           = excluded.tile_y,
+    updated_at       = excluded.updated_at
     -- overrides intentionally omitted: manual corrections survive pipeline re-runs
 """
 
@@ -106,9 +115,20 @@ def lat_lon_to_tile(lat: float, lon: float, zoom: int = TILE_ZOOM) -> tuple[int,
 
 def _load_enrichment(geojson_dir: Path) -> dict[str, dict]:
     enrichment: dict[str, dict] = {}
+    # Load LIRE first (lower priority)
+    lire_path = geojson_dir.parent.parent / "data" / "lire_enrichment.json"
+    if lire_path.exists():
+        with open(lire_path) as f:
+            for edcs_id, fields in json.load(f).items():
+                enrichment[edcs_id] = dict(fields)
+    # Load province enrichment (higher priority — overwrites LIRE where both exist)
     for path in geojson_dir.glob("enrichment_*.json"):
         with open(path) as f:
-            enrichment.update(json.load(f))
+            for edcs_id, fields in json.load(f).items():
+                if edcs_id in enrichment:
+                    enrichment[edcs_id].update(fields)
+                else:
+                    enrichment[edcs_id] = dict(fields)
     return enrichment
 
 
@@ -154,6 +174,10 @@ def _load_geojson(
             json.dumps(props.get("persons", [])),
             enr.get("translation"),
             enr.get("summary"),
+            enr.get("edh_id"),
+            enr.get("tm_uri"),
+            enr.get("text_edition"),
+            enr.get("inscription_type"),
             tile_x,
             tile_y,
             now,
@@ -223,11 +247,10 @@ def build(
 
         n_provinces = _build_provinces(conn)
         n_aggregates = _build_tile_aggregates(conn)
-        enriched = sum(
-            1 for v in enrichment.values()
-            if v.get("translation") or v.get("summary")
-        )
-        print(f"Enrichment: {enriched} records with translation/summary")
+        enriched_trans = sum(1 for v in enrichment.values() if v.get("translation") or v.get("summary"))
+        enriched_text = sum(1 for v in enrichment.values() if v.get("text_edition"))
+        enriched_links = sum(1 for v in enrichment.values() if v.get("edh_id") or v.get("tm_uri"))
+        print(f"Enrichment: {enriched_trans} with translation/summary, {enriched_text} with text_edition, {enriched_links} with EDH/TM links")
     finally:
         conn.close()
 
