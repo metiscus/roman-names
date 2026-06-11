@@ -16,14 +16,16 @@ _SAMPLE_PERSONS = json.dumps([{
 _ROWS = [
     ("EDCS-00000001", "africa_proconsularis",
      36.8, 10.2, "Carthago", "M. Tullio...", -50, 50,
-     _SAMPLE_PERSONS, None, None, None, 541, 399, "2026-01-01T00:00:00+00:00"),
+     _SAMPLE_PERSONS, None, None, None, None, None, None, None,
+     541, 399, "2026-01-01T00:00:00+00:00"),
     ("EDCS-00000002", "africa_proconsularis",
      36.9, 10.3, "Carthago", "L. Bruto...", 0, 100,
      _SAMPLE_PERSONS, None, "Translation for inscription 2", "Summary for inscription 2",
-     541, 398, "2026-01-01T00:00:00+00:00"),
+     None, None, None, None, 541, 398, "2026-01-01T00:00:00+00:00"),
     ("EDCS-00000003", "britannia",
      51.5, -0.1, "Londinium", "...", 100, 200,
-     _SAMPLE_PERSONS, None, None, None, 511, 340, "2026-01-01T00:00:00+00:00"),
+     _SAMPLE_PERSONS, None, None, None, None, None, None, None,
+     511, 340, "2026-01-01T00:00:00+00:00"),
 ]
 
 
@@ -43,6 +45,8 @@ def test_db(tmp_path, monkeypatch):
             date_from INTEGER, date_to INTEGER,
             persons TEXT NOT NULL, overrides TEXT,
             translation TEXT, summary TEXT,
+            edh_id TEXT, tm_uri TEXT,
+            text_edition TEXT, inscription_type TEXT,
             tile_x INTEGER NOT NULL DEFAULT 0,
             tile_y INTEGER NOT NULL DEFAULT 0,
             updated_at TEXT NOT NULL
@@ -76,7 +80,7 @@ def test_db(tmp_path, monkeypatch):
         CREATE INDEX idx_inscriptions_tile ON inscriptions (tile_x, tile_y);
     """)
     conn.executemany(
-        "INSERT INTO inscriptions VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+        "INSERT INTO inscriptions VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
         _ROWS,
     )
     # z=7 aggregate cells: EDCS-1,2 → (67,49); EDCS-3 → (63,42)
