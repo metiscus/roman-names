@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Attribution &amp; Licensing — Roman Name Attestations</title>
+  <style>
+    :root {
+      --accent: #c0392b;
+      --bg: #ffffff;
+      --bg2: #f8f9fa;
+      --sidebar-head-bg: #faf4ef;
+      --border: #dee2e6;
+      --text: #2c3e50;
+      --text2: #6c757d;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg2); color: var(--text); min-height: 100vh;
+    }
+
+    #topnav {
+      background: var(--bg); border-bottom: 1px solid var(--border);
+      height: 44px; display: flex; align-items: center;
+      padding: 0 20px; gap: 16px; position: sticky; top: 0; z-index: 100;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    }
+    .site-title { font-size: 0.92rem; font-weight: 600; color: var(--text); letter-spacing: -0.01em; }
+    .site-title span { color: var(--accent); }
+    .nav-links { display: flex; gap: 8px; margin-left: auto; }
+    .nav-link {
+      height: 28px; padding: 0 12px; border: 1px solid var(--border);
+      border-radius: 14px; background: var(--bg2); font-size: 0.82rem;
+      color: var(--text2); text-decoration: none;
+      display: inline-flex; align-items: center;
+    }
+    .nav-link:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+    #page { max-width: 800px; margin: 0 auto; padding: 32px 20px 80px; }
+
+    h1 {
+      font-size: 1.5rem; font-weight: 700; color: var(--text);
+      margin-bottom: 6px; letter-spacing: -0.02em;
+    }
+    .page-lead {
+      font-size: 0.92rem; color: var(--text2); line-height: 1.6; margin-bottom: 32px;
+      padding-bottom: 20px; border-bottom: 1px solid var(--border);
+    }
+
+    section { margin-bottom: 32px; }
+    h2 {
+      font-size: 1.05rem; font-weight: 600; color: var(--text);
+      margin-bottom: 12px; padding-bottom: 6px;
+      border-bottom: 2px solid var(--accent);
+      display: inline-block;
+    }
+    h3 {
+      font-size: 0.92rem; font-weight: 600; color: var(--text);
+      margin: 16px 0 8px;
+    }
+    p { font-size: 0.88rem; line-height: 1.65; color: var(--text); margin-bottom: 10px; }
+    p:last-child { margin-bottom: 0; }
+
+    /* Dataset cards */
+    .dataset-card {
+      border: 1px solid var(--border); border-radius: 8px;
+      background: var(--bg); margin-bottom: 14px; overflow: hidden;
+    }
+    .dataset-card-header {
+      padding: 10px 14px; background: var(--sidebar-head-bg);
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 10px;
+    }
+    .dataset-card-header h3 { margin: 0; font-size: 0.9rem; }
+    .license-badge {
+      margin-left: auto; font-size: 0.72rem; font-weight: 600;
+      padding: 2px 8px; border-radius: 10px; white-space: nowrap;
+    }
+    .cc-by { background: #d4edda; color: #155724; }
+    .cc-by-nc { background: #fff3cd; color: #856404; }
+    .dataset-card-body { padding: 12px 14px; }
+    .meta-row {
+      display: flex; gap: 8px; font-size: 0.80rem; margin-bottom: 6px;
+      align-items: baseline; flex-wrap: wrap;
+    }
+    .meta-label { color: var(--text2); flex-shrink: 0; min-width: 110px; }
+    .meta-value { color: var(--text); }
+    .meta-value a { color: var(--accent); text-decoration: none; }
+    .meta-value a:hover { text-decoration: underline; }
+    .dataset-note {
+      font-size: 0.80rem; color: var(--text2); line-height: 1.5;
+      margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border);
+    }
+
+    /* Citation box */
+    .cite-box {
+      background: var(--bg); border: 1px solid var(--border);
+      border-left: 4px solid var(--accent); border-radius: 0 6px 6px 0;
+      padding: 12px 16px; font-size: 0.85rem; line-height: 1.6;
+      color: var(--text); margin: 12px 0;
+    }
+    .cite-box code {
+      font-family: "SF Mono", "Fira Code", monospace; font-size: 0.8rem;
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: 3px; padding: 1px 4px;
+    }
+
+    /* Link list */
+    .link-list { list-style: none; margin: 8px 0; }
+    .link-list li {
+      padding: 5px 0; font-size: 0.85rem; border-bottom: 1px solid var(--border);
+      display: flex; gap: 10px; align-items: baseline;
+    }
+    .link-list li:last-child { border-bottom: none; }
+    .link-list .link-name { font-weight: 500; min-width: 200px; color: var(--text); }
+    .link-list a { color: var(--accent); text-decoration: none; font-size: 0.82rem; }
+    .link-list a:hover { text-decoration: underline; }
+
+    /* Warning box */
+    .notice {
+      background: #fff8f0; border: 1px solid #f5c48a;
+      border-radius: 6px; padding: 10px 14px;
+      font-size: 0.82rem; line-height: 1.55; color: #7a4a00; margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+
+<nav id="topnav">
+  <div class="site-title">Roman Name <span>Attestations</span></div>
+  <div class="nav-links">
+    <a href="/" class="nav-link">&#8592; Map</a>
+    <a href="/search" class="nav-link">Search / Browse</a>
+  </div>
+</nav>
+
+<div id="page">
+
+  <h1>Attribution &amp; Licensing</h1>
+  <p class="page-lead">
+    This project creates machine-generated personal-name attestation indexes from
+    Latin inscription corpora. It is a derived, computational resource by Michael A Bosse —
+    not an official release of EDCS, LIRE, EDH, Trismegistos, CIL ACE, Ubi Erat Lupa,
+    DARE, or any other source database.
+  </p>
+
+  <!-- Recommended citation -->
+  <section>
+    <h2>Recommended citation</h2>
+    <p>When using the derived data, cite the project and the source datasets:</p>
+    <div class="cite-box">
+      Michael A Bosse, <em>Roman Names: machine-generated personal-name attestations
+      from Latin inscriptions.</em> Derived from EDCS 2022 and LIRE v3.0.
+      Generated with the <code>metiscus/roman-names</code> pipeline.
+    </div>
+    <p>When a Zenodo DOI is minted for this project, cite that DOI in place of the
+    repository-only reference.</p>
+
+    <h3>Suggested acknowledgement</h3>
+    <div class="cite-box">
+      This work uses machine-generated data by Michael A Bosse from
+      <code>metiscus/roman-names</code>, derived from EDCS 2022
+      (<a href="https://doi.org/10.5281/zenodo.7072337" target="_blank">10.5281/zenodo.7072337</a>)
+      and LIRE v3.0
+      (<a href="https://doi.org/10.5281/zenodo.8431452" target="_blank">10.5281/zenodo.8431452</a>).
+      Interpretations and errors are the responsibility of the user, not the source
+      database maintainers.
+    </div>
+  </section>
+
+  <!-- License -->
+  <section>
+    <h2>Data license</h2>
+    <p>
+      Derived data artifacts produced by this project — including generated
+      name-attestation datasets, NER outputs, clustering outputs, webapp data,
+      generated summaries, and generated English translations — are released under the
+      <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank">
+        Creative Commons Attribution 4.0 International License (CC BY 4.0)</a>.
+      Attribution is required. Reusers must also preserve attribution to the
+      underlying source datasets listed below.
+    </p>
+    <div class="notice">
+      <strong>Exception:</strong> Name lookup tables derived from the Digital
+      Prosopography of the Roman Republic (DPRR) are released under
+      <a href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank">CC BY-NC 4.0</a>
+      and may not be used for commercial purposes.
+    </div>
+    <p style="margin-top:10px; font-size:0.82rem; color:var(--text2);">
+      Software source code in this repository is licensed separately under the MIT License.
+    </p>
+  </section>
+
+  <!-- Source datasets -->
+  <section>
+    <h2>Source datasets</h2>
+    <p>The derived data depends on the following third-party source datasets.
+    Reusers must preserve attribution to these sources.</p>
+
+    <div class="dataset-card">
+      <div class="dataset-card-header">
+        <h3>EDCS 2022</h3>
+        <span class="license-badge cc-by">CC BY 4.0</span>
+      </div>
+      <div class="dataset-card-body">
+        <div class="meta-row">
+          <span class="meta-label">Full name</span>
+          <span class="meta-value">Epigraphik-Datenbank Clauss-Slaby (EDCS)</span>
+        </div>
+        <div class="meta-row">
+          <span class="meta-label">Version used</span>
+          <span class="meta-value">2.0, aggregated 2022-09-12</span>
+        </div>
+        <div class="meta-row">
+          <span class="meta-label">Zenodo DOI</span>
+          <span class="meta-value">
+            <a href="https://doi.org/10.5281/zenodo.7072337" target="_blank">10.5281/zenodo.7072337</a>
+          </span>
+        </div>
+        <div class="meta-row">
+          <span class="meta-label">Creator</span>
+          <span class="meta-value">Petra Heřmánková, Aarhus University</span>
+        </div>
+        <div class="meta-row">
+          <span class="meta-label">Original database</span>
+          <span class="meta-value"><a href="https://db.edcs.eu/" target="_blank">db.edcs.eu</a></span>
+        </div>
+        <div class="dataset-note">
+          Fields used: EDCS identifiers, raw inscription text, province,
+          findspot/place metadata, date fields, and inscription type.
+        </div>
+      </div>
+    </div>
+
+    <div class="dataset-card">
+      <div class="dataset-card-header">
+        <h3>LIRE v3.0</h3>
+        <span class="license-badge cc-by">CC BY 4.0</span>
+      </div>
+      <div class="dataset-card-body">
+        <div class="meta-row">
+          <span class="meta-label">Full name</span>
+          <span class="meta-value">Latin Inscriptions of the Roman Empire (LIRE)</span>
+        </div>
+        <div class="meta-row">
+          <span class="meta-label">Version used</span>
+          <span class="meta-value">v3.0, published 2023-10-11</span>
+        </div>
+        <div class="meta-row">
+          <span class="meta-label">Zenodo DOI</span>
+          <span class="meta-value">
+            <a href="https://doi.org/10.5281/zenodo.8431452" target="_blank">10.5281/zenodo.8431452</a>
+          </span>
+        </div>
+        <div class="meta-row">
+          <span class="meta-label">Creators</span>
+          <span class="meta-value">Vojtěch Kaše, Petra Heřmánková, Adéla Sobotková — Aarhus University</span>
+        </div>
+        <div class="meta-row">
+          <span class="meta-label">Repository</span>
+          <span class="meta-value"><a href="https://github.com/sdam-au/LI_ETL" target="_blank">github.com/sdam-au/LI_ETL</a></span>
+        </div>
+        <div class="dataset-note">
+          Fields used: coordinates, dates, interpretive text, publication references,
+          external identifiers, and structured person data used for validation.
+          LIRE itself aggregates material from EDCS and the Epigraphic Database
+          Heidelberg (EDH); its disclaimer notes that original data is provided by
+          the third-party source indicated in its metadata.
+        </div>
+      </div>
+    </div>
+
+    <div class="dataset-card">
+      <div class="dataset-card-header">
+        <h3>Digital Prosopography of the Roman Republic (DPRR)</h3>
+        <span class="license-badge cc-by-nc">CC BY-NC 4.0</span>
+      </div>
+      <div class="dataset-card-body">
+        <div class="meta-row">
+          <span class="meta-label">Source</span>
+          <span class="meta-value"><a href="http://romanrepublic.ac.uk/" target="_blank">romanrepublic.ac.uk</a></span>
+        </div>
+        <div class="meta-row">
+          <span class="meta-label">Project lead</span>
+          <span class="meta-value">King's College London</span>
+        </div>
+        <div class="dataset-note">
+          Used for canonical name whitelists (Nomina and Cognomina) and tribal
+          variant detection. This project's use of DPRR data is for academic
+          research and follows the NonCommercial restriction.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Machine-generated content -->
+  <section>
+    <h2>Machine-generated annotations</h2>
+    <p>
+      The following are generated by this project's NLP pipeline and should be
+      treated as scholarly aids requiring verification against the inscription
+      text and relevant publications:
+    </p>
+    <ul style="margin: 10px 0 10px 20px; font-size:0.85rem; line-height:1.8; color:var(--text);">
+      <li>Name extraction and component classification (praenomen, nomen, cognomen)</li>
+      <li>Social-status labels, fragmentary flags, non-person flags</li>
+      <li>Heuristic name clusters (possible same-person groups)</li>
+      <li>English translations and summaries</li>
+    </ul>
+    <div class="notice">
+      <strong>Clusters are heuristic, not confirmed identities.</strong>
+      A cluster groups inscriptions that may refer to the same individual based on
+      name similarity and geographic proximity — not prosopographical verification.
+    </div>
+  </section>
+
+  <!-- Linked resources -->
+  <section>
+    <h2>Linked third-party resources</h2>
+    <p>
+      The webapp links to external databases where identifiers are available.
+      It does not claim ownership of those records, pages, images, or map tiles.
+    </p>
+    <ul class="link-list">
+      <li>
+        <span class="link-name">Epigraphik-Datenbank Clauss-Slaby (EDCS)</span>
+        <a href="https://db.edcs.eu/" target="_blank">db.edcs.eu</a>
+      </li>
+      <li>
+        <span class="link-name">Epigraphic Database Heidelberg (EDH)</span>
+        <a href="https://edh.ub.uni-heidelberg.de/" target="_blank">edh.ub.uni-heidelberg.de</a>
+      </li>
+      <li>
+        <span class="link-name">Trismegistos</span>
+        <a href="https://www.trismegistos.org/" target="_blank">trismegistos.org</a>
+      </li>
+      <li>
+        <span class="link-name">CIL ACE</span>
+        <a href="https://cil.bbaw.de/" target="_blank">cil.bbaw.de</a>
+      </li>
+      <li>
+        <span class="link-name">Ubi Erat Lupa</span>
+        <a href="https://lupa.at/" target="_blank">lupa.at</a>
+      </li>
+      <li>
+        <span class="link-name">Digital Atlas of the Roman Empire (DARE)</span>
+        <a href="https://dh.gu.se/dare/" target="_blank">dh.gu.se/dare</a>
+      </li>
+    </ul>
+  </section>
+
+</div>
+</body>
+</html>

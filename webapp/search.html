@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Roman Name Attestations — Search</title>
+  <style>
+    :root {
+      --accent: #c0392b;
+      --accent-hover: #a93226;
+      --bg: #ffffff;
+      --bg2: #f8f9fa;
+      --sidebar-head-bg: #faf4ef;
+      --border: #dee2e6;
+      --text: #2c3e50;
+      --text2: #6c757d;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg2); color: var(--text); min-height: 100vh;
+    }
+
+    /* ── Topnav ──────────────────────────────────────────── */
+    #topnav {
+      background: var(--bg); border-bottom: 1px solid var(--border);
+      height: 44px; display: flex; align-items: center;
+      padding: 0 20px; gap: 16px; position: sticky; top: 0; z-index: 100;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    }
+    .site-title { font-size: 0.92rem; font-weight: 600; color: var(--text); letter-spacing: -0.01em; }
+    .site-title span { color: var(--accent); }
+    .nav-links { display: flex; gap: 8px; margin-left: auto; }
+    .nav-link {
+      height: 28px; padding: 0 12px; border: 1px solid var(--border);
+      border-radius: 14px; background: var(--bg2); cursor: pointer;
+      font-size: 0.82rem; color: var(--text2); text-decoration: none;
+      display: inline-flex; align-items: center; gap: 5px;
+      transition: background 0.15s, color 0.15s;
+    }
+    .nav-link:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .nav-link.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+    /* ── Page layout ─────────────────────────────────────── */
+    #page { max-width: 1200px; margin: 0 auto; padding: 20px 20px 60px; }
+
+    /* ── Search panel ────────────────────────────────────── */
+    #search-panel {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 8px; margin-bottom: 16px; overflow: hidden;
+    }
+    #search-panel-header {
+      padding: 11px 16px; display: flex; align-items: center; gap: 10px;
+      border-bottom: 1px solid var(--border); background: var(--sidebar-head-bg);
+    }
+    #search-panel-header h2 { font-size: 0.88rem; font-weight: 600; color: var(--text); flex: 1; }
+    #collapse-btn {
+      background: none; border: none; cursor: pointer; font-size: 0.82rem;
+      color: var(--text2); padding: 2px 8px;
+    }
+    #search-form {
+      padding: 14px 16px; display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 10px 16px;
+    }
+    .form-group { display: flex; flex-direction: column; gap: 4px; }
+    .form-group label {
+      font-size: 0.74rem; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.04em; color: var(--text2);
+    }
+    .form-group input, .form-group select {
+      height: 30px; border: 1px solid var(--border); border-radius: 5px;
+      padding: 0 8px; font-size: 0.83rem; font-family: inherit;
+      background: var(--bg); color: var(--text); outline: none;
+    }
+    .form-group input:focus, .form-group select:focus {
+      border-color: var(--accent); box-shadow: 0 0 0 2px rgba(192,57,43,0.12);
+    }
+    .form-group.full-width { grid-column: 1 / -1; }
+    .date-inputs { display: flex; gap: 6px; align-items: center; }
+    .date-inputs span { font-size: 0.8rem; color: var(--text2); }
+    .date-inputs input { flex: 1; }
+    .gender-radios { display: flex; gap: 12px; align-items: center; height: 30px; }
+    .gender-radios label {
+      display: flex; align-items: center; gap: 4px; font-size: 0.83rem;
+      color: var(--text); font-weight: 400; text-transform: none;
+      letter-spacing: normal; cursor: pointer;
+    }
+    .form-actions { grid-column: 1 / -1; display: flex; gap: 8px; align-items: center; padding-top: 4px; }
+    .btn-primary {
+      height: 30px; padding: 0 18px; background: var(--accent); color: #fff;
+      border: none; border-radius: 5px; font-size: 0.83rem; font-weight: 500;
+      cursor: pointer; font-family: inherit;
+    }
+    .btn-primary:hover { background: var(--accent-hover); }
+    .btn-secondary {
+      height: 30px; padding: 0 14px; background: var(--bg2); color: var(--text2);
+      border: 1px solid var(--border); border-radius: 5px; font-size: 0.83rem;
+      cursor: pointer; font-family: inherit;
+    }
+    .btn-secondary:hover { color: var(--text); background: var(--bg); }
+    .form-hint { font-size: 0.76rem; color: var(--text2); margin-left: 4px; }
+
+    /* ── Results bar ─────────────────────────────────────── */
+    #results-bar {
+      display: flex; align-items: center; gap: 10px; margin-bottom: 10px;
+      flex-wrap: wrap;
+    }
+    #results-count { font-size: 0.83rem; color: var(--text2); flex: 1; min-width: 200px; }
+    #results-count strong { color: var(--text); }
+    .view-toggle {
+      display: flex; border: 1px solid var(--border); border-radius: 5px; overflow: hidden;
+    }
+    .view-toggle button {
+      height: 28px; padding: 0 12px; border: none; background: var(--bg2);
+      font-size: 0.80rem; cursor: pointer; color: var(--text2); font-family: inherit;
+    }
+    .view-toggle button.active { background: var(--accent); color: #fff; }
+    .view-toggle button:first-child { border-right: 1px solid var(--border); }
+    .btn-export {
+      height: 28px; padding: 0 12px; border: 1px solid var(--border);
+      border-radius: 5px; background: var(--bg); font-size: 0.80rem;
+      cursor: pointer; color: var(--text2); font-family: inherit;
+      display: flex; align-items: center; gap: 5px;
+    }
+    .btn-export:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* ── Results table ───────────────────────────────────── */
+    #results-table-wrap {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 8px; overflow: hidden;
+    }
+    table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+    thead { background: var(--sidebar-head-bg); }
+    thead th {
+      padding: 9px 12px; text-align: left; font-weight: 600;
+      font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.04em;
+      color: var(--text2); border-bottom: 1px solid var(--border);
+      white-space: nowrap; cursor: pointer; user-select: none;
+    }
+    thead th:hover { color: var(--text); }
+    thead th.sorted { color: var(--accent); }
+    .sort-arrow { margin-left: 3px; opacity: 0.5; font-size: 0.7rem; }
+    thead th.sorted .sort-arrow { opacity: 1; }
+    tbody tr { border-bottom: 1px solid var(--border); }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: #fdf7f6; }
+    td { padding: 8px 12px; vertical-align: top; }
+    td.edcs-id a {
+      color: var(--accent); text-decoration: none; font-weight: 500;
+      font-family: "SF Mono", "Fira Code", monospace; font-size: 0.78rem;
+    }
+    td.edcs-id a:hover { text-decoration: underline; }
+    td.province, td.date-cell { color: var(--text2); white-space: nowrap; font-size: 0.78rem; }
+    td.persons-cell { max-width: 300px; }
+    .person-chip {
+      display: inline-flex; align-items: center; gap: 3px;
+      border: 1px solid var(--border); border-radius: 12px;
+      padding: 1px 7px; margin: 1px 2px 1px 0; font-size: 0.75rem; color: var(--text);
+    }
+    .person-chip .glyph { font-size: 0.65rem; color: var(--text2); }
+    .chip-f { border-color: #f8d7da; background: #fff5f6; }
+    .chip-m { border-color: #d1e7dd; background: #f6fffb; }
+    .chip-u { background: var(--bg2); }
+    .type-badge {
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: 10px; padding: 1px 7px; font-size: 0.72rem; color: var(--text2);
+    }
+    td.has-trans { text-align: center; color: #27ae60; font-size: 0.85rem; }
+
+    /* ── Pagination ──────────────────────────────────────── */
+    #pagination {
+      display: flex; align-items: center; justify-content: center;
+      gap: 6px; margin-top: 14px; font-size: 0.83rem; flex-wrap: wrap;
+    }
+    .page-btn {
+      height: 28px; min-width: 28px; padding: 0 8px;
+      border: 1px solid var(--border); border-radius: 5px;
+      background: var(--bg); cursor: pointer; font-size: 0.82rem;
+      color: var(--text2); font-family: inherit;
+    }
+    .page-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+    .page-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); cursor: default; }
+    .page-btn:disabled { opacity: 0.35; cursor: default; }
+    #page-info { color: var(--text2); padding: 0 4px; font-size: 0.82rem; }
+
+    /* ── Detail modal ────────────────────────────────────── */
+    #modal-backdrop {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.35);
+      z-index: 200; display: flex; align-items: center; justify-content: center;
+    }
+    #modal-backdrop[hidden] { display: none; }
+    #modal {
+      background: var(--bg); border-radius: 10px; width: 580px; max-width: 95vw;
+      max-height: 88vh; display: flex; flex-direction: column;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.18);
+    }
+    #modal-header {
+      padding: 14px 16px 12px; border-bottom: 1px solid var(--border);
+      background: var(--sidebar-head-bg); border-radius: 10px 10px 0 0;
+      display: flex; align-items: flex-start; gap: 8px; flex-shrink: 0;
+    }
+    #modal-header-text { flex: 1; }
+    #modal-header h2 { font-size: 1rem; color: var(--text); }
+    #modal-header .sub { font-size: 0.8rem; color: var(--text2); margin-top: 2px; }
+    #modal-close {
+      background: none; border: none; font-size: 1.3rem;
+      cursor: pointer; color: var(--text2); line-height: 1; padding: 2px;
+    }
+    #modal-close:hover { color: var(--text); }
+    #modal-body { padding: 14px 16px; overflow-y: auto; flex: 1; }
+    .modal-section { margin-bottom: 14px; }
+    .modal-section-title {
+      font-size: 0.72rem; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.05em; color: var(--text2); margin-bottom: 6px;
+    }
+    .modal-person {
+      border: 1px solid var(--border); border-radius: 6px;
+      padding: 8px 10px; margin-bottom: 6px; background: var(--bg2);
+    }
+    .modal-person .name { font-weight: 600; font-size: 0.88rem; margin-bottom: 2px; }
+    .modal-person .meta { font-size: 0.76rem; color: var(--text2); }
+    .modal-raw {
+      font-family: "SF Mono", "Fira Code", monospace; font-size: 0.78rem;
+      line-height: 1.5; color: var(--text); background: var(--bg2);
+      border: 1px solid var(--border); border-radius: 5px;
+      padding: 8px 10px; white-space: pre-wrap; word-break: break-all;
+    }
+    .modal-translation { font-size: 0.85rem; line-height: 1.55; color: var(--text); font-style: italic; }
+    .modal-links { display: flex; gap: 8px; flex-wrap: wrap; }
+    .modal-link {
+      font-size: 0.78rem; color: var(--accent); text-decoration: none;
+      border: 1px solid #f0c0bc; border-radius: 10px; padding: 2px 8px; background: #fff5f4;
+    }
+    .modal-link:hover { background: #fde8e6; }
+
+    /* ── Empty / loading states ──────────────────────────── */
+    #empty-state, #loading-state {
+      text-align: center; padding: 60px 20px; color: var(--text2);
+      background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+    }
+    #loading-state .spinner {
+      width: 28px; height: 28px; border: 3px solid var(--border);
+      border-top-color: var(--accent); border-radius: 50%;
+      animation: spin 0.7s linear infinite; margin: 0 auto 12px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    #error-banner {
+      background: #fff5f4; border: 1px solid #f0c0bc; border-radius: 8px;
+      padding: 12px 16px; font-size: 0.83rem; color: var(--accent); margin-bottom: 12px;
+    }
+    #error-banner[hidden] { display: none; }
+
+    /* ── Attribution footer ──────────────────────────────── */
+    #attribution {
+      margin-top: 40px; padding: 14px 16px; border: 1px solid var(--border);
+      border-radius: 8px; background: var(--bg); font-size: 0.76rem;
+      color: var(--text2); line-height: 1.6;
+    }
+    #attribution strong { color: var(--text); }
+    #attribution a { color: var(--accent); text-decoration: none; }
+    #attribution a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+
+<nav id="topnav">
+  <div class="site-title">Roman Name <span>Attestations</span></div>
+  <div class="nav-links">
+    <a href="/" class="nav-link">&#8592; Map</a>
+    <a href="/search" class="nav-link active">Search / Browse</a>
+  </div>
+</nav>
+
+<div id="page">
+
+  <!-- Search panel -->
+  <div id="search-panel">
+    <div id="search-panel-header">
+      <h2>Search Inscriptions</h2>
+      <button id="collapse-btn" onclick="togglePanel()">Hide &#9650;</button>
+    </div>
+    <div id="search-form">
+      <div class="form-group">
+        <label>Nomen</label>
+        <input id="f-nomen" type="text" placeholder="e.g. Iulius">
+      </div>
+      <div class="form-group">
+        <label>Cognomen</label>
+        <input id="f-cognomen" type="text" placeholder="e.g. Fortunata">
+      </div>
+      <div class="form-group">
+        <label>Praenomen</label>
+        <input id="f-praenomen" type="text" placeholder="e.g. Marcus">
+      </div>
+      <div class="form-group">
+        <label>Province</label>
+        <select id="f-province">
+          <option value="">All provinces</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Gender</label>
+        <div class="gender-radios">
+          <label><input type="radio" name="gender" value="" checked> Any</label>
+          <label><input type="radio" name="gender" value="M"> Male</label>
+          <label><input type="radio" name="gender" value="F"> Female</label>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Date range (CE/BCE)</label>
+        <div class="date-inputs">
+          <input id="f-date-from" type="number" placeholder="−200" step="1">
+          <span>to</span>
+          <input id="f-date-to" type="number" placeholder="400" step="1">
+        </div>
+      </div>
+      <div class="form-group full-width">
+        <label>Inscription text (full-text search)</label>
+        <input id="f-q" type="text" placeholder="Search raw inscription text, e.g. deo or vivit">
+      </div>
+      <div class="form-actions">
+        <button class="btn-primary" onclick="doSearch(1)">Search</button>
+        <button class="btn-secondary" onclick="resetForm()">Reset</button>
+        <span class="form-hint">Leave all fields blank to browse all inscriptions</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Error banner -->
+  <div id="error-banner" hidden></div>
+
+  <!-- Results bar -->
+  <div id="results-bar">
+    <div id="results-count"></div>
+    <div class="view-toggle">
+      <button id="btn-view-inscriptions" class="active" onclick="setView('inscriptions', this)">Inscriptions</button>
+      <button id="btn-view-persons" onclick="setView('persons', this)">Persons</button>
+    </div>
+    <button class="btn-export" onclick="exportCSV()">&#8615; Export CSV</button>
+  </div>
+
+  <!-- Results area -->
+  <div id="results-area"></div>
+
+  <!-- Pagination -->
+  <div id="pagination"></div>
+
+  <!-- Attribution -->
+  <div id="attribution">
+    <strong>Data &amp; Attribution</strong> &mdash;
+    Derived data is released under
+    <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank">CC BY 4.0</a>.
+    Cite as: <em>Michael A Bosse, Roman Names: machine-generated personal-name attestations
+    from Latin inscriptions. Derived from
+    <a href="https://doi.org/10.5281/zenodo.7072337" target="_blank">EDCS 2022</a> and
+    <a href="https://doi.org/10.5281/zenodo.8431452" target="_blank">LIRE v3.0</a>.</em>
+    Name extraction, clusters, translations, and summaries are machine-generated and require
+    verification against the inscription and relevant publications.
+    This is not an official release of EDCS, EDH, Trismegistos, or any source database.
+    See <a href="/attribution" target="_blank">full attribution</a>.
+  </div>
+
+</div><!-- /page -->
+
+<!-- Detail modal -->
+<div id="modal-backdrop" hidden>
+  <div id="modal">
+    <div id="modal-header">
+      <div id="modal-header-text">
+        <h2 id="modal-title"></h2>
+        <div class="sub" id="modal-sub"></div>
+      </div>
+      <button id="modal-close" onclick="closeModal()">&#215;</button>
+    </div>
+    <div id="modal-body"></div>
+  </div>
+</div>
+
+<script>
+  // ── State ───────────────────────────────────────────────
+  let currentPage = 1;
+  let currentView = 'inscriptions';
+  let lastParams = null;
+
+  // ── Init ────────────────────────────────────────────────
+  (async function init() {
+    try {
+      const provinces = await fetch('/api/provinces').then(r => r.json());
+      const sel = document.getElementById('f-province');
+      provinces.forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p;
+        opt.textContent = p;
+        sel.appendChild(opt);
+      });
+    } catch (e) {
+      console.warn('Could not load provinces', e);
+    }
+
+    // Support URL params for direct links
+    const sp = new URLSearchParams(location.search);
+    if (sp.has('nomen') || sp.has('cognomen') || sp.has('q') || sp.has('province')) {
+      if (sp.get('nomen')) document.getElementById('f-nomen').value = sp.get('nomen');
+      if (sp.get('cognomen')) document.getElementById('f-cognomen').value = sp.get('cognomen');
+      if (sp.get('praenomen')) document.getElementById('f-praenomen').value = sp.get('praenomen');
+      if (sp.get('province')) document.getElementById('f-province').value = sp.get('province');
+      if (sp.get('q')) document.getElementById('f-q').value = sp.get('q');
+      if (sp.get('date_from')) document.getElementById('f-date-from').value = sp.get('date_from');
+      if (sp.get('date_to')) document.getElementById('f-date-to').value = sp.get('date_to');
+      if (sp.get('gender')) {
+        const radio = document.querySelector(`input[name=gender][value="${sp.get('gender')}"]`);
+        if (radio) radio.checked = true;
+      }
+      doSearch(parseInt(sp.get('page') || '1', 10));
+    }
+
+    // Enter key submits
+    document.getElementById('search-form').addEventListener('keydown', e => {
+      if (e.key === 'Enter') doSearch(1);
+    });
+  })();
+
+  // ── Form helpers ────────────────────────────────────────
+  function getParams() {
+    const gender = document.querySelector('input[name=gender]:checked')?.value || '';
+    const p = {
+      nomen:     document.getElementById('f-nomen').value.trim(),
+      cognomen:  document.getElementById('f-cognomen').value.trim(),
+      praenomen: document.getElementById('f-praenomen').value.trim(),
+      province:  document.getElementById('f-province').value,
+      q:         document.getElementById('f-q').value.trim(),
+      gender,
+      date_from: document.getElementById('f-date-from').value,
+      date_to:   document.getElementById('f-date-to').value,
+    };
+    return Object.fromEntries(Object.entries(p).filter(([, v]) => v !== ''));
+  }
+
+  function resetForm() {
+    document.getElementById('f-nomen').value = '';
+    document.getElementById('f-cognomen').value = '';
+    document.getElementById('f-praenomen').value = '';
+    document.getElementById('f-province').value = '';
+    document.getElementById('f-q').value = '';
+    document.getElementById('f-date-from').value = '';
+    document.getElementById('f-date-to').value = '';
+    document.querySelector('input[name=gender][value=""]').checked = true;
+    document.getElementById('results-area').innerHTML = '';
+    document.getElementById('pagination').innerHTML = '';
+    document.getElementById('results-count').textContent = '';
+    document.getElementById('error-banner').hidden = true;
+    lastParams = null;
+  }
+
+  function togglePanel() {
+    const form = document.getElementById('search-form');
+    const btn  = document.getElementById('collapse-btn');
+    const hidden = form.style.display === 'none';
+    form.style.display = hidden ? 'grid' : 'none';
+    btn.textContent = hidden ? 'Hide ▲' : 'Show ▼';
+  }
+
+  function setView(view, btn) {
+    currentView = view;
+    document.querySelectorAll('.view-toggle button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    if (lastParams !== null) doSearch(1);
+  }
+
+  // ── Search ──────────────────────────────────────────────
+  async function doSearch(page) {
+    currentPage = page;
+    lastParams = getParams();
+
+    const qs = new URLSearchParams({
+      ...lastParams,
+      page,
+      limit: 50,
+      view: currentView,
+    });
+
+    // Update URL without reload
+    history.replaceState(null, '', '/search?' + qs.toString());
+
+    showLoading();
+    document.getElementById('error-banner').hidden = true;
+
+    try {
+      const data = await fetch('/api/inscriptions?' + qs).then(async r => {
+        if (!r.ok) throw new Error(await r.text());
+        return r.json();
+      });
+      renderResults(data);
+    } catch (e) {
+      showError('Search failed: ' + (e.message || 'unknown error'));
+    }
+  }
+
+  // ── Render ──────────────────────────────────────────────
+  function showLoading() {
+    document.getElementById('results-area').innerHTML =
+      '<div id="loading-state"><div class="spinner"></div><p>Searching…</p></div>';
+    document.getElementById('pagination').innerHTML = '';
+    document.getElementById('results-count').textContent = '';
+  }
+
+  function showError(msg) {
+    document.getElementById('results-area').innerHTML = '';
+    const banner = document.getElementById('error-banner');
+    banner.textContent = msg;
+    banner.hidden = false;
+  }
+
+  function renderResults(data) {
+    const { total, page, limit, results } = data;
+    const area = document.getElementById('results-area');
+
+    // Count line
+    const start = total === 0 ? 0 : (page - 1) * limit + 1;
+    const end   = Math.min(page * limit, total);
+    const countEl = document.getElementById('results-count');
+    if (total === 0) {
+      countEl.innerHTML = 'No results found.';
+      area.innerHTML = '<div id="empty-state"><p>No inscriptions match your search. Try broadening the filters.</p></div>';
+      document.getElementById('pagination').innerHTML = '';
+      return;
+    }
+    countEl.innerHTML = `Showing <strong>${start}–${end}</strong> of <strong>${total.toLocaleString()}</strong> results`;
+
+    if (currentView === 'persons') {
+      renderPersonsTable(results);
+    } else {
+      renderInscriptionsTable(results);
+    }
+
+    renderPagination(total, page, limit);
+  }
+
+  function renderInscriptionsTable(results) {
+    const rows = results.map(r => {
+      const dateStr = formatDate(r.date_from, r.date_to);
+      const chips = (r.persons || []).map(p => {
+        const name = [p.praenomen, p.nomen, p.cognomen].filter(Boolean).join(' ') || p.raw_name || '(unnamed)';
+        const g = p.gender === 'M' ? 'chip-m' : p.gender === 'F' ? 'chip-f' : 'chip-u';
+        const glyph = p.gender || '';
+        return `<span class="person-chip ${g}"><span class="glyph">${esc(glyph)}</span>${esc(name)}</span>`;
+      }).join('');
+      const typeBadge = r.inscription_type ? `<span class="type-badge">${esc(r.inscription_type)}</span>` : '';
+      const hasTrans = r.has_translation ? '&#10003;' : '';
+      return `<tr>
+        <td class="edcs-id"><a href="#" onclick="openModal('${esc(r.edcs_id)}');return false;">${esc(r.edcs_id)}</a></td>
+        <td class="province">${esc(r.province || '')}</td>
+        <td class="date-cell">${dateStr}</td>
+        <td class="persons-cell">${chips}</td>
+        <td>${typeBadge}</td>
+        <td class="has-trans">${hasTrans}</td>
+      </tr>`;
+    }).join('');
+
+    document.getElementById('results-area').innerHTML = `
+      <div id="results-table-wrap">
+        <table>
+          <thead><tr>
+            <th>EDCS ID</th>
+            <th>Province</th>
+            <th>Date</th>
+            <th>Persons</th>
+            <th>Type</th>
+            <th>Trans.</th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>`;
+  }
+
+  function renderPersonsTable(results) {
+    const rows = results.map(r => {
+      const name = [r.praenomen, r.nomen, r.cognomen].filter(Boolean).join(' ') || r.raw_name || '(unnamed)';
+      const flags = [];
+      if (r.is_deity) flags.push('deity');
+      if (r.is_imperial) flags.push('imperial');
+      const flagStr = flags.map(f => `<span class="type-badge">${f}</span>`).join(' ');
+      return `<tr>
+        <td>${esc(name)}</td>
+        <td>${esc(r.praenomen || '')}</td>
+        <td>${esc(r.nomen || '')}</td>
+        <td>${esc(r.cognomen || '')}</td>
+        <td>${esc(r.gender || '')}</td>
+        <td class="province">${esc(r.province || '')}</td>
+        <td class="date-cell">${formatDate(r.date_from, r.date_to)}</td>
+        <td class="edcs-id"><a href="#" onclick="openModal('${esc(r.edcs_id)}');return false;">${esc(r.edcs_id)}</a></td>
+        <td>${flagStr}</td>
+      </tr>`;
+    }).join('');
+
+    document.getElementById('results-area').innerHTML = `
+      <div id="results-table-wrap">
+        <table>
+          <thead><tr>
+            <th>Full name</th>
+            <th>Praenomen</th>
+            <th>Nomen</th>
+            <th>Cognomen</th>
+            <th>Gender</th>
+            <th>Province</th>
+            <th>Date</th>
+            <th>EDCS ID</th>
+            <th>Flags</th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>`;
+  }
+
+  function renderPagination(total, page, limit) {
+    const pages = Math.ceil(total / limit);
+    if (pages <= 1) { document.getElementById('pagination').innerHTML = ''; return; }
+
+    const el = document.getElementById('pagination');
+    let html = '';
+    html += `<button class="page-btn" ${page === 1 ? 'disabled' : ''} onclick="doSearch(${page - 1})">&#8592; Prev</button>`;
+
+    // Show up to 7 page buttons with ellipsis
+    const range = pageRange(page, pages);
+    let prev = null;
+    range.forEach(p => {
+      if (prev !== null && p - prev > 1) html += '<span style="color:var(--text2)">…</span>';
+      html += `<button class="page-btn ${p === page ? 'active' : ''}" onclick="doSearch(${p})">${p}</button>`;
+      prev = p;
+    });
+
+    html += `<button class="page-btn" ${page === pages ? 'disabled' : ''} onclick="doSearch(${page + 1})">Next &#8594;</button>`;
+    html += `<span id="page-info">Page ${page} of ${pages.toLocaleString()}</span>`;
+    el.innerHTML = html;
+  }
+
+  function pageRange(current, total) {
+    const delta = 2;
+    const range = new Set([1, total]);
+    for (let i = Math.max(2, current - delta); i <= Math.min(total - 1, current + delta); i++) range.add(i);
+    return [...range].sort((a, b) => a - b);
+  }
+
+  // ── Export ──────────────────────────────────────────────
+  function exportCSV() {
+    if (!lastParams) { alert('Run a search first.'); return; }
+    const qs = new URLSearchParams({ ...lastParams, limit: 200, view: currentView, format: 'csv' });
+    window.location = '/api/inscriptions?' + qs.toString();
+  }
+
+  // ── Detail modal ────────────────────────────────────────
+  async function openModal(edcsId) {
+    document.getElementById('modal-backdrop').removeAttribute('hidden');
+    document.getElementById('modal-title').textContent = edcsId;
+    document.getElementById('modal-sub').textContent = 'Loading…';
+    document.getElementById('modal-body').innerHTML = '';
+
+    try {
+      const d = await fetch(`/api/inscription/${encodeURIComponent(edcsId)}`).then(r => r.json());
+      document.getElementById('modal-title').textContent = d.edcs_id;
+      document.getElementById('modal-sub').textContent = [
+        d.province, formatDate(d.date_from, d.date_to), d.inscription_type
+      ].filter(Boolean).join(' · ');
+      document.getElementById('modal-body').innerHTML = buildModalBody(d);
+    } catch (e) {
+      document.getElementById('modal-body').innerHTML = `<p style="color:var(--accent)">Could not load inscription: ${esc(String(e))}</p>`;
+    }
+  }
+
+  function buildModalBody(d) {
+    let html = '';
+
+    if (d.persons && d.persons.length) {
+      html += '<div class="modal-section"><div class="modal-section-title">Persons</div>';
+      d.persons.forEach(p => {
+        const name = [p.praenomen, p.nomen, p.cognomen].filter(Boolean).join(' ') || p.raw_name || '(unnamed)';
+        const meta = [
+          p.gender === 'M' ? 'Male' : p.gender === 'F' ? 'Female' : null,
+          p.praenomen ? `praenomen: ${p.praenomen}` : null,
+          p.nomen     ? `nomen: ${p.nomen}` : null,
+          p.cognomen  ? `cognomen: ${p.cognomen}` : null,
+          p.is_deity  ? 'deity' : null,
+          p.is_imperial ? 'imperial' : null,
+        ].filter(Boolean).join(' · ');
+        html += `<div class="modal-person">
+          <div class="name">${esc(name)}</div>
+          <div class="meta">${esc(meta)}</div>
+        </div>`;
+      });
+      html += '</div>';
+    }
+
+    if (d.raw_text) {
+      html += `<div class="modal-section">
+        <div class="modal-section-title">Inscription text</div>
+        <div class="modal-raw">${esc(d.raw_text)}</div>
+      </div>`;
+    }
+
+    if (d.translation) {
+      html += `<div class="modal-section">
+        <div class="modal-section-title">Translation</div>
+        <p class="modal-translation">${esc(d.translation)}</p>
+      </div>`;
+    }
+
+    // External links
+    const links = [];
+    if (d.edcs_id) links.push(`<a class="modal-link" href="https://db.edcs.eu/epigr/epi_einzel.php?s_sprache=en&p_belegstelle=${encodeURIComponent(d.edcs_id)}" target="_blank">EDCS</a>`);
+    if (d.edh_id)  links.push(`<a class="modal-link" href="https://edh.ub.uni-heidelberg.de/edh/inschrift/${encodeURIComponent(d.edh_id)}" target="_blank">EDH ${esc(d.edh_id)}</a>`);
+    if (d.tm_uri)  links.push(`<a class="modal-link" href="${esc(d.tm_uri)}" target="_blank">Trismegistos</a>`);
+    if (links.length) {
+      html += `<div class="modal-section">
+        <div class="modal-section-title">External links</div>
+        <div class="modal-links">${links.join('')}</div>
+      </div>`;
+    }
+
+    html += `<div class="modal-section" style="font-size:0.73rem;color:var(--text2);border-top:1px solid var(--border);padding-top:10px;margin-top:4px;">
+      Name extraction, clusters, translations, and summaries are machine-generated
+      and require verification. Not an official release of EDCS, EDH, or Trismegistos.
+    </div>`;
+
+    return html;
+  }
+
+  function closeModal() {
+    document.getElementById('modal-backdrop').setAttribute('hidden', '');
+  }
+  document.getElementById('modal-backdrop').addEventListener('click', e => {
+    if (e.target === document.getElementById('modal-backdrop')) closeModal();
+  });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+  // ── Helpers ─────────────────────────────────────────────
+  function formatDate(from, to) {
+    if (from == null && to == null) return '—';
+    const f = from != null ? (from < 0 ? `${Math.abs(from)} BCE` : `${from} CE`) : null;
+    const t = to   != null ? (to   < 0 ? `${Math.abs(to)} BCE`   : `${to} CE`)   : null;
+    if (f && t && f !== t) return `${f} – ${t}`;
+    return f || t || '—';
+  }
+
+  function esc(s) {
+    if (s == null) return '';
+    return String(s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+</script>
+</body>
+</html>
