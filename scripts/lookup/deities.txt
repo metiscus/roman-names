@@ -245,6 +245,8 @@ bormano
 cernunnos
 taranis
 tarani
+taranuos
+taranuo
 camulus
 camulo
 intarabus
