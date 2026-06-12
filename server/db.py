@@ -1,5 +1,8 @@
+import csv
+import io
 import json
 import os
+import re
 import sqlite3
 from contextlib import contextmanager
 from datetime import datetime, timezone
@@ -87,6 +90,26 @@ def run_migrations() -> None:
                         )
 
         conn.commit()
+
+    # FTS5 virtual table — standalone (not content-linked) for reliability.
+    # Populated once on first run; data is static enough that a full rebuild
+    # is only needed if the table is dropped or the db is rebuilt.
+    with _conn() as conn:
+        conn.execute("""
+            CREATE VIRTUAL TABLE IF NOT EXISTS inscriptions_fts
+            USING fts5(edcs_id UNINDEXED, raw_text)
+        """)
+        conn.commit()
+        fts_empty = conn.execute(
+            "SELECT COUNT(*) FROM inscriptions_fts"
+        ).fetchone()[0] == 0
+        if fts_empty:
+            conn.execute("""
+                INSERT INTO inscriptions_fts(edcs_id, raw_text)
+                SELECT edcs_id, raw_text FROM inscriptions
+                WHERE raw_text IS NOT NULL AND raw_text != ''
+            """)
+            conn.commit()
 
 
 def _tile_range(z: int, x: int, y: int) -> tuple[int, int, int, int]:
@@ -468,3 +491,247 @@ def insert_flag(
             (edcs_id, category, comment, email, datetime.now(timezone.utc).isoformat()),
         )
         conn.commit()
+
+
+def get_provinces() -> list[str]:
+    with _conn() as conn:
+        rows = conn.execute(
+            "SELECT province FROM provinces ORDER BY province"
+        ).fetchall()
+    return [r["province"] for r in rows]
+
+
+def _fts_query(q: str) -> str:
+    """Convert a plain-text user query to an FTS5 prefix-match expression."""
+    clean = re.sub(r'[^\w\s]', ' ', q, flags=re.UNICODE)
+    terms = clean.strip().split()
+    if not terms:
+        return '""'
+    return " ".join(f"{t}*" for t in terms)
+
+
+def search_inscriptions(
+    nomen: str | None = None,
+    cognomen: str | None = None,
+    praenomen: str | None = None,
+    q: str | None = None,
+    province: str | None = None,
+    date_from: int | None = None,
+    date_to: int | None = None,
+    gender: str | None = None,
+    inscription_type: str | None = None,
+    page: int = 1,
+    limit: int = 50,
+    view: str = "inscriptions",
+) -> tuple[int, list[dict]]:
+    use_fts = q is not None and q.strip()
+    use_persons = any([nomen, cognomen, praenomen, gender])
+
+    select_cols = """
+        SELECT DISTINCT i.edcs_id, i.province, i.lat, i.lon, i.findspot,
+               i.date_from, i.date_to, i.inscription_type,
+               COALESCE(i.overrides, i.persons) AS persons_json,
+               i.translation, i.summary, i.edh_id, i.tm_uri,
+               (i.translation IS NOT NULL AND i.translation != '') AS has_translation
+    """
+    from_clause = "FROM inscriptions i"
+    if use_fts:
+        from_clause += "\nJOIN inscriptions_fts fts ON fts.edcs_id = i.edcs_id"
+    if use_persons:
+        from_clause += "\n, json_each(COALESCE(i.overrides, i.persons)) p"
+
+    where_parts: list[str] = []
+    params: list = []
+
+    if use_fts:
+        where_parts.append("fts.raw_text MATCH ?")
+        params.append(_fts_query(q))
+    if nomen:
+        where_parts.append("json_extract(p.value, '$.nomen') LIKE ?")
+        params.append(f"%{nomen}%")
+    if cognomen:
+        where_parts.append("json_extract(p.value, '$.cognomen') LIKE ?")
+        params.append(f"%{cognomen}%")
+    if praenomen:
+        where_parts.append("json_extract(p.value, '$.praenomen') LIKE ?")
+        params.append(f"%{praenomen}%")
+    if gender:
+        where_parts.append("json_extract(p.value, '$.gender') = ?")
+        params.append(gender)
+    if province:
+        where_parts.append("i.province = ?")
+        params.append(province)
+    if date_from is not None:
+        where_parts.append("(i.date_to IS NULL OR i.date_to >= ?)")
+        params.append(date_from)
+    if date_to is not None:
+        where_parts.append("(i.date_from IS NULL OR i.date_from <= ?)")
+        params.append(date_to)
+    if inscription_type:
+        where_parts.append("i.inscription_type = ?")
+        params.append(inscription_type)
+
+    where_sql = ("WHERE " + " AND ".join(where_parts)) if where_parts else ""
+    count_sql = f"SELECT COUNT(DISTINCT i.edcs_id) {from_clause} {where_sql}"
+    data_sql = (
+        f"{select_cols} {from_clause} {where_sql}"
+        " ORDER BY i.province, i.edcs_id LIMIT ? OFFSET ?"
+    )
+    offset = (page - 1) * limit
+
+    with _conn() as conn:
+        total = conn.execute(count_sql, params).fetchone()[0]
+        rows = conn.execute(data_sql, params + [limit, offset]).fetchall()
+
+    if view == "persons":
+        results = []
+        for r in rows:
+            persons = _parse_persons(None, r["persons_json"])
+            for p in persons:
+                if gender and p.get("gender") != gender:
+                    continue
+                if nomen and nomen.lower() not in (p.get("nomen") or "").lower():
+                    continue
+                if cognomen and cognomen.lower() not in (p.get("cognomen") or "").lower():
+                    continue
+                if praenomen and praenomen.lower() not in (p.get("praenomen") or "").lower():
+                    continue
+                results.append({
+                    "praenomen": p.get("praenomen"),
+                    "nomen": p.get("nomen"),
+                    "cognomen": p.get("cognomen"),
+                    "raw_name": p.get("raw_name"),
+                    "gender": p.get("gender"),
+                    "is_deity": p.get("is_deity", False),
+                    "is_imperial": p.get("is_imperial", False),
+                    "edcs_id": r["edcs_id"],
+                    "province": r["province"],
+                    "date_from": r["date_from"],
+                    "date_to": r["date_to"],
+                })
+        return total, results
+
+    results = []
+    for r in rows:
+        persons = _parse_persons(None, r["persons_json"])
+        results.append({
+            "edcs_id": r["edcs_id"],
+            "province": r["province"],
+            "findspot": r["findspot"],
+            "date_from": r["date_from"],
+            "date_to": r["date_to"],
+            "inscription_type": r["inscription_type"],
+            "persons": persons,
+            "has_translation": bool(r["has_translation"]),
+            "translation": r["translation"],
+            "summary": r["summary"],
+            "edh_id": r["edh_id"],
+            "tm_uri": r["tm_uri"],
+        })
+    return total, results
+
+
+def get_name_stats(
+    nomen: str | None = None,
+    province: str | None = None,
+    date_from: int | None = None,
+    date_to: int | None = None,
+) -> dict:
+    where_parts: list[str] = []
+    params: list = []
+
+    if nomen:
+        where_parts.append("json_extract(p.value, '$.nomen') LIKE ?")
+        params.append(f"%{nomen}%")
+    if province:
+        where_parts.append("i.province = ?")
+        params.append(province)
+    if date_from is not None:
+        where_parts.append("(i.date_to IS NULL OR i.date_to >= ?)")
+        params.append(date_from)
+    if date_to is not None:
+        where_parts.append("(i.date_from IS NULL OR i.date_from <= ?)")
+        params.append(date_to)
+
+    base = "FROM inscriptions i, json_each(COALESCE(i.overrides, i.persons)) p"
+    where_sql = ("WHERE " + " AND ".join(where_parts)) if where_parts else ""
+
+    with _conn() as conn:
+        total = conn.execute(
+            f"SELECT COUNT(*) {base} {where_sql}", params
+        ).fetchone()[0]
+
+        by_nomen = conn.execute(
+            f"SELECT json_extract(p.value, '$.nomen') n, COUNT(*) c"
+            f" {base} {where_sql} GROUP BY n ORDER BY c DESC LIMIT 50",
+            params,
+        ).fetchall()
+
+        by_cognomen = conn.execute(
+            f"SELECT json_extract(p.value, '$.cognomen') n, COUNT(*) c"
+            f" {base} {where_sql} GROUP BY n ORDER BY c DESC LIMIT 50",
+            params,
+        ).fetchall()
+
+        by_province = conn.execute(
+            f"SELECT i.province, COUNT(*) c"
+            f" {base} {where_sql} GROUP BY i.province ORDER BY c DESC",
+            params,
+        ).fetchall()
+
+        by_gender = conn.execute(
+            f"SELECT json_extract(p.value, '$.gender') g, COUNT(*) c"
+            f" {base} {where_sql} GROUP BY g",
+            params,
+        ).fetchall()
+
+    return {
+        "total_persons": total,
+        "by_nomen": [{"name": r[0], "count": r[1]} for r in by_nomen if r[0]],
+        "by_cognomen": [{"name": r[0], "count": r[1]} for r in by_cognomen if r[0]],
+        "by_province": [{"province": r[0], "count": r[1]} for r in by_province if r[0]],
+        "by_gender": {r[0]: r[1] for r in by_gender if r[0]},
+    }
+
+
+_ATTRIBUTION_HEADER = (
+    "# Roman Names — machine-generated personal-name attestations from Latin inscriptions\n"
+    "# Michael A Bosse, derived from EDCS 2022 (doi:10.5281/zenodo.7072337)"
+    " and LIRE v3.0 (doi:10.5281/zenodo.8431452)\n"
+    "# License: CC BY 4.0 — https://creativecommons.org/licenses/by/4.0/\n"
+    "# Attribution required. Translations, name extraction, and clusters are"
+    " machine-generated and require verification.\n"
+)
+
+
+def results_to_csv(results: list[dict], view: str) -> str:
+    buf = io.StringIO()
+    buf.write(_ATTRIBUTION_HEADER)
+
+    if view == "persons":
+        fieldnames = [
+            "praenomen", "nomen", "cognomen", "raw_name", "gender",
+            "is_deity", "is_imperial", "edcs_id", "province", "date_from", "date_to",
+        ]
+    else:
+        fieldnames = [
+            "edcs_id", "province", "findspot", "date_from", "date_to",
+            "inscription_type", "persons_count", "persons_names",
+            "has_translation", "edh_id", "tm_uri",
+        ]
+
+    writer = csv.DictWriter(buf, fieldnames=fieldnames, extrasaction="ignore")
+    writer.writeheader()
+
+    for row in results:
+        if view != "persons":
+            persons = row.get("persons", [])
+            names = "; ".join(
+                " ".join(filter(None, [p.get("praenomen"), p.get("nomen"), p.get("cognomen")]))
+                or p.get("raw_name", "(unnamed)")
+                for p in persons
+            )
+            row = {**row, "persons_count": len(persons), "persons_names": names}
+        writer.writerow(row)
+
+    return buf.getvalue()

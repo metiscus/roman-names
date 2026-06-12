@@ -51,6 +51,13 @@
       font-size: 0.82rem; color: var(--text2); white-space: nowrap;
     }
     #filter-toggle.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+    #browse-btn {
+      height: 28px; padding: 0 12px; border: 1px solid var(--border);
+      border-radius: 14px; background: var(--bg2); cursor: pointer;
+      font-size: 0.82rem; color: var(--text2); flex-shrink: 0;
+      text-decoration: none; display: inline-flex; align-items: center;
+    }
+    #browse-btn:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
     #about-btn {
       height: 28px; width: 28px; border: 1px solid var(--border);
       border-radius: 50%; background: var(--bg2); cursor: pointer;
@@ -256,17 +263,20 @@
 <div id="intro-modal" class="modal-backdrop" hidden>
   <div class="modal-box">
     <p class="intro-title">Roman Name Attestations</p>
-    <p class="intro-sub">~150,000 inscriptions from across the Roman Empire, enriched with AI-extracted name data</p>
+    <p class="intro-sub">~250,000 inscriptions from across the Roman Empire, enriched with AI-extracted name data</p>
     <div class="intro-body">
       <p>This map visualises inscriptions from the <a href="https://db.edcs.eu" target="_blank" rel="noopener">Epigraphic Database Clauss-Slaby (EDCS)</a> that record personal names. For each inscription an AI pipeline attempts to identify individuals and extract their <em>praenomen</em>, <em>nomen</em>, <em>cognomen</em>, status, and gender.</p>
       <h4>How to use</h4>
       <p>Zoom in to explore individual inscriptions. Click any marker to see the people recorded on it, the inscription text, and (where available) a translation and summary. Use the search bar and filters to narrow down what you see.</p>
+      <p>Prefer to search by name, province, or date? Use the <a href="/search" rel="noopener"><strong>Search / Browse</strong></a> interface to query the database directly, filter results, and export data as CSV or JSON.</p>
       <h4>Caveats</h4>
       <p>Name extraction is roughly 80–85% accurate. Errors are inevitable — if you spot a mistake, use the <em>Flag this entry</em> button in the detail panel to report it.</p>
-      <h4>Sources</h4>
-      <p>Inscription data: <a href="https://db.edcs.eu" target="_blank" rel="noopener">EDCS</a> · Linked cross-references: <a href="https://doi.org/10.5281/zenodo.5776109" target="_blank" rel="noopener">LIRE</a>, <a href="https://edh.ub.uni-heidelberg.de/" target="_blank" rel="noopener">EDH</a>, <a href="https://www.trismegistos.org/" target="_blank" rel="noopener">Trismegistos</a> · Map tiles: <a href="https://dh.gu.se/dare/" target="_blank" rel="noopener">DARE</a></p>
+      <h4>Data &amp; licensing</h4>
+      <p>Inscription data: <a href="https://db.edcs.eu" target="_blank" rel="noopener">EDCS</a> · Cross-references: <a href="https://doi.org/10.5281/zenodo.8431452" target="_blank" rel="noopener">LIRE</a>, <a href="https://edh.ub.uni-heidelberg.de/" target="_blank" rel="noopener">EDH</a>, <a href="https://www.trismegistos.org/" target="_blank" rel="noopener">Trismegistos</a> · Map tiles: <a href="https://dh.gu.se/dare/" target="_blank" rel="noopener">DARE</a><br>
+      Derived data released under <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a>. See <a href="/attribution" target="_blank" rel="noopener">full attribution</a>.</p>
     </div>
     <div class="intro-footer">
+      <a href="/search" style="margin-right:auto; text-decoration:none; height:32px; padding:0 14px; background:var(--bg2); color:var(--text2); border:1px solid var(--border); border-radius:5px; font-size:0.83rem; display:inline-flex; align-items:center;">Search / Browse</a>
       <button class="btn-primary" onclick="closeIntro()">Explore the map</button>
     </div>
   </div>
@@ -327,6 +337,7 @@
     <div id="toolbar">
       <input id="search-input" type="search" placeholder="Search by name…" autocomplete="off">
       <button id="filter-toggle" onclick="toggleFilters()">Filters</button>
+      <a href="/search" id="browse-btn" title="Search &amp; browse inscriptions">Browse</a>
       <button id="about-btn" onclick="openIntro()" title="About this project">?</button>
     </div>
 
