@@ -909,3 +909,54 @@ F1 0.77 is consistent with the province's naming complexity (mix of Celtic singl
 ### Webapp
 - Province added to SQLite database (`roman_names.db`) with 8,217 inscriptions.
 - Webapp data files: `inscriptions_germania_superior.geojson`, `clusters_germania_superior.json`, `enrichment_germania_superior.json`
+
+---
+
+## Belgica Run (June 2026)
+
+### Status: Complete
+
+**Goal:** Run full NER pipeline for Belgica — 19,362 EDCS records (16,310 after 30%-lacuna damage filter; 2,749 high-damage records skipped).
+
+### Accomplishments
+
+**Full Corpus Run:**
+- 16,308 records processed
+- **14,178 name attestations extracted**
+- 91 `is_deity`, 93 `is_imperial`, 19 `is_bare_epithet`, 3 `is_place`, 1,370 `fragmentary`
+- 1 praenomen reclassification (off-whitelist → nomen)
+- 59.7% of inscriptions mappable (7,546 / 12,637 features with coordinates)
+- 8,172 unique clusters (1,283 multi-member; largest: 508 × Marcellus — dominant tile-stamp name)
+- **5,756 English translations** (6 errors from transient failures; $0.18 total)
+- Total NER cost: **~$0.42** (gemini-flash-lite-latest throughout, 0 API errors)
+
+**Model:** `gemini-flash-lite-latest` — switched from `gemini-2.5-flash-lite` after gut-check iteration 1 showed the cheaper model applying rules inconsistently (overcorrecting on "Genitor f(ecit)" while missing other patterns). The higher-end model handled nuanced Latin morphology correctly from iteration 2 onward, reaching ~2% error rate.
+
+**Prompt Changes:** Significant additions to the `elif province.lower() in ('gallia narbonensis', 'belgica', ...)` branch in `prompt_utils.py`:
+- 10 new rules: verb/graffiti phrase suppression ("venio si das"), bare kinship term suppression, lacuna-obscured kinship word suppression (`[fi]lius` ≠ Iulius), measurement stamp suppression (`M(odii) V`), genitive normalization (`Lupi` → Lupus not Lucius), pharmaceutical label deduplication (Fatalis diacholes / Fatalis Dionysianum → one person), duplicate name suppression (repeated greetings), name coherence in dative forms (`Lallio Atticino` = one person, not two).
+- 9 new few-shot examples (GA7–GA15).
+- `deities.txt`: added `taranuos`, `taranuo` (Celtic deity Taranus variant form).
+
+**Evaluation Results:**
+
+| Metric | Value |
+|--------|-------|
+| F1 (adjusted) | **0.80** |
+| Recall (adj, excl. damage) | 0.83 |
+| Precision (adj, excl. non-persons) | 0.78 |
+| Eval records scored | 201 / 239 (38 damage-filtered) |
+| True Positives | 278 |
+| Candidate Discoveries | 80 |
+| FP — Deity | 1 |
+| FP — Imperial | 2 |
+| FP — Place name | 1 |
+
+F1 0.80 is in the expected range. LIRE pool for Belgica is small (289 records) so the estimate has higher variance than larger provinces.
+
+**Known borderline cases:**
+- "Adiutrix" gender inconsistent across records (male/female) — Celtic name with uncertain gender in attestations; not a systematic error.
+- Tile-stamp corpus is very large (~8,000+ records), dominated by single-name Gallic craftsmen; cluster sizes for common names (Marcellus, Cintugnatus, Brariatus) are correspondingly large.
+
+### Webapp
+- Province added to SQLite database (`roman_names.db`) with 12,637 inscriptions.
+- Webapp data files: `inscriptions_belgica.geojson`, `clusters_belgica.json`, `enrichment_belgica.json`

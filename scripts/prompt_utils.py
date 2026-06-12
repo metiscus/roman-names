@@ -1092,8 +1092,17 @@ def get_system_prompt(province):
 1. CELTIC SINGLE NAMES: Many Gallic and Germanic peregrini bear a single personal name with no praenomen or nomen. Treat these as **cognomen only** (praenomen=null, nomen=null).
 2. CELTIC FILIATION: "Atto Camuli f(ilius)" — Atto is the main person (cognomen only), Camulus is the father (status "pater", cognomen only). Do NOT put Camulus in Atto's nomen field.
 3. POST-CITIZENSHIP NAMING: After 212 AD many Gauls adopted Roman nomina (Iulius, Aurelius, Claudius most common) while keeping a Celtic cognomen. "Iulius Masuetus" = nomen Iulius, cognomen Masuetus.
-4. GALLIC/GERMANIC DEITIES: Epona, Nantosuelta, Rosmerta, Sequana, Sucellus, Maponos, Taranis, Lenus, Intarabus, Ritona, Nehalennia, Matres/Matronae, Vagdavercustis, Hludana, Hercules Magusanus and similar indigenous divine names are deities, NOT persons.
+4. GALLIC/GERMANIC DEITIES: Epona, Nantosuelta, Rosmerta, Sequana, Sucellus, Maponos, Taranis/Taranuos, Lenus, Intarabus, Ritona, Nehalennia, Matres/Matronae, Vagdavercustis, Hludana, Hercules Magusanus and similar indigenous divine names are deities, NOT persons.
 5. MILITARY UNITS: Rhine legions (Legio I Minervia, VIII Augusta, XXII Primigenia, XXX Ulpia Victrix, I Adiutrix, etc.) and auxiliary unit names (ala, cohors) must NOT be extracted as persons.
+6. COMMON LATIN WORDS — never extract these as personal names:
+   a. VERBS/PHRASES: "venio", "das", "fecit" when part of a graffiti phrase like "venio si das" — return [].
+   b. BARE KINSHIP TERMS: "frater", "soror", "pater", "mater", "avia", "avus", "heres", "uxor", "maritus" are roles, not names. If the text contains ONLY these kinship words with no actual personal name (e.g. "f]ratri et patribus"), return []. They are only valid as the **status** field of an extracted person.
+   c. MEASUREMENTS: "M(odii)", "s(extarii)", "p(edes)" followed by a numeral are units of measure, NOT a praenomen abbreviation — return [].
+   d. LACUNA-OBSCURED COMMON WORDS: When lacunae partially obscure common Latin words, do NOT reconstruct them as personal names. "uxo/r", "uxo[ri]", "[fi]lius", "[fi]liae", "mat[ri]", "pat[ri]", "frat[ri]", "here[s]", "here[dem]" are damaged forms of uxor, filius, mater, pater, frater, heres — NOT person names. Never extract a person whose raw_name is only such a word.
+7. DUPLICATE SUPPRESSION: If the same personal name appears more than once in a single inscription (e.g. once in a heading, once in the body, or in a repeated greeting like "Ave Sexti / Iucunde / vale Sexti / Iucunde"), extract that person **once only**, using the most complete form available.
+8. GENITIVE NORMALIZATION: When a name appears in the genitive (e.g. "Lupi m(anu)"), restore the nominative correctly — "Lupi" → cognomen "Lupus", NOT "Lucius". Do not confuse genitive endings with praenomen abbreviations.
+9. PHARMACEUTICAL/MEDICAL LABELS: Texts repeating a personal name before each remedy (e.g. "Fatalis diacholes ad X // Fatalis Dionysianum ad Y") are medical recipe labels — the repeated name is the physician or pharmacist. Extract that person **once only**; do not create one person per recipe line.
+10. NAME COHERENCE: Adjacent words that form a complete Roman name (nomen + cognomen, or praenomen + nomen + cognomen) belong to one person. Do NOT split "Nericcius Fronto" or "Aprilio Tralio" into two persons, and do not extract a spurious second person from the fragmentary verb phrase that follows. However, if a D.M. inscription clearly lists MULTIPLE separate two-word pairs (e.g. "Penausio Lagane / Sidonie Iasse" with "fili(i) curaverunt" indicating multiple agents), extract each pair as a separate person.
 
 **Input:** "Atepomaro / Atti f(ilio) / v(otum) s(olvit) / l(ibens) m(erito)"
 **Output:**
@@ -1138,7 +1147,81 @@ def get_system_prompt(province):
     {"praenomen": null, "nomen": "Aurelia", "cognomen": "Litavicca", "gender": "female", "status": "pia, coniunx", "raw_name": "Aurelia Litaviccae"},
     {"praenomen": "Marcus", "nomen": "Aurelius", "cognomen": "Acceptus", "gender": "male", "status": null, "raw_name": "M. Aur. Acceptus"}
   ]}]
-}"""
+}
+
+**Input:** "Venio si das"
+**Output:**
+{
+  "results": [{"id": "GA7", "persons": []}]
+}
+
+**Input:** "f]ratri et patribus / [f(aciendum)] c(uravit?)"
+**Output:**
+{
+  "results": [{"id": "GA8", "persons": []}]
+}
+
+**Input:** "Lupi m(anu)"
+**Output:**
+{
+  "results": [{"id": "GA9", "persons": [
+    {"praenomen": null, "nomen": null, "cognomen": "Lupus", "gender": "male", "status": null, "raw_name": "Lupi"}
+  ]}]
+}
+
+**Input:** "Ave Sexti / Iucunde / vale Sexti / Iucunde"
+**Output:**
+{
+  "results": [{"id": "GA10", "persons": [
+    {"praenomen": null, "nomen": "Sextius", "cognomen": "Iucundus", "gender": "male", "status": null, "raw_name": "Sexti Iucunde"}
+  ]}]
+}
+
+**Input:** "[D(is)] / M(anibus) / [3]li Mico/[3]mia MI/[3]onis uxo/[ri 3]ive Iuna / [fi]lius f(ecit)"
+**Output:**
+{
+  "results": [{"id": "GA11", "persons": [
+    {"praenomen": null, "nomen": null, "cognomen": "Mico", "gender": "male", "status": null, "raw_name": "Mico", "fragmentary": true},
+    {"praenomen": null, "nomen": null, "cognomen": "Iuna", "gender": "female", "status": "uxor", "raw_name": "Iuna", "fragmentary": true}
+  ]}]
+}
+
+**Input:** "Fatalis diacho/les ad aspritudi(nem) // Fatalis Diony(sianum) / ad lacunas"
+**Output:**
+{
+  "results": [{"id": "GA12", "persons": [
+    {"praenomen": null, "nomen": null, "cognomen": "Fatalis", "gender": "male", "status": null, "raw_name": "Fatalis"}
+  ]}]
+}
+
+**Input:** "D(is) M(anibus) / Lallio Attici/no defuncto fr/atri pientissimo / Popillianus fecit"
+**Output:**
+{
+  "results": [{"id": "GA13", "persons": [
+    {"praenomen": null, "nomen": "Lallius", "cognomen": "Atticinus", "gender": "male", "status": "defunctus, frater pientissimus", "raw_name": "Lallio Atticino defuncto"},
+    {"praenomen": null, "nomen": null, "cognomen": "Popillianus", "gender": "male", "status": null, "raw_name": "Popillianus"}
+  ]}]
+}
+
+**Input:** "D(is) M(anibus) / Litugenio Se/cundino avo / vivo et Nocturna(e) / avia(e) def(unctae)"
+**Output:**
+{
+  "results": [{"id": "GA14", "persons": [
+    {"praenomen": null, "nomen": "Litugenius", "cognomen": "Secundinus", "gender": "male", "status": "avus", "raw_name": "Litugenio Secundino"},
+    {"praenomen": null, "nomen": null, "cognomen": "Nocturna", "gender": "female", "status": "avia, defuncta", "raw_name": "Nocturna"}
+  ]}]
+}
+
+**Input:** "D(is) M(anibus) / Penausio Lagane / Sidonie Iasse / fili(i) f(ecerunt)"
+**Output:**
+{
+  "results": [{"id": "GA15", "persons": [
+    {"praenomen": null, "nomen": "Penausius", "cognomen": "Laganus", "gender": "male", "status": null, "raw_name": "Penausio Lagane"},
+    {"praenomen": null, "nomen": "Sidonius", "cognomen": "Iassus", "gender": null, "status": null, "raw_name": "Sidonie Iasse"}
+  ]}]
+}
+
+"""
 
     elif province.lower() in ('dalmatia', 'pannonia superior', 'pannonia inferior',
                               'noricum', 'dacia', 'moesia superior', 'moesia inferior'):
