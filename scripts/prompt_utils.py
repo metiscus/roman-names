@@ -1085,6 +1085,174 @@ def get_system_prompt(province):
   "results": [{"id": "VH5", "persons": []}]
 }"""
 
+    elif province.lower() in ('liguria / regio ix', 'liguria'):
+        extra_examples = """
+**LIGURIA / REGIO IX RULES:**
+1. DEITY EPITHETS ARE NOT PERSONS: When an inscription dedicates to a deity — deity names: Iovi/Iovis (Jupiter), Mercurio (Mercury), Marti (Mars), Minervae (Minerva), Dianae (Diana), Apollini (Apollo), Silvano (Silvanus), Neptuno (Neptune), Herculi (Hercules), Fortunae (Fortuna), Genio (Genius) — the deity name AND its epithets are NOT persons. "Iovi Max(imo)" = Jupiter the Greatest — do NOT extract "Maximus" as a person. "Mercurio Negotiatori sacrum" = Mercury the Merchant — return persons: []. Only extract human dedicants.
+2. NO HALLUCINATION OF COGNOMINA: If a person's text shows only praenomen + nomen (without cognomen), do NOT invent a cognomen. "C(aius) Fabricius L(uci) f(ilius) Cam(ilia) aed(ilis)" — the text has NO cognomen; extract praenomen=Gaius, nomen=Fabricius, cognomen=null. Never guess a cognomen from context or similar inscriptions.
+3. PRAENOMEN ABBREVIATION PRECISION: The abbreviation "C." = Gaius (NOT Lucius, NOT Gaius from "c f"). "L." = Lucius. "M." = Marcus. "T." = Titus. "P." = Publius. "Q." = Quintus. "Cn." = Gnaeus. "Sex." = Sextus. "St." = Statius. ALWAYS expand the exact abbreviation shown. When an inscription reads "L ucranius c f", that means "Lucius Ucranius Cai filius" — praenomen is Lucius (L.), NOT Gaius.
+4. CAMILIA TRIBE: Liguria contains many inscriptions where citizens are enrolled in the Camilia tribe (Cam. or Cam(ilia)). Record as "tribus: Camilia" in status; do not treat Cam. as a nomen.
+5. TROMENTINA TRIBE: "Tro(mentina)" / "Tromen(tina)" similarly is a tribus, not a nomen. Record as "tribus: Tromentina".
+6. LIBERTO FORMULAE: "Aug(usti) lib(ertus)" / "Aug. lib." means Augustan freedman. Record in status as "libertus Augusti". Do NOT create a second person entry from the abbreviated formula.
+7. GENIO FORMULAE: "Genio / C(ai) Petroni Rufi / parentes" — the Genius dedicated to here belongs to C. Petronius Rufus; extract that person. "Genio" is the deity; the genitive phrase after it names the person whose Genius is honoured.
+8. LATE ANTIQUE NAMES: This province has Late Antique / Christian inscriptions. Names like "Desiderius", "Vigilia", "Maria", "Laurentius" should be extracted normally.
+9. NOMEN GENDER AGREEMENT — CRITICAL: The nomen must agree in gender with the person. MALE persons have nomina ending in -us or -ius (Vibius, Valerius, Pollius, Coelius). FEMALE persons have nomina ending in -a or -ia (Vibia, Valeria, Pollia, Coelia). When a person is MALE, NEVER write a nomen ending in -a or -ia. Check: if you see a male person and you have written a nomen like "Vibia", "Valeria", "Pollia", "Coelia" — these are WRONG for male persons. Correct to "Vibius", "Valerius", "Pollius", "Coelius". Conversely, female persons never have -us/-ius nomina. Example: "Vibio Asiatico" = dative masculine → nomen=Vibius, cognomen=Asiaticus (MALE). "Vibiae Sulpiciae" = dative feminine → nomen=Vibia, cognomen=Sulpicia (FEMALE).
+10. FILIATION PRAENOMEN BELONGS TO THE FATHER: "Vibiae Q(uinti) f(iliae) Secund(ae?)" = Vibia Secunda, daughter of Quintus. Do NOT assign Q./Quintus as the subject's praenomen. Vibia is FEMALE; her praenomen is null. Likewise "Valeriae M(arci) f(iliae) Marcellae" = Valeria Marcella, daughter of Marcus. Do NOT assign "Marcus" as Valeria's praenomen. Female persons essentially never have a praenomen in Roman practice; if you see what looks like a praenomen before a clearly female name pattern, it is the FATHER's praenomen in filiation context.
+11. COMMON LATIN WORDS ARE NOT NAMES: "amico" (= "to a friend"), "amici" (= "of a friend") are ablative/genitive forms of the Latin word "amicus". Do NOT extract them as personal names. Similarly, "Aquenses decuriones et municipes" is a collective phrase for "decurions and citizens of Aquae" — NOT a personal name; return persons: [].
+12. INSTITUTIONAL COLLECTIVE PHRASES: Phrases like "Aquenses decur(iones) et municip(es)", "ordo splendidissimus", "decuriones et plebs", "colonia", "senatus" are institutional bodies, NOT persons.
+13. MULIERIS LIBERTUS FORMULA: The pipe character | followed by "(mulieris)" in formulae like "L(ucius) Livius |(mulieris) l(ibertus) Eurytus" means the person was freed by a woman. The praenomen "L." and nomen "Livius" still belong to the same person. Extract: praenomen=Lucius, nomen=Livius, cognomen=Eurytus. Do NOT drop the nomen.
+14. KINSHIP FORMULAE WITHOUT A NAME = NO PERSON: When text reads "filio [3] pater" with no actual name token (only kinship words and a lacuna), do NOT extract a person. "filio", "pater", "matri", "fratri", "sorori" are relationship words, not names. Unless they are accompanied by an actual personal name, return persons: [] for that element.
+15. GEOGRAPHICAL ORIGIN MARKERS ARE NOT PERSONS: Words like "Novarisiensis" / "Novarien(sis)" (= from Novaria), "Pedonensis" (= from Pedona), "Albensis" (= from Alba), "Statiellis" (= from Statielli), "Forumgermanorum" or similar city/ethnic adjectives following "vivus/viva fecit" or attached to a person's name are origin markers, NOT separate persons. Record them in the status of the preceding person, never as a new person entry.
+16. VICTORIA AUGUSTA = DEITY: "Victoriae Aug(ustae) sacrum", "Victoriae Aug(ustae) ob merita" — Victoria Augusta is a goddess. Do NOT extract her as a person. Only extract the human dedicant. Similarly: "Herculi Aug(usto) sacrum", "Fortunae Aug(ustae)" etc. are deity dedications — the deity is NOT a person.
+17. NOMEN GENDER SELF-CHECK (FINAL REMINDER): Before finalizing ANY output, check EVERY person: does the nomen match the gender? FEMALE persons → nomen MUST end in -a (e.g. Valeria, Vettia, Cornelia, Iunia, Flavia). MALE persons → nomen MUST end in -us or -ius (e.g. Valerius, Vettius, Cornelius, Iunius, Flavius). If you see a FEMALE person with a nomen ending -ius/-us, CORRECT it to the feminine -ia/-a form. If you see a MALE person with a nomen ending in -ia/-a, CORRECT it to the masculine -ius/-us form.
+
+**Input:** "Iovi Max(imo)"
+**Output:**
+{
+  "results": [{"id": "LI1", "persons": []}]
+}
+
+**Input:** "Mercurio Negotiatori sacrum"
+**Output:**
+{
+  "results": [{"id": "LI2", "persons": []}]
+}
+
+**Input:** "Mercurio / Aug(usto) / Q(uintus) Salvius / Germanius / v(otum) s(olvit) l(ibens) m(erito)"
+**Output:**
+{
+  "results": [{"id": "LI3", "persons": [
+    {"praenomen": "Quintus", "nomen": "Salvius", "cognomen": "Germanius", "gender": "male", "status": "votum solvit libens merito", "raw_name": "Q. Salvius Germanius", "fragmentary": false}
+  ]}]
+}
+
+**Input:** "C(aius) Fabricius L(uci) f(ilius) / Cam(ilia) aed(ilis) sibi et / M(arco) Fabricio L(uci) f(ilio) Cam(ilia) / Liguri fratri aed(ili) t(estamento) f(ieri) i(ussit) / Philetus et Fuscus l(iberti) f(aciendum) c(uraverunt)"
+**Output:**
+{
+  "results": [{"id": "LI4", "persons": [
+    {"praenomen": "Gaius", "nomen": "Fabricius", "cognomen": null, "gender": "male", "status": "tribus: Camilia, aedilis", "raw_name": "C. Fabricius L. f. Cam. aed.", "fragmentary": false},
+    {"praenomen": "Marcus", "nomen": "Fabricius", "cognomen": "Ligurus", "gender": "male", "status": "tribus: Camilia, frater, aedilis", "raw_name": "M. Fabricio L. f. Cam. Liguri fratri aed.", "fragmentary": false},
+    {"praenomen": null, "nomen": null, "cognomen": "Philetus", "gender": "male", "status": "libertus", "raw_name": "Philetus", "fragmentary": false},
+    {"praenomen": null, "nomen": null, "cognomen": "Fuscus", "gender": "male", "status": "libertus", "raw_name": "Fuscus", "fragmentary": false}
+  ]}]
+}
+
+**Input:** "dianae sac / l didius primus l f aed / q iivir et c fabricius / l f camp["
+**Output:**
+{
+  "results": [{"id": "LI5", "persons": [
+    {"praenomen": "Lucius", "nomen": "Didius", "cognomen": "Primus", "gender": "male", "status": "aedilis, IIvir", "raw_name": "L. Didius Primus L. f. aed. IIvir", "fragmentary": false},
+    {"praenomen": "Gaius", "nomen": "Fabricius", "cognomen": null, "gender": "male", "status": "FRAG", "raw_name": "C. Fabricius L. f. camp[", "fragmentary": true}
+  ]}]
+}
+
+**Input:** "Genio / P(ubli) n(ostri) / Thallus / Thallio / Agathio / lib(erti)"
+**Output:**
+{
+  "results": [{"id": "LI6", "persons": [
+    {"praenomen": null, "nomen": null, "cognomen": "Thallus", "gender": "male", "status": "libertus", "raw_name": "Thallus", "fragmentary": false},
+    {"praenomen": null, "nomen": null, "cognomen": "Thallio", "gender": "male", "status": "libertus", "raw_name": "Thallio", "fragmentary": false},
+    {"praenomen": null, "nomen": null, "cognomen": "Agathio", "gender": "male", "status": "libertus", "raw_name": "Agathio", "fragmentary": false}
+  ]}]
+}
+
+**Input:** "Vibio / Asiatico / et / Viriae Sulpiciae / M(arcus) Coelius Mansu/etus et / Latinia Dextra et / Procula filia"
+**Output:**
+{
+  "results": [{"id": "LI7", "persons": [
+    {"praenomen": null, "nomen": "Vibius", "cognomen": "Asiaticus", "gender": "male", "status": null, "raw_name": "Vibio Asiatico", "fragmentary": false},
+    {"praenomen": null, "nomen": "Viria", "cognomen": "Sulpicia", "gender": "female", "status": null, "raw_name": "Viriae Sulpiciae", "fragmentary": false},
+    {"praenomen": "Marcus", "nomen": "Coelius", "cognomen": "Mansuetus", "gender": "male", "status": null, "raw_name": "M. Coelius Mansuetus", "fragmentary": false},
+    {"praenomen": null, "nomen": "Latinia", "cognomen": "Dextra", "gender": "female", "status": null, "raw_name": "Latinia Dextra", "fragmentary": false},
+    {"praenomen": null, "nomen": null, "cognomen": "Procula", "gender": "female", "status": "filia", "raw_name": "Procula", "fragmentary": false}
+  ]}]
+}
+
+**Input:** "C(aius) Valerius |(mulieris) l(ibertus) / Sceptus / VIvir Aug(ustalis) Flavialis / sibi et / Vettiae L(uci) f(iliae) Romulae uxori"
+**Output:**
+{
+  "results": [{"id": "LI7b", "persons": [
+    {"praenomen": "Gaius", "nomen": "Valerius", "cognomen": "Sceptus", "gender": "male", "status": "mulieris libertus, VIvir Augustalis Flavialis", "raw_name": "C. Valerius |(mulieris) l. Sceptus", "fragmentary": false},
+    {"praenomen": null, "nomen": "Vettia", "cognomen": "Romula", "gender": "female", "status": "filia Luci, uxor", "raw_name": "Vettiae L. f. Romulae", "fragmentary": false}
+  ]}]
+}
+
+**Input:** "V(ivus) f(ecit) / C(aius) Cornelius / C(ai) f(ilius) Cam(ilia) / Germanus aed(ilis) / q(uaestor) IIvir praef(ectus) fabr(um) / sibi et / Valeriae M(arci) f(iliae) Marcellae"
+**Output:**
+{
+  "results": [{"id": "LI7c", "persons": [
+    {"praenomen": "Gaius", "nomen": "Cornelius", "cognomen": "Germanus", "gender": "male", "status": "tribus: Camilia, aedilis, quaestor, IIvir, praefectus fabrum", "raw_name": "C. Cornelius C. f. Cam. Germanus aed. q. IIvir praef. fabr.", "fragmentary": false},
+    {"praenomen": null, "nomen": "Valeria", "cognomen": "Marcella", "gender": "female", "status": "filia Marci", "raw_name": "Valeriae M. f(iliae) Marcellae", "fragmentary": false}
+  ]}]
+}
+
+**Input:** "V(ivus) f(ecit) / L(ucius) Livius / |(mulieris) l(ibertus) Eurytus / sibi et / Aebutiae / Adiutric(i)"
+**Output:**
+{
+  "results": [{"id": "LI7d", "persons": [
+    {"praenomen": "Lucius", "nomen": "Livius", "cognomen": "Eurytus", "gender": "male", "status": "mulieris libertus", "raw_name": "L. Livius |(mulieris) l. Eurytus", "fragmentary": false},
+    {"praenomen": null, "nomen": "Aebutia", "cognomen": "Adiutrix", "gender": "female", "status": null, "raw_name": "Aebutiae Adiutric(i)", "fragmentary": false}
+  ]}]
+}
+
+**Input:** "M(arco) Maio M(arci) f(ilio) / Tro(mentina) / Marcello / an(norum) XX / filio [3] pater / p(osuit)"
+**Output:**
+{
+  "results": [{"id": "LI7e", "persons": [
+    {"praenomen": "Marcus", "nomen": "Maius", "cognomen": "Marcellus", "gender": "male", "status": "tribus: Tromentina", "raw_name": "M. Maio M. f. Tro. Marcello", "fragmentary": false}
+  ]}]
+}
+
+**Input:** "D(is) M(anibus) / P(ubli) Atili / Nicostra/ti VIviri / Aug(ustalis) Epa/phroditus / lib(ertus)"
+**Output:**
+{
+  "results": [{"id": "LI8", "persons": [
+    {"praenomen": "Publius", "nomen": "Atilius", "cognomen": "Nicostratus", "gender": "male", "status": "VIvir, Augustalis", "raw_name": "P. Atili Nicostrati VIviri Aug.", "fragmentary": false},
+    {"praenomen": null, "nomen": null, "cognomen": "Epaphroditus", "gender": "male", "status": "libertus", "raw_name": "Epaphroditus", "fragmentary": false}
+  ]}]
+}
+
+**Input:** "D(is) M(anibus) / P(ubli) Atili / Nicostra/ti VIviri / Aug(ustalis) Epa/phroditus / lib(ertus)"
+**Output:**
+{
+  "results": [{"id": "LI8b", "persons": [
+    {"praenomen": "Publius", "nomen": "Atilius", "cognomen": "Nicostratus", "gender": "male", "status": "VIvir, Augustalis", "raw_name": "P. Atili Nicostrati VIviri Aug.", "fragmentary": false},
+    {"praenomen": null, "nomen": null, "cognomen": "Epaphroditus", "gender": "male", "status": "libertus", "raw_name": "Epaphroditus", "fragmentary": false}
+  ]}]
+}
+
+**Input:** "M(anius) Geminius L(uci) f(ilius) / Cam(ilia) veteran(us) / sibi et L(ucio) Gemi/nio L(uci) f(ilio) Cam(ilia) / Manciae patri / Vibiae Q(uinti) f(iliae) Secund(ae?) / matri"
+**Output:**
+{
+  "results": [{"id": "LI9", "persons": [
+    {"praenomen": "Manius", "nomen": "Geminius", "cognomen": null, "gender": "male", "status": "tribus: Camilia, veteranus", "raw_name": "M. Geminius L. f. Cam. veteranus", "fragmentary": false},
+    {"praenomen": "Lucius", "nomen": "Geminius", "cognomen": "Mancia", "gender": "male", "status": "tribus: Camilia, pater", "raw_name": "L. Geminio L. f. Cam. Manciae", "fragmentary": false},
+    {"praenomen": null, "nomen": "Vibia", "cognomen": "Secunda", "gender": "female", "status": "filia Quinti, mater", "raw_name": "Vibiae Q. f. Secund(ae?)", "fragmentary": false}
+  ]}]
+}
+
+**Input:** "] / amico / [3]IIIA Ter() f(ilia) Prisca / ux{s}or p(osuit?)"
+**Output:**
+{
+  "results": [{"id": "LI10", "persons": [
+    {"praenomen": null, "nomen": null, "cognomen": "Prisca", "gender": "female", "status": "uxor", "raw_name": "[3]IIIA Ter() f. Prisca", "fragmentary": true}
+  ]}]
+}
+
+**Input:** "l ucranius c f / domo pedona / mil coh x pr"
+**Output:**
+{
+  "results": [{"id": "LI11", "persons": [
+    {"praenomen": "Lucius", "nomen": "Ucranius", "cognomen": null, "gender": "male", "status": "domo Pedona, miles cohortis X praetoriae", "raw_name": "L. Ucranius C. f. domo Pedona mil. coh. X pr.", "fragmentary": false}
+  ]}]
+}
+
+**Input:** "] / Aquenses decur(iones) et municip(es) / ["
+**Output:**
+{
+  "results": [{"id": "LI12", "persons": []}]
+}"""
+
     elif province.lower() in ('gallia narbonensis', 'belgica', 'aquitani(c)a',
                               'germania superior', 'germania inferior'):
         extra_examples = """
