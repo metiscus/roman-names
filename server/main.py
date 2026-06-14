@@ -93,7 +93,7 @@ async def rate_limit_and_cache(request: Request, call_next):
 
 @app.get("/api/tiles/{z}/{x}/{y}")
 def tiles(
-    z: int, x: int, y: int,
+    z: float, x: int, y: int,
     gender: str | None = None,
     confidence: str | None = None,
     hide_deity: bool = False,
@@ -105,7 +105,7 @@ def tiles(
     exclude_undated: bool = False,
 ):
     data = db.get_markers_for_tile(
-        z, x, y,
+        int(z), x, y,
         gender=gender,
         confidence=confidence,
         hide_deity=hide_deity,
