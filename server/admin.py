@@ -98,7 +98,7 @@ h1{{font-size:1.3rem;margin:0 0 16px}}
 </nav>
 <main>{content}</main>
 </body>
-</html>""")
+</html>""", headers={"Cache-Control": "no-store"})
 
 
 # ── Login / logout ────────────────────────────────────────────────────────────
@@ -170,7 +170,7 @@ def flags_list(session: str | None = Cookie(default=None, alias=COOKIE_NAME)):
     for f in flags:
         color = _STATUS_COLORS.get(f["status"], "#000")
         opts = "".join(
-            f'<option value="{_e(s)}"{"selected" if s == f["status"] else ""}>{_e(s)}</option>'
+            f'<option value="{_e(s)}"{" selected" if s == f["status"] else ""}>{_e(s)}</option>'
             for s in _STATUS_OPTS
         )
         rows += f"""<tr>

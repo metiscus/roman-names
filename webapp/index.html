@@ -651,7 +651,7 @@ async function loadView() {
 
   // Aggregate tier: always request at AGGREGATE_ZOOM regardless of current zoom
   // Individual tier: request at min(zoom, MAX_TILE_ZOOM)
-  const requestZoom = tier === 'aggregate' ? AGGREGATE_ZOOM : Math.min(zoom, MAX_TILE_ZOOM);
+  const requestZoom = tier === 'aggregate' ? AGGREGATE_ZOOM : Math.min(Math.floor(zoom), MAX_TILE_ZOOM);
   const tiles = getVisibleTiles(requestZoom);
 
   // Viewport-based cache eviction
