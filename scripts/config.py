@@ -73,6 +73,30 @@ PROVINCES = [
     ("venetia_et_histria",     "Venetia et Histria / Regio X", False),
     ("transpadana",            "Transpadana / Regio XI",  False),
     ("roma",                   "Roma",                    True),
+    # Gaul / Alpine
+    ("lugdunensis",            "Lugudunensis",            True),
+    ("raetia",                 "Raetia",                  True),
+    ("alpes_maritimae",        "Alpes Maritimae",         False),
+    ("alpes_cottiae",          "Alpes Cottiae",           False),
+    ("alpes_poeninae",         "Alpes Poeninae",          False),
+    ("alpes_graiae",           "Alpes Graiae",            False),
+    # Balkans / Eastern Europe
+    ("macedonia",              "Macedonia",               True),
+    ("achaia",                 "Achaia",                  True),
+    ("thracia",                "Thracia",                 True),
+    ("regnum_bospori",         "Regnum Bospori",          False),
+    # Asia Minor
+    ("asia",                   "Asia",                    True),
+    ("galatia",                "Galatia",                 True),
+    ("pontus_et_bithynia",     "Pontus et Bithynia",      True),
+    ("cappadocia",             "Cappadocia",              False),
+    ("lycia_et_pamphylia",     "Lycia et Pamphylia",      True),
+    ("cilicia",                "Cilicia",                 False),
+    ("cyprus",                 "Cyprus",                  False),
+    # Levant / Near East
+    ("syria",                  "Syria",                   True),
+    ("arabia",                 "Arabia",                  True),
+    ("palaestina",             "Palaestina",              True),
 ]
 
 PROVINCE_SLUGS = [slug for slug, _name, _has_eval in PROVINCES]

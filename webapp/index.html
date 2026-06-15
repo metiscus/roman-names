@@ -202,6 +202,21 @@
     }
     .db-link:hover { color: var(--accent); border-color: var(--accent); }
 
+    /* ── Photo strip ────────────────────────────────────── */
+    .photo-strip {
+      display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px;
+    }
+    .photo-thumb {
+      display: block; width: 100px; height: 80px;
+      border-radius: 4px; overflow: hidden;
+      border: 1px solid var(--border); flex-shrink: 0;
+      transition: border-color 0.15s;
+    }
+    .photo-thumb:hover { border-color: var(--accent); }
+    .photo-thumb img {
+      width: 100%; height: 100%; object-fit: cover; display: block;
+    }
+
     /* ── Inspection list ────────────────────────────────── */
     .inspect-item {
       border: 1px solid var(--border); border-radius: 6px;
@@ -1017,6 +1032,26 @@ function renderDetailSidebar(data) {
     sec.appendChild(t);
     sec.appendChild(b);
     body.appendChild(sec);
+  }
+
+  // Photo strip
+  if (data.photos && data.photos.length > 0) {
+    const strip = document.createElement('div');
+    strip.className = 'photo-strip';
+    for (const photo of data.photos) {
+      const a = document.createElement('a');
+      a.className = 'photo-thumb';
+      a.href = photo.detail || `https://edh.ub.uni-heidelberg.de/edh/inschrift/${escHtml(data.edh_id)}`;
+      a.target = '_blank';
+      a.rel = 'noopener';
+      const img = document.createElement('img');
+      img.src = photo.thumb;
+      img.alt = 'Inscription photo';
+      img.loading = 'lazy';
+      a.appendChild(img);
+      strip.appendChild(a);
+    }
+    body.appendChild(strip);
   }
 
   // External database links

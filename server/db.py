@@ -53,6 +53,11 @@ def run_migrations() -> None:
             "ALTER TABLE inscriptions ADD COLUMN tm_uri TEXT",
             "ALTER TABLE inscriptions ADD COLUMN text_edition TEXT",
             "ALTER TABLE inscriptions ADD COLUMN inscription_type TEXT",
+            "ALTER TABLE inscriptions ADD COLUMN material TEXT",
+            "ALTER TABLE inscriptions ADD COLUMN dimensions TEXT",
+            "ALTER TABLE inscriptions ADD COLUMN current_location TEXT",
+            "ALTER TABLE inscriptions ADD COLUMN photos TEXT",
+            "ALTER TABLE inscriptions ADD COLUMN bibliography TEXT",
         ]:
             try:
                 conn.execute(ddl)
@@ -291,7 +296,8 @@ def get_inscription(edcs_id: str) -> dict | None:
             """
             SELECT edcs_id, province, lat, lon, findspot, raw_text,
                    date_from, date_to, persons, overrides, translation, summary,
-                   edh_id, tm_uri, text_edition, inscription_type
+                   edh_id, tm_uri, text_edition, inscription_type,
+                   photos, material, dimensions, current_location
             FROM inscriptions WHERE edcs_id = ?
             """,
             (edcs_id,),
@@ -316,6 +322,10 @@ def get_inscription(edcs_id: str) -> dict | None:
         "tm_uri": r["tm_uri"],
         "text_edition": r["text_edition"],
         "inscription_type": r["inscription_type"],
+        "photos": json.loads(r["photos"]) if r["photos"] else [],
+        "material": r["material"],
+        "dimensions": r["dimensions"],
+        "current_location": r["current_location"],
     }
 
 
