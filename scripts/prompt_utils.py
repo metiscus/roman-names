@@ -270,7 +270,62 @@ def get_system_prompt(province):
 **Output:**
 {
   "results": [{"id": "C5", "persons": []}]
-}"""
+}
+
+**Input:** "Leg(ionis) VI // COMPM"
+**Output:**
+{
+  "results": [{"id": "C6", "persons": []}]
+}
+
+**Input:** "[Le]g(ionis) VI"
+**Output:**
+{
+  "results": [{"id": "C7", "persons": []}]
+}
+
+**CORSICA-SPECIFIC RULE:** Legion brick stamps ("Leg(ionis) VI", "[Le]g(ionis) VI") are military unit identifiers, NOT personal names. Return persons: [] for any text that consists solely of a legion designation.
+
+**Input:** "] / fil(io) piiss(imo) / vix(it) ann(os) X m(enses) V / Epaphrodit[us] / pater m(erito?) f(ecit)"
+**Output:**
+{
+  "results": [{"id": "C8", "persons": [
+    {"praenomen": null, "nomen": null, "cognomen": "Epaphroditus", "gender": "male", "status": "filius piissimus", "raw_name": "Epaphrodit[us]", "fragmentary": true}
+  ]}]
+}
+
+**CORSICA-SPECIFIC RULE:** "pater m(erito?) f(ecit)" — the unnamed father who made the monument is NOT a separate person. The word "pater" here is a kinship role, not a name. Only extract persons whose actual name appears in the text.
+
+**Input:** "Dis Manibu[s] / T(itus) Plaetoriu[s] Celer fecit / Diodorae Qu/intae coniugi kariss(imae) / vixit ann(os) XXXX h(ic) s(ita) e(st)"
+**Output:**
+{
+  "results": [{"id": "C9", "persons": [
+    {"praenomen": "Titus", "nomen": "Plaetorius", "cognomen": "Celer", "gender": "male", "status": null, "raw_name": "T. Plaetoriu[s] Celer", "fragmentary": true},
+    {"praenomen": null, "nomen": "Diodora", "cognomen": "Quinta", "gender": "female", "status": "coniunx karissima", "raw_name": "Diodorae Quintae", "fragmentary": false}
+  ]}]
+}
+
+**CORSICA-SPECIFIC RULE:** When two names in the same case appear on consecutive lines (e.g. "Diodorae Qu/intae" with "/" being a line-break), they form ONE person's name (nomen + cognomen), not two separate people.
+
+**Input:** "Flaviae / Mariae / Vetullenus / Calpurnia/nus filius"
+**Output:**
+{
+  "results": [{"id": "C10", "persons": [
+    {"praenomen": null, "nomen": "Flavia", "cognomen": "Maria", "gender": "female", "status": null, "raw_name": "Flaviae Mariae", "fragmentary": false},
+    {"praenomen": null, "nomen": "Vetullenus", "cognomen": "Calpurnianus", "gender": "male", "status": "filius", "raw_name": "Vetullenus Calpurnianus", "fragmentary": false}
+  ]}]
+}
+
+**Input:** "D(is) M(anibus) / Fl(avia) Bitalis Mario / Fusciano co(n)iu/gi bene merenti / fecit st<i=V>pendio/rum XXVII"
+**Output:**
+{
+  "results": [{"id": "C11", "persons": [
+    {"praenomen": null, "nomen": "Flavia", "cognomen": "Vitalis", "gender": "female", "status": null, "raw_name": "Fl. Bitalis", "fragmentary": false},
+    {"praenomen": null, "nomen": "Marius", "cognomen": "Fuscianus", "gender": "male", "status": "coniunx bene merens", "raw_name": "Mario Fusciano", "fragmentary": false}
+  ]}]
+}
+
+**CORSICA-SPECIFIC RULE:** "Mario / Fusciano" (praenomen+cognomen split across a line-break) is ONE person: Marius Fuscianus. When a name's components are split by a "/" (stone line-break) within a single person's name block, treat them as one person, not two."""
 
     elif province.lower() == 'sicilia':
         extra_examples = """
